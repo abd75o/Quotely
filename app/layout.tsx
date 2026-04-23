@@ -13,6 +13,13 @@ export const metadata: Metadata = {
   description:
     "Quotely aide les artisans, freelances et consultants à créer des devis professionnels en quelques secondes. Signature électronique, suivi en temps réel, facturation en 1 clic.",
   keywords: "devis, facture, artisan, freelance, signature électronique, devis en ligne",
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
+  },
   openGraph: {
     title: "Quotely — Devis professionnels en 30 secondes",
     description: "Créez, envoyez et suivez vos devis professionnels avec l'IA.",

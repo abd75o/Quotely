@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="none">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366F1"/>
+      <stop offset="100%" stop-color="#4F46E5"/>
+    </linearGradient>
+    <linearGradient id="shineGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background rounded square -->
+  <rect width="40" height="40" rx="10" fill="url(#bgGrad)"/>
+
+  <!-- Subtle top shine -->
+  <rect width="40" height="22" rx="10" fill="url(#shineGrad)"/>
+
+  <!-- < bracket -->
+  <path d="M14 13 L8 20 L14 27" stroke="white" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- > bracket -->
+  <path d="M26 13 L32 20 L26 27" stroke="white" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Pencil (replacing /) — tilted ~25° like a slash, centered at 20,20 -->
+  <g transform="rotate(-25, 20, 20)">
+    <!-- Eraser cap -->
+    <rect x="18.5" y="10" width="3" height="2.8" rx="1.4" fill="#FDA4AF"/>
+    <!-- Ferrule (metal band) -->
+    <rect x="18.2" y="12.8" width="3.6" height="2" rx="0.4" fill="rgba(255,255,255,0.55)"/>
+    <!-- Pencil body -->
+    <rect x="18.5" y="14.8" width="3" height="9.5" rx="0.3" fill="white"/>
+    <!-- Wood cone at tip -->
+    <path d="M18.5 24.3 L21.5 24.3 L20 28.5 Z" fill="rgba(255,255,255,0.72)"/>
+    <!-- Graphite point -->
+    <line x1="20" y1="27" x2="20" y2="29" stroke="rgba(255,255,255,0.95)" stroke-width="1.1" stroke-linecap="round"/>
+  </g>
+</svg>

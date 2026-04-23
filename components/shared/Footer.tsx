@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Zap, Mail, ExternalLink } from "lucide-react";
+import { Mail, ExternalLink } from "lucide-react";
+import { Logo } from "@/components/shared/Logo";
 
 const FOOTER_LINKS = {
   Produit: [
@@ -45,11 +46,8 @@ export function Footer() {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-12">
           {/* Brand column */}
           <div className="col-span-2">
-            <Link href="/" className="flex items-center gap-2 mb-4 group">
-              <div className="w-8 h-8 rounded-lg bg-[var(--primary)] flex items-center justify-center shadow-md">
-                <Zap className="w-4 h-4 text-white" fill="white" />
-              </div>
-              <span className="text-lg font-bold tracking-tight">Quotely</span>
+            <Link href="/" className="inline-flex mb-4 hover:opacity-80 transition-opacity duration-150">
+              <Logo size={32} textColor="#ffffff" />
             </Link>
             <p className="text-sm text-gray-400 leading-relaxed mb-6 max-w-xs">
               Créez des devis professionnels en 30 secondes. L'outil préféré

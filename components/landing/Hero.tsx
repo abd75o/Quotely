@@ -14,6 +14,7 @@ import {
   PenLine,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Logo } from "@/components/shared/Logo";
 
 const TYPING_TEXTS = [
   "Pose un carrelage 40m² cuisine",
@@ -96,7 +97,7 @@ function QuotePreviewCard() {
         <div className="bg-gradient-to-r from-[var(--primary)] to-indigo-500 px-5 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Zap className="w-4 h-4 text-white" fill="white" />
+              <Logo iconOnly size={20} />
               <span className="text-white font-semibold text-sm">Devis #2024-089</span>
             </div>
             <span className="px-2.5 py-0.5 bg-white/20 text-white text-xs font-medium rounded-full">
@@ -166,7 +167,7 @@ function QuotePreviewCard() {
       </div>
 
       <div className="absolute -bottom-3 -left-3 glass border border-white/60 text-xs font-semibold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5 animate-float [animation-delay:1s]">
-        <Zap className="w-3.5 h-3.5 text-[var(--primary)]" />
+        <Logo iconOnly size={16} />
         Généré par IA
       </div>
     </div>
@@ -230,7 +231,7 @@ export function Hero() {
             <div className="animate-fade-in-up [animation-delay:0.2s] opacity-0 [animation-fill-mode:forwards]">
               <div className="flex items-start gap-3 p-4 bg-white/70 backdrop-blur-sm border border-[var(--border)] rounded-xl shadow-sm">
                 <div className="mt-0.5 p-1.5 bg-[var(--primary-bg)] rounded-lg">
-                  <Zap className="w-4 h-4 text-[var(--primary)]" />
+                  <Logo iconOnly size={18} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-[var(--text-muted)] mb-1 font-medium">Dites à l'IA ce que vous faites :</p>

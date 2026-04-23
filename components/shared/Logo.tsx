@@ -9,6 +9,8 @@ interface LogoProps {
   className?: string;
   /** Wordmark color — defaults to dark */
   textColor?: string;
+  /** Unique suffix for gradient IDs to avoid conflicts */
+  id?: string;
 }
 
 export function Logo({
@@ -16,9 +18,17 @@ export function Logo({
   size = 32,
   className,
   textColor = "#0f0f23",
+  id = "a",
 }: LogoProps) {
-  const fontSize = size * 0.585;
-  const totalWidth = iconOnly ? size : size + size * 0.35 + size * 3.3;
+  const scale = size / 40;
+  const fontSize = Math.round(size * 0.575);
+  const gap = Math.round(size * 0.3);
+  // Approximate text width for "Quotely" at this font-size
+  const textWidth = Math.round(fontSize * 3.9);
+  const totalWidth = iconOnly ? size : size + gap + textWidth;
+
+  const bgId = `ql-bg-${id}`;
+  const shineId = `ql-shine-${id}`;
 
   return (
     <svg
@@ -32,64 +42,47 @@ export function Logo({
       className={cn("flex-shrink-0", className)}
     >
       <defs>
-        <linearGradient id="ql-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient id={bgId} x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#6366F1" />
           <stop offset="100%" stopColor="#4F46E5" />
         </linearGradient>
-        <linearGradient id="ql-shine" x1="0%" y1="0%" x2="0%" y2="100%">
+        <linearGradient id={shineId} x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" stopColor="#ffffff" stopOpacity="0.15" />
           <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
         </linearGradient>
       </defs>
 
-      {/* ── Icon background ── */}
-      <rect width={size} height={size} rx={size * 0.25} fill="url(#ql-bg)" />
-      <rect width={size} height={size * 0.55} rx={size * 0.25} fill="url(#ql-shine)" />
+      {/* ── Icon (scaled to size × size) ── */}
+      <g transform={`scale(${scale})`}>
+        {/* Background rounded square */}
+        <rect width="40" height="40" rx="10" fill={`url(#${bgId})`} />
+        <rect width="40" height="22" rx="10" fill={`url(#${shineId})`} />
 
-      {/* Scale everything inside the icon relative to its size */}
-      <g transform={`scale(${size / 40})`}>
-        {/* < bracket */}
+        {/* Document body — white paper with folded top-right corner */}
+        <path d="M8 6 L25 6 L32 13 L32 34 L8 34 Z" fill="white" fillOpacity="0.97" />
+
+        {/* Fold shadow */}
+        <path d="M25 6 L32 13 L25 13 Z" fill="rgba(99,102,241,0.2)" />
+
+        {/* Content lines (representing quote rows) */}
+        <line x1="12" y1="16" x2="20" y2="16" stroke="rgba(99,102,241,0.28)" strokeWidth="1.5" strokeLinecap="round" />
+        <line x1="12" y1="19.5" x2="24" y2="19.5" stroke="rgba(99,102,241,0.2)" strokeWidth="1.5" strokeLinecap="round" />
+
+        {/* Bold checkmark */}
         <path
-          d="M14 13 L8 20 L14 27"
-          stroke="white"
-          strokeWidth="2.3"
+          d="M12 25 L17.5 31 L28 17"
+          stroke="#6366F1"
+          strokeWidth="3.5"
           strokeLinecap="round"
           strokeLinejoin="round"
         />
-        {/* > bracket */}
-        <path
-          d="M26 13 L32 20 L26 27"
-          stroke="white"
-          strokeWidth="2.3"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-
-        {/* Pencil — tilted like / */}
-        <g transform="rotate(-25, 20, 20)">
-          {/* Eraser cap */}
-          <rect x="18.5" y="10" width="3" height="2.8" rx="1.4" fill="#FDA4AF" />
-          {/* Ferrule */}
-          <rect x="18.2" y="12.8" width="3.6" height="2" rx="0.4" fill="rgba(255,255,255,0.55)" />
-          {/* Body */}
-          <rect x="18.5" y="14.8" width="3" height="9.5" rx="0.3" fill="white" />
-          {/* Wood cone */}
-          <path d="M18.5 24.3 L21.5 24.3 L20 28.5 Z" fill="rgba(255,255,255,0.72)" />
-          {/* Graphite tip */}
-          <line
-            x1="20" y1="27" x2="20" y2="29"
-            stroke="rgba(255,255,255,0.95)"
-            strokeWidth="1.1"
-            strokeLinecap="round"
-          />
-        </g>
       </g>
 
       {/* ── Wordmark ── */}
       {!iconOnly && (
         <text
-          x={size + size * 0.35}
-          y={size * 0.7}
+          x={size + gap}
+          y={size * 0.695}
           fontFamily="Inter, system-ui, -apple-system, sans-serif"
           fontSize={fontSize}
           fontWeight="700"

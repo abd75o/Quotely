@@ -36,7 +36,7 @@ export function Navbar() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center hover:opacity-90 transition-opacity duration-150">
-            <Logo size={32} />
+            <Logo size={32} id="nav" />
           </Link>
 
           {/* Desktop nav */}

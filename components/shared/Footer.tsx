@@ -47,7 +47,7 @@ export function Footer() {
           {/* Brand column */}
           <div className="col-span-2">
             <Link href="/" className="inline-flex mb-4 hover:opacity-80 transition-opacity duration-150">
-              <Logo size={32} textColor="#ffffff" />
+              <Logo size={32} textColor="#ffffff" id="footer" />
             </Link>
             <p className="text-sm text-gray-400 leading-relaxed mb-6 max-w-xs">
               Créez des devis professionnels en 30 secondes. L'outil préféré

@@ -1,97 +1,104 @@
 import { cn } from "@/lib/utils";
 
+/**
+ * Standalone Q icon — indigo rounded square with bold white Q.
+ * Inspired by Revolut / Linear / Notion: single letter, ultra minimal.
+ */
+function QIcon({ size = 40 }: { size: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 40 40"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
+      <rect width="40" height="40" rx="10" fill="#6366F1" />
+      <rect width="40" height="21" rx="10" fill="white" fillOpacity="0.1" />
+      <text
+        x="20"
+        y="29"
+        textAnchor="middle"
+        fontFamily="-apple-system, BlinkMacSystemFont, Inter, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
+        fontSize="25"
+        fontWeight="800"
+        letterSpacing="-0.5"
+        fill="white"
+      >
+        Q
+      </text>
+    </svg>
+  );
+}
+
 interface LogoProps {
-  /** Show icon only (no wordmark) */
-  iconOnly?: boolean;
-  /** Icon size in px (square) */
+  /**
+   * icon     — Q square only (navbar icon, favicons, small usages)
+   * horizontal — Q + "Quotely" side by side (navbar, footer)
+   * stacked  — Q above "Quotely" above slogan (hero, branding)
+   */
+  variant?: "icon" | "horizontal" | "stacked";
+  /** Base size in px: icon square side. Text scales proportionally. */
   size?: number;
-  /** Extra classes on the wrapper */
+  /** White wordmark + slogan for dark backgrounds */
+  inverted?: boolean;
   className?: string;
-  /** Wordmark color — defaults to dark */
-  textColor?: string;
-  /** Unique suffix for gradient IDs to avoid conflicts */
-  id?: string;
 }
 
 export function Logo({
-  iconOnly = false,
+  variant = "horizontal",
   size = 32,
+  inverted = false,
   className,
-  textColor = "#0f0f23",
-  id = "a",
 }: LogoProps) {
-  const scale = size / 40;
-  const fontSize = Math.round(size * 0.575);
-  const gap = Math.round(size * 0.3);
-  // Approximate text width for "Quotely" at this font-size
-  const textWidth = Math.round(fontSize * 3.9);
-  const totalWidth = iconOnly ? size : size + gap + textWidth;
+  const wordColor = inverted ? "text-white" : "text-[var(--text-primary)]";
+  const sloganColor = inverted ? "text-indigo-200" : "text-gray-400";
 
-  const bgId = `ql-bg-${id}`;
-  const shineId = `ql-shine-${id}`;
+  if (variant === "icon") {
+    return (
+      <span className={cn("inline-flex", className)} aria-label="Quotely">
+        <QIcon size={size} />
+      </span>
+    );
+  }
 
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox={`0 0 ${totalWidth} ${size}`}
-      width={totalWidth}
-      height={size}
-      fill="none"
-      aria-label="Quotely"
-      role="img"
-      className={cn("flex-shrink-0", className)}
-    >
-      <defs>
-        <linearGradient id={bgId} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#6366F1" />
-          <stop offset="100%" stopColor="#4F46E5" />
-        </linearGradient>
-        <linearGradient id={shineId} x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.15" />
-          <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-
-      {/* ── Icon (scaled to size × size) ── */}
-      <g transform={`scale(${scale})`}>
-        {/* Background rounded square */}
-        <rect width="40" height="40" rx="10" fill={`url(#${bgId})`} />
-        <rect width="40" height="22" rx="10" fill={`url(#${shineId})`} />
-
-        {/* Document body — white paper with folded top-right corner */}
-        <path d="M8 6 L25 6 L32 13 L32 34 L8 34 Z" fill="white" fillOpacity="0.97" />
-
-        {/* Fold shadow */}
-        <path d="M25 6 L32 13 L25 13 Z" fill="rgba(99,102,241,0.2)" />
-
-        {/* Content lines (representing quote rows) */}
-        <line x1="12" y1="16" x2="20" y2="16" stroke="rgba(99,102,241,0.28)" strokeWidth="1.5" strokeLinecap="round" />
-        <line x1="12" y1="19.5" x2="24" y2="19.5" stroke="rgba(99,102,241,0.2)" strokeWidth="1.5" strokeLinecap="round" />
-
-        {/* Bold checkmark */}
-        <path
-          d="M12 25 L17.5 31 L28 17"
-          stroke="#6366F1"
-          strokeWidth="3.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </g>
-
-      {/* ── Wordmark ── */}
-      {!iconOnly && (
-        <text
-          x={size + gap}
-          y={size * 0.695}
-          fontFamily="Inter, system-ui, -apple-system, sans-serif"
-          fontSize={fontSize}
-          fontWeight="700"
-          letterSpacing="-0.4"
-          fill={textColor}
+  if (variant === "stacked") {
+    return (
+      <div
+        className={cn("flex flex-col items-center", className)}
+        aria-label="Quotely — Parlez. Signez. Encaissez."
+      >
+        <QIcon size={size} />
+        <p
+          className={cn("mt-3 font-bold tracking-tight leading-none", wordColor)}
+          style={{ fontSize: Math.round(size * 0.55) }}
         >
           Quotely
-        </text>
-      )}
-    </svg>
+        </p>
+        <p
+          className={cn("mt-1.5 font-medium leading-none", sloganColor)}
+          style={{ fontSize: Math.round(size * 0.265) }}
+        >
+          Parlez. Signez. Encaissez.
+        </p>
+      </div>
+    );
+  }
+
+  // horizontal (default)
+  return (
+    <div
+      className={cn("inline-flex items-center", className)}
+      aria-label="Quotely"
+    >
+      <QIcon size={size} />
+      <span
+        className={cn("ml-2.5 font-bold tracking-tight leading-none", wordColor)}
+        style={{ fontSize: Math.round(size * 0.625) }}
+      >
+        Quotely
+      </span>
+    </div>
   );
 }

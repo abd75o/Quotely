@@ -1,37 +1,33 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 168 40" fill="none">
-  <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#6366F1"/>
-      <stop offset="100%" stop-color="#4F46E5"/>
-    </linearGradient>
-    <linearGradient id="shine" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.15"/>
-      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
-    </linearGradient>
-  </defs>
-
-  <!-- ── Icon (40×40) ── -->
-  <rect width="40" height="40" rx="10" fill="url(#bg)"/>
-  <rect width="40" height="22" rx="10" fill="url(#shine)"/>
-
-  <path d="M8 6 L25 6 L32 13 L32 34 L8 34 Z" fill="white" fill-opacity="0.97"/>
-  <path d="M25 6 L32 13 L25 13 Z" fill="rgba(99,102,241,0.2)"/>
-
-  <line x1="12" y1="16" x2="20" y2="16" stroke="rgba(99,102,241,0.28)" stroke-width="1.5" stroke-linecap="round"/>
-  <line x1="12" y1="19.5" x2="24" y2="19.5" stroke="rgba(99,102,241,0.2)" stroke-width="1.5" stroke-linecap="round"/>
-
-  <path d="M12 25 L17.5 31 L28 17"
-    stroke="#6366F1"
-    stroke-width="3.5"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-    fill="none"/>
-
-  <!-- ── Wordmark ── -->
-  <text x="52" y="27.5"
-    font-family="Inter, system-ui, -apple-system, sans-serif"
-    font-size="22"
-    font-weight="700"
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 96" fill="none">
+  <!-- Q icon, centered at x=80 -->
+  <rect x="60" y="0" width="40" height="40" rx="10" fill="#6366F1"/>
+  <rect x="60" y="0" width="40" height="21" rx="10" fill="white" fill-opacity="0.1"/>
+  <text
+    x="80" y="29"
+    text-anchor="middle"
+    font-family="-apple-system, BlinkMacSystemFont, Inter, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
+    font-size="25"
+    font-weight="800"
     letter-spacing="-0.5"
+    fill="white">Q</text>
+
+  <!-- Wordmark "Quotely" -->
+  <text
+    x="80" y="64"
+    text-anchor="middle"
+    font-family="-apple-system, BlinkMacSystemFont, Inter, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
+    font-size="20"
+    font-weight="700"
+    letter-spacing="-0.4"
     fill="#0f0f23">Quotely</text>
+
+  <!-- Slogan -->
+  <text
+    x="80" y="82"
+    text-anchor="middle"
+    font-family="-apple-system, BlinkMacSystemFont, Inter, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
+    font-size="10.5"
+    font-weight="500"
+    letter-spacing="0.1"
+    fill="#9ca3af">Parlez. Signez. Encaissez.</text>
 </svg>

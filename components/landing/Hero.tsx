@@ -97,7 +97,7 @@ function QuotePreviewCard() {
         <div className="bg-gradient-to-r from-[var(--primary)] to-indigo-500 px-5 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Logo iconOnly size={20} id="hero-card" />
+              <Logo variant="icon" size={20} />
               <span className="text-white font-semibold text-sm">Devis #2024-089</span>
             </div>
             <span className="px-2.5 py-0.5 bg-white/20 text-white text-xs font-medium rounded-full">
@@ -167,7 +167,7 @@ function QuotePreviewCard() {
       </div>
 
       <div className="absolute -bottom-3 -left-3 glass border border-white/60 text-xs font-semibold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5 animate-float [animation-delay:1s]">
-        <Logo iconOnly size={16} id="hero-badge" />
+        <Logo variant="icon" size={16} />
         Généré par IA
       </div>
     </div>
@@ -190,6 +190,11 @@ export function Hero() {
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           {/* Left — Text */}
           <div className="space-y-8">
+            {/* Stacked logo — brand anchor above heading */}
+            <div className="animate-fade-in-up">
+              <Logo variant="stacked" size={48} />
+            </div>
+
             {/* Badge */}
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/80 border border-[var(--primary)]/20 rounded-full shadow-sm backdrop-blur-sm animate-fade-in-up">
               <span className="flex h-2 w-2">
@@ -231,7 +236,7 @@ export function Hero() {
             <div className="animate-fade-in-up [animation-delay:0.2s] opacity-0 [animation-fill-mode:forwards]">
               <div className="flex items-start gap-3 p-4 bg-white/70 backdrop-blur-sm border border-[var(--border)] rounded-xl shadow-sm">
                 <div className="mt-0.5 p-1.5 bg-[var(--primary-bg)] rounded-lg">
-                  <Logo iconOnly size={18} id="hero-pill" />
+                  <Logo variant="icon" size={18} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-[var(--text-muted)] mb-1 font-medium">Dites à l'IA ce que vous faites :</p>

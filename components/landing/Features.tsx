@@ -190,7 +190,7 @@ export function Features() {
               Plan Starter
             </span>
             <div className="flex-1 h-px bg-[var(--border)]" />
-            <span className="text-sm font-bold text-[var(--text-secondary)]">19€/mois</span>
+            <span className="text-sm font-bold text-[var(--text-secondary)]">25€/mois</span>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {FEATURES_STARTER.map((f) => (
@@ -206,7 +206,7 @@ export function Features() {
               Plan Pro
             </span>
             <div className="flex-1 h-px bg-gradient-to-r from-[var(--primary)]/30 to-transparent" />
-            <span className="text-sm font-bold text-[var(--primary)]">39€/mois</span>
+            <span className="text-sm font-bold text-[var(--primary)]">49€/mois</span>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {FEATURES_PRO.map((f) => (

@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import {
   Check,
@@ -8,18 +7,18 @@ import {
   Star,
   ArrowRight,
   Sparkles,
+  Shield,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 const STARTER_FEATURES = [
   "5 templates par métier (plombier, électricien, peintre, freelance, commerce)",
   "Formulaire simplifié 5 champs",
   "Calcul TVA automatique",
-  "Envoi par email au client",
-  "Signature électronique en ligne",
+  "Lien client unique par devis (quotely.fr/devis/...)",
+  "Signature électronique adaptative (simple ou email)",
   "Suivi des devis (signé, en attente, refusé)",
-  "Facturation en 1 clic",
-  "Jusqu'à 20 devis/mois",
+  "Facturation automatique après signature",
+  "Jusqu'à 30 devis/mois",
   "Support par email",
 ];
 
@@ -28,6 +27,7 @@ const PRO_FEATURES = [
   "Dictée vocale — l'IA génère le devis",
   "Génération de devis par Claude AI",
   "Suggestions de prix selon le marché",
+  "Signature certifiée eIDAS (YouSign) pour +5 000 €",
   "Relances automatiques (J+3, J+7, J+14)",
   "Statistiques intelligentes et métriques",
   "Score de performance des devis",
@@ -36,16 +36,9 @@ const PRO_FEATURES = [
 ];
 
 export function Pricing() {
-  const [isAnnual, setIsAnnual] = useState(false);
-
-  const starterPrice = isAnnual ? 15 : 19;
-  const proPrice = isAnnual ? 31 : 39;
-
   return (
     <section id="pricing" className="py-24 bg-white relative overflow-hidden">
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[var(--border)] to-transparent" />
-
-      {/* Background decoration */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-br from-indigo-50 to-purple-50 rounded-full blur-3xl opacity-50" />
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -62,35 +55,6 @@ export function Pricing() {
           <p className="text-lg text-[var(--text-secondary)] max-w-xl mx-auto">
             14 jours d'essai gratuit, sans carte bancaire. Résiliable à tout moment.
           </p>
-
-          {/* Annual toggle */}
-          <div className="inline-flex items-center gap-3 mt-8 p-1 bg-[var(--surface)] border border-[var(--border)] rounded-xl">
-            <button
-              onClick={() => setIsAnnual(false)}
-              className={cn(
-                "px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 cursor-pointer",
-                !isAnnual
-                  ? "bg-white shadow-sm text-[var(--text-primary)]"
-                  : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-              )}
-            >
-              Mensuel
-            </button>
-            <button
-              onClick={() => setIsAnnual(true)}
-              className={cn(
-                "px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 cursor-pointer flex items-center gap-2",
-                isAnnual
-                  ? "bg-white shadow-sm text-[var(--text-primary)]"
-                  : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-              )}
-            >
-              Annuel
-              <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-bold rounded-full">
-                -20%
-              </span>
-            </button>
-          </div>
         </div>
 
         {/* Cards */}
@@ -106,16 +70,12 @@ export function Pricing() {
 
             <div className="mb-8">
               <div className="flex items-end gap-2">
-                <span className="text-5xl font-black text-[var(--text-primary)]">
-                  {starterPrice}€
-                </span>
+                <span className="text-5xl font-black text-[var(--text-primary)]">25€</span>
                 <span className="text-[var(--text-muted)] mb-2 font-medium">/mois</span>
               </div>
-              {isAnnual && (
-                <p className="text-xs text-[var(--text-muted)] mt-1">
-                  Facturé <span className="font-semibold text-[var(--emerald)]">{starterPrice * 12}€/an</span> · Économisez 48€
-                </p>
-              )}
+              <p className="text-xs text-[var(--text-muted)] mt-1.5 font-medium">
+                soit 0,83€/jour
+              </p>
             </div>
 
             <Link
@@ -133,15 +93,20 @@ export function Pricing() {
                 </li>
               ))}
             </ul>
+
+            <div className="mt-6 flex items-center gap-2 p-3 bg-gray-50 rounded-xl">
+              <Shield className="w-4 h-4 text-[var(--text-muted)] flex-shrink-0" />
+              <span className="text-xs text-[var(--text-muted)]">
+                Signature simple pour &lt;1 500€ · Email confirmé jusqu'à 5 000€
+              </span>
+            </div>
           </div>
 
           {/* Pro */}
           <div className="relative p-8 bg-gradient-to-br from-[var(--primary)] via-indigo-600 to-purple-700 rounded-3xl shadow-2xl overflow-hidden">
-            {/* Shine effect */}
             <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
             <div className="absolute -top-16 -right-16 w-48 h-48 bg-white/5 rounded-full blur-2xl" />
 
-            {/* Popular badge */}
             <div className="absolute top-6 right-6 flex items-center gap-1.5 px-3 py-1.5 bg-white/20 backdrop-blur-sm rounded-full">
               <Star className="w-3 h-3 text-yellow-300" fill="currentColor" />
               <span className="text-xs font-bold text-white">Populaire</span>
@@ -149,21 +114,17 @@ export function Pricing() {
 
             <div className="mb-6">
               <h3 className="text-lg font-bold text-white mb-1">Pro</h3>
-              <p className="text-sm text-indigo-200">
-                Pour maximiser votre CA avec l'IA
-              </p>
+              <p className="text-sm text-indigo-200">Pour maximiser votre CA avec l'IA</p>
             </div>
 
             <div className="mb-8">
               <div className="flex items-end gap-2">
-                <span className="text-5xl font-black text-white">{proPrice}€</span>
+                <span className="text-5xl font-black text-white">49€</span>
                 <span className="text-indigo-200 mb-2 font-medium">/mois</span>
               </div>
-              {isAnnual && (
-                <p className="text-xs text-indigo-300 mt-1">
-                  Facturé <span className="font-semibold text-white">{proPrice * 12}€/an</span> · Économisez 96€
-                </p>
-              )}
+              <p className="text-xs text-indigo-300 mt-1.5 font-medium">
+                soit 1,63€/jour
+              </p>
             </div>
 
             <Link
@@ -183,6 +144,13 @@ export function Pricing() {
                 </li>
               ))}
             </ul>
+
+            <div className="mt-6 flex items-center gap-2 p-3 bg-white/10 rounded-xl">
+              <Shield className="w-4 h-4 text-emerald-300 flex-shrink-0" />
+              <span className="text-xs text-indigo-200">
+                Signature certifiée eIDAS (YouSign) pour les devis &gt;5 000€
+              </span>
+            </div>
           </div>
         </div>
 

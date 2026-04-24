@@ -44,6 +44,8 @@ interface LogoProps {
   /** White wordmark + slogan for dark backgrounds */
   inverted?: boolean;
   className?: string;
+  /** Optional instance ID to namespace SVG gradient IDs when multiple logos coexist */
+  id?: string;
 }
 
 export function Logo({
@@ -51,6 +53,7 @@ export function Logo({
   size = 32,
   inverted = false,
   className,
+  id: _id,
 }: LogoProps) {
   const wordColor = inverted ? "text-white" : "text-[var(--text-primary)]";
   const sloganColor = inverted ? "text-indigo-200" : "text-gray-400";

@@ -272,12 +272,12 @@ export function Hero() {
                 Essai gratuit 14 jours
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" />
               </Link>
-              <button className="inline-flex items-center justify-center gap-2 px-6 py-3.5 text-base font-semibold text-[var(--text-primary)] bg-white hover:bg-gray-50 border border-[var(--border)] rounded-xl shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer">
+              <Link href="#demo" className="inline-flex items-center justify-center gap-2 px-6 py-3.5 text-base font-semibold text-[var(--text-primary)] bg-white hover:bg-gray-50 border border-[var(--border)] rounded-xl shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer">
                 <div className="w-7 h-7 bg-[var(--primary-bg)] rounded-full flex items-center justify-center">
                   <Play className="w-3 h-3 text-[var(--primary)] ml-0.5" fill="currentColor" />
                 </div>
                 Voir la démo
-              </button>
+              </Link>
             </div>
 
             {/* Social proof avatars */}

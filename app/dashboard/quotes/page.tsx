@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { QuotesList } from "@/components/quotes/QuotesList";
+import { WelcomeBanner } from "@/components/dashboard/WelcomeBanner";
 
 export const metadata: Metadata = {
   title: "Mes devis — Quotely",
@@ -95,7 +96,18 @@ async function getQuotes() {
   }
 }
 
-export default async function QuotesPage() {
+export default async function QuotesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ welcome?: string }>;
+}) {
+  const { welcome } = await searchParams;
   const quotes = await getQuotes();
-  return <QuotesList initialQuotes={quotes as Parameters<typeof QuotesList>[0]["initialQuotes"]} />;
+
+  return (
+    <>
+      {welcome === "1" && <WelcomeBanner />}
+      <QuotesList initialQuotes={quotes as Parameters<typeof QuotesList>[0]["initialQuotes"]} />
+    </>
+  );
 }

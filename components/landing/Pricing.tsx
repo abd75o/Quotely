@@ -23,16 +23,16 @@ const STARTER_FEATURES = [
 ];
 
 const PRO_FEATURES = [
-  "Tout le plan Starter inclus",
-  "Dictée vocale — l'IA génère le devis",
-  "Génération de devis par Claude AI",
-  "Suggestions de prix selon le marché",
-  "Signature certifiée eIDAS (YouSign) pour +5 000 €",
-  "Relances automatiques (J+3, J+7, J+14)",
-  "Statistiques intelligentes et métriques",
-  "Score de performance des devis",
-  "Devis illimités",
-  "Support prioritaire + chat",
+  "Tout le Starter inclus",
+  "Dictée vocale (devis généré en 10 sec)",
+  "IA Claude (plus de temps perdu à rédiger)",
+  "Prix suggérés (évite de se brader)",
+  "Signature certifiée eIDAS (valide dès +5 000 €)",
+  "Relances auto (plus de devis signés sans effort)",
+  "Statistiques (optimise ton taux de signature)",
+  "Score devis (sais ce qui fait signer)",
+  "Devis illimités (aucune limite de croissance)",
+  "Support prioritaire (réponse en moins de 2h)",
 ];
 
 export function Pricing() {

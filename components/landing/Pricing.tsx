@@ -23,16 +23,16 @@ const STARTER_FEATURES = [
 ];
 
 const PRO_FEATURES = [
-  "Tout le Starter inclus",
-  "Dictée vocale (devis en 10 sec)",
-  "IA Claude (aucune rédaction manuelle)",
-  "Prix suggérés (tarifs optimisés)",
-  "Signature certifiée (gros devis sécurisés)",
-  "Relances auto (plus de devis signés)",
-  "Statistiques (optimise ton taux de signature)",
-  "Score devis (identifie ce qui convertit)",
-  "Devis illimités (aucune limite de croissance)",
-  "Support prioritaire (réponse rapide)",
+  "Tout le plan Starter inclus",
+  "Devis en 10 secondes par dictée vocale",
+  "Rédaction automatique des prestations",
+  "Tarifs du marché suggérés",
+  "Signature sécurisée pour gros chantiers",
+  "Relances automatiques (zéro oubli)",
+  "Tableau de bord (revenus en temps réel)",
+  "Score de signature (sache ce qui marche)",
+  "Devis illimités",
+  "Réponse support en moins d'1h",
 ];
 
 export function Pricing() {
@@ -114,7 +114,8 @@ export function Pricing() {
 
             <div className="mb-6">
               <h3 className="text-lg font-bold text-white mb-1">Pro</h3>
-              <p className="text-sm text-indigo-200">Pour maximiser votre CA avec l'IA</p>
+              <p className="text-sm text-indigo-200">Signez plus de clients, sans y passer vos soirées</p>
+              <p className="text-xs text-indigo-300 mt-1">Transformez vos devis envoyés en devis signés.</p>
             </div>
 
             <div className="mb-8">
@@ -132,7 +133,7 @@ export function Pricing() {
               className="group flex items-center justify-center gap-2 w-full py-3.5 text-center text-sm font-semibold text-[var(--primary)] bg-white hover:bg-gray-50 rounded-xl transition-colors duration-200 mb-8 shadow-lg cursor-pointer"
             >
               <Sparkles className="w-4 h-4" />
-              Démarrer avec l'IA
+              Démarrer mon essai Pro
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" />
             </Link>
 
@@ -149,6 +150,13 @@ export function Pricing() {
               <Shield className="w-4 h-4 text-emerald-300 flex-shrink-0" />
               <span className="text-xs text-indigo-200">
                 Signature certifiée eIDAS (YouSign) pour les devis &gt;5 000€
+              </span>
+            </div>
+
+            <div className="mt-4 flex items-center gap-2.5 p-3.5 bg-emerald-500/20 border border-emerald-400/30 rounded-xl">
+              <span className="text-base flex-shrink-0">💰</span>
+              <span className="text-xs font-semibold text-emerald-200">
+                +34% de devis signés en moyenne chez nos utilisateurs Pro
               </span>
             </div>
           </div>

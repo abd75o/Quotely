@@ -24,15 +24,15 @@ const STARTER_FEATURES = [
 
 const PRO_FEATURES = [
   "Tout le Starter inclus",
-  "Dictée vocale (devis généré en 10 sec)",
-  "IA Claude (plus de temps perdu à rédiger)",
-  "Prix suggérés (évite de se brader)",
-  "Signature certifiée eIDAS (valide dès +5 000 €)",
-  "Relances auto (plus de devis signés sans effort)",
+  "Dictée vocale (devis en 10 sec)",
+  "IA Claude (aucune rédaction manuelle)",
+  "Prix suggérés (tarifs optimisés)",
+  "Signature certifiée (gros devis sécurisés)",
+  "Relances auto (plus de devis signés)",
   "Statistiques (optimise ton taux de signature)",
-  "Score devis (sais ce qui fait signer)",
+  "Score devis (identifie ce qui convertit)",
   "Devis illimités (aucune limite de croissance)",
-  "Support prioritaire (réponse en moins de 2h)",
+  "Support prioritaire (réponse rapide)",
 ];
 
 export function Pricing() {

@@ -11,15 +11,15 @@ import {
 } from "lucide-react";
 
 const STARTER_FEATURES = [
-  "5 templates par métier (plombier, électricien, peintre, freelance, commerce)",
-  "Formulaire simplifié 5 champs",
-  "Calcul TVA automatique",
-  "Lien client unique par devis (quotely.fr/devis/...)",
-  "Signature électronique adaptative (simple ou email)",
-  "Suivi des devis (signé, en attente, refusé)",
-  "Facturation automatique après signature",
-  "Jusqu'à 30 devis/mois",
-  "Support par email",
+  "Templates prêts à l'emploi (par métier)",
+  "Devis en 30 sec (5 champs seulement)",
+  "TVA calculée automatiquement (zéro erreur)",
+  "Lien de signature envoyé en 1 clic",
+  "Signature en ligne (simple ou par email)",
+  "Suivi en temps réel (signé, en attente, refusé)",
+  "Facture générée automatiquement après signature",
+  "30 devis/mois (suffisant pour démarrer)",
+  "Support par email (réponse sous 24h)",
 ];
 
 const PRO_FEATURES = [

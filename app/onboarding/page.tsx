@@ -234,7 +234,7 @@ export default function OnboardingPage() {
       await fetch("/api/auth/complete-onboarding", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ metier, company, phone: phone.trim() || undefined }),
+        body: JSON.stringify({ metier, company, telephone: phone.trim() || undefined }),
         signal: controller.signal,
       });
     } catch {

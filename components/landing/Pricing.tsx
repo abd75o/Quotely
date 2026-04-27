@@ -11,28 +11,28 @@ import {
 } from "lucide-react";
 
 const STARTER_FEATURES = [
-  "5 templates par métier (plombier, électricien, peintre, freelance, commerce)",
-  "Formulaire simplifié 5 champs",
-  "Calcul TVA automatique",
-  "Lien client unique par devis (quotely.fr/devis/...)",
-  "Signature électronique adaptative (simple ou email)",
-  "Suivi des devis (signé, en attente, refusé)",
-  "Facturation automatique après signature",
-  "Jusqu'à 30 devis/mois",
-  "Support par email",
+  "Templates prêts à l'emploi (par métier)",
+  "Devis en 30 sec (5 champs seulement)",
+  "TVA calculée automatiquement (zéro erreur)",
+  "Lien de signature envoyé en 1 clic",
+  "Signature en ligne (simple ou par email)",
+  "Suivi en temps réel (signé, en attente, refusé)",
+  "Facture générée automatiquement après signature",
+  "30 devis/mois (suffisant pour démarrer)",
+  "Support par email (réponse sous 24h)",
 ];
 
 const PRO_FEATURES = [
   "Tout le plan Starter inclus",
-  "Dictée vocale — l'IA génère le devis",
-  "Génération de devis par Claude AI",
-  "Suggestions de prix selon le marché",
-  "Signature certifiée eIDAS (YouSign) pour +5 000 €",
-  "Relances automatiques (J+3, J+7, J+14)",
-  "Statistiques intelligentes et métriques",
-  "Score de performance des devis",
+  "Devis en 10 secondes par dictée vocale",
+  "Rédaction automatique des prestations",
+  "Tarifs du marché suggérés",
+  "Signature sécurisée pour gros chantiers",
+  "Relances automatiques (zéro oubli)",
+  "Tableau de bord (revenus en temps réel)",
+  "Score de signature (sache ce qui marche)",
   "Devis illimités",
-  "Support prioritaire + chat",
+  "Réponse support en moins d'1h",
 ];
 
 export function Pricing() {
@@ -114,7 +114,8 @@ export function Pricing() {
 
             <div className="mb-6">
               <h3 className="text-lg font-bold text-white mb-1">Pro</h3>
-              <p className="text-sm text-indigo-200">Pour maximiser votre CA avec l'IA</p>
+              <p className="text-sm text-indigo-200">Signez plus de clients, sans y passer vos soirées</p>
+              <p className="text-xs text-indigo-300 mt-1">Transformez vos devis envoyés en devis signés.</p>
             </div>
 
             <div className="mb-8">
@@ -132,7 +133,7 @@ export function Pricing() {
               className="group flex items-center justify-center gap-2 w-full py-3.5 text-center text-sm font-semibold text-[var(--primary)] bg-white hover:bg-gray-50 rounded-xl transition-colors duration-200 mb-8 shadow-lg cursor-pointer"
             >
               <Sparkles className="w-4 h-4" />
-              Démarrer avec l'IA
+              Démarrer mon essai Pro
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" />
             </Link>
 
@@ -149,6 +150,13 @@ export function Pricing() {
               <Shield className="w-4 h-4 text-emerald-300 flex-shrink-0" />
               <span className="text-xs text-indigo-200">
                 Signature certifiée eIDAS (YouSign) pour les devis &gt;5 000€
+              </span>
+            </div>
+
+            <div className="mt-4 flex items-center gap-2.5 p-3.5 bg-emerald-500/20 border border-emerald-400/30 rounded-xl">
+              <span className="text-base flex-shrink-0">💰</span>
+              <span className="text-xs font-semibold text-emerald-200">
+                +34% de devis signés en moyenne chez nos utilisateurs Pro
               </span>
             </div>
           </div>

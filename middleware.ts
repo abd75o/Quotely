@@ -44,34 +44,21 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Authenticated on dashboard → check onboarding completion
-  if (isDashboard && user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("onboarded_at")
-      .eq("id", user.id)
-      .single();
+  // Use Auth metadata (JWT) — no DB query, no latency
+  const isOnboarded = !!user?.user_metadata?.onboarded;
 
-    if (!profile?.onboarded_at) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/onboarding";
-      return NextResponse.redirect(url);
-    }
+  // Authenticated on dashboard → check onboarding completion
+  if (isDashboard && user && !isOnboarded) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/onboarding";
+    return NextResponse.redirect(url);
   }
 
   // On onboarding with completed profile → go to dashboard
-  if (isOnboarding && user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("onboarded_at")
-      .eq("id", user.id)
-      .single();
-
-    if (profile?.onboarded_at) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/dashboard/quotes";
-      return NextResponse.redirect(url);
-    }
+  if (isOnboarding && user && isOnboarded) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/dashboard/quotes";
+    return NextResponse.redirect(url);
   }
 
   return response;

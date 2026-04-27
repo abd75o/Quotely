@@ -228,19 +228,26 @@ export default function OnboardingPage() {
 
   async function handleFinish() {
     setLoading(true);
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
     try {
-      await fetch("/api/auth/complete-onboarding", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ metier, company, telephone: phone.trim() || undefined }),
-        signal: controller.signal,
-      });
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+
+      // Mark onboarded in Auth metadata — middleware reads this from JWT, no DB query needed
+      await Promise.race([
+        supabase.auth.updateUser({ data: { onboarded: true } }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 4000)),
+      ]);
+
+      // Save profile data in background — don't block redirect on this
+      supabase.from("profiles").upsert({
+        id: (await supabase.auth.getUser()).data.user?.id,
+        metier,
+        company,
+        telephone: phone.trim() || null,
+        onboarded_at: new Date().toISOString(),
+      }).then(() => {}).catch(() => {});
     } catch {
-      // timeout or network error — redirect anyway
-    } finally {
-      clearTimeout(timeout);
+      // proceed anyway
     }
     router.push("/dashboard/quotes?welcome=1");
   }

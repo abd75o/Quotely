@@ -228,16 +228,21 @@ export default function OnboardingPage() {
 
   async function handleFinish() {
     setLoading(true);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
     try {
       await fetch("/api/auth/complete-onboarding", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ metier, company, phone: phone.trim() || undefined }),
+        signal: controller.signal,
       });
-      router.push("/dashboard/quotes?welcome=1");
     } catch {
-      setLoading(false);
+      // timeout or network error — redirect anyway
+    } finally {
+      clearTimeout(timeout);
     }
+    router.push("/dashboard/quotes?welcome=1");
   }
 
   return (

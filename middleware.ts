@@ -44,8 +44,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Use Auth metadata (JWT) — no DB query, no latency
-  const isOnboarded = !!user?.user_metadata?.onboarded;
+  // Check onboarded: JWT metadata OR cookie fallback (set on onboarding completion)
+  const onboardedCookie = request.cookies.get("onboarded")?.value;
+  const isOnboarded = !!user?.user_metadata?.onboarded || onboardedCookie === "1";
 
   // Authenticated on dashboard → check onboarding completion
   if (isDashboard && user && !isOnboarded) {

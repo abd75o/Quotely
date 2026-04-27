@@ -232,23 +232,29 @@ export default function OnboardingPage() {
       const { createClient } = await import("@/lib/supabase/client");
       const supabase = createClient();
 
-      // Mark onboarded in Auth metadata — middleware reads this from JWT, no DB query needed
+      // Mark onboarded in Auth metadata (read by middleware from JWT, no DB query)
       await Promise.race([
         supabase.auth.updateUser({ data: { onboarded: true } }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 4000)),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 2000)),
       ]);
 
-      // Save profile data in background — don't block redirect on this
-      supabase.from("profiles").upsert({
-        id: (await supabase.auth.getUser()).data.user?.id,
-        metier,
-        company,
-        telephone: phone.trim() || null,
-        onboarded_at: new Date().toISOString(),
-      }).then(() => {}).catch(() => {});
+      // Save profile data in background — never blocks redirect
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        if (user) {
+          supabase.from("profiles").upsert({
+            id: user.id,
+            metier,
+            company,
+            telephone: phone.trim() || null,
+            onboarded_at: new Date().toISOString(),
+          }).catch(() => {});
+        }
+      });
     } catch {
-      // proceed anyway
+      // updateUser timed out or failed — set cookie so middleware lets us through
     }
+    // Cookie fallback: middleware reads this if user_metadata not yet propagated
+    document.cookie = "onboarded=1; path=/; max-age=31536000; SameSite=Lax";
     router.push("/dashboard/quotes?welcome=1");
   }
 

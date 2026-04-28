@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Sparkles, Save, Eye, Loader2, Mic, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { Sparkles, Save, Eye, Loader2, Mic, AlertCircle, Plus, Info, X } from "lucide-react";
 import { ClientSelector } from "./ClientSelector";
 import { LineItemsEditor, LineItem } from "./LineItemsEditor";
 import { cn } from "@/lib/utils";
@@ -50,6 +50,9 @@ export function QuoteForm() {
   const [aiText, setAiText] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiError, setAiError] = useState("");
+  const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
+  const [aiMarginNote, setAiMarginNote] = useState("");
+  const [aiClientType, setAiClientType] = useState<"particulier" | "professionnel" | null>(null);
 
   // Form state
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -71,6 +74,10 @@ export function QuoteForm() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Erreur inconnue");
       setItems(data.items);
+      if (data.tvaRate === 10 || data.tvaRate === 20) setTaxRate(data.tvaRate);
+      setAiSuggestions(data.suggestions ?? []);
+      setAiMarginNote(data.marginNote ?? "");
+      setAiClientType(data.clientType ?? null);
       setAiExpanded(false);
     } catch (err) {
       setAiError(err instanceof Error ? err.message : "Génération échouée");
@@ -78,6 +85,18 @@ export function QuoteForm() {
       setIsGenerating(false);
     }
   }, [aiText]);
+
+  function addSuggestionAsItem(suggestion: string) {
+    const newItem: LineItem = {
+      id: `sugg-${Date.now()}`,
+      description: suggestion.replace(/\s*—.*$/, "").replace(/^(Ajouter|Prévoir|Inclure)\s+/i, "").trim(),
+      quantity: 1,
+      unitPrice: 0,
+      total: 0,
+    };
+    setItems((prev) => [...prev, newItem]);
+    setAiSuggestions((prev) => prev.filter((s) => s !== suggestion));
+  }
 
   function validate(): boolean {
     const errs: Record<string, string> = {};
@@ -163,13 +182,13 @@ export function QuoteForm() {
               <h3 className="text-sm font-bold text-[var(--primary)]">Génération IA — Claude</h3>
             </div>
             <p className="text-xs text-indigo-700 mb-3">
-              Décrivez votre prestation en quelques mots. Claude va générer les lignes du devis automatiquement avec des prix cohérents.
+              Décrivez votre prestation. Claude génère les lignes, détecte le type de client et suggère la TVA adaptée.
             </p>
             <div className="relative">
               <textarea
                 value={aiText}
                 onChange={(e) => { setAiText(e.target.value); setAiError(""); }}
-                placeholder="Ex: Installation électrique complète d'un appartement de 80m², tableau 3 rangées, 20 prises, mise en conformité…"
+                placeholder="Ex: pose carrelage salle de bain 12m² pour M. Dupont, dépose ancien carrelage incluse…"
                 rows={4}
                 aria-label="Description de la prestation pour la génération IA"
                 className="w-full px-4 py-3 text-sm bg-white border border-[var(--primary)]/30 rounded-xl outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 resize-none placeholder:text-indigo-300 text-[var(--text-primary)]"
@@ -189,7 +208,7 @@ export function QuoteForm() {
               </div>
             )}
             <div className="flex items-center justify-between mt-3">
-              <p className="text-xs text-indigo-500">Modèle : claude-opus-4-5</p>
+              <p className="text-xs text-indigo-500">Tarifs 2026 · Détection client · TVA auto</p>
               <button
                 type="button"
                 onClick={generateWithAI}
@@ -200,6 +219,28 @@ export function QuoteForm() {
                 {isGenerating ? "Génération…" : "Générer les lignes"}
               </button>
             </div>
+          </div>
+        )}
+
+        {/* AI result metadata — client type + margin note */}
+        {(aiClientType || aiMarginNote) && !aiExpanded && (
+          <div className="mb-4 flex flex-wrap gap-2">
+            {aiClientType && (
+              <span className={cn(
+                "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold",
+                aiClientType === "professionnel"
+                  ? "bg-amber-50 text-amber-700 border border-amber-200"
+                  : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+              )}>
+                Client {aiClientType} · TVA {taxRate}% détectée
+              </span>
+            )}
+            {aiMarginNote && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                <Info className="w-3 h-3 flex-shrink-0" />
+                {aiMarginNote}
+              </span>
+            )}
           </div>
         )}
 
@@ -231,6 +272,38 @@ export function QuoteForm() {
                 <p className="mt-3 text-xs text-red-500 flex items-center gap-1.5">
                   <AlertCircle className="w-3.5 h-3.5" /> {errors.items}
                 </p>
+              )}
+
+              {/* AI suggestions */}
+              {aiSuggestions.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-[var(--border)]">
+                  <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-[var(--primary)]" />
+                    Prestations suggérées
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {aiSuggestions.map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => addSuggestionAsItem(s)}
+                        className="group flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[var(--primary)] bg-[var(--primary-bg)] hover:bg-indigo-100 border border-[var(--primary)]/30 hover:border-[var(--primary)] rounded-xl cursor-pointer transition-all"
+                      >
+                        <Plus className="w-3 h-3" />
+                        {s}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setAiSuggestions([])}
+                      className="flex items-center gap-1 px-2 py-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)] cursor-pointer transition-colors"
+                      aria-label="Ignorer les suggestions"
+                    >
+                      <X className="w-3 h-3" />
+                      Ignorer
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
 

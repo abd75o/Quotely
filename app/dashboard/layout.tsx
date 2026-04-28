@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
+import { ChatBotWrapper } from "@/components/ai/ChatBotWrapper";
 
 export const metadata = {
   title: "Dashboard — Quotely",
@@ -15,6 +16,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           {children}
         </div>
       </main>
+      <ChatBotWrapper />
     </div>
   );
 }

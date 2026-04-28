@@ -40,7 +40,7 @@ export async function middleware(request: NextRequest) {
   // Authenticated on auth pages → redirect to dashboard
   if (isAuthPage && user) {
     const url = request.nextUrl.clone();
-    url.pathname = "/dashboard/quotes";
+    url.pathname = "/dashboard";
     return NextResponse.redirect(url);
   }
 
@@ -58,7 +58,7 @@ export async function middleware(request: NextRequest) {
   // On onboarding with completed profile → go to dashboard
   if (isOnboarding && user && isOnboarded) {
     const url = request.nextUrl.clone();
-    url.pathname = "/dashboard/quotes";
+    url.pathname = "/dashboard";
     return NextResponse.redirect(url);
   }
 

@@ -255,7 +255,7 @@ export default function OnboardingPage() {
     }
     // Cookie fallback: middleware reads this if user_metadata not yet propagated
     document.cookie = "onboarded=1; path=/; max-age=31536000; SameSite=Lax";
-    router.push("/dashboard/quotes?welcome=1");
+    router.push("/dashboard?welcome=1");
   }
 
   return (

@@ -15,6 +15,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { Logo } from "@/components/shared/Logo";
+import { TrialBadge } from "@/components/auth/TrialBadge";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -96,6 +97,12 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
         ))}
       </nav>
 
+      {/* Trial badge */}
+      <TrialBadge
+        trialEndsAt={new Date(Date.now() + 11 * 86400_000).toISOString()}
+        plan="trial"
+      />
+
       {/* User info */}
       <div className="px-4 py-4 border-t border-[var(--border)]">
         <div className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-gray-50 cursor-pointer transition-colors group">
@@ -104,7 +111,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-[var(--text-primary)] truncate">Artisan Demo</p>
-            <p className="text-xs text-[var(--text-muted)] truncate">Plan Starter</p>
+            <p className="text-xs text-[var(--text-muted)] truncate">Essai Pro</p>
           </div>
           <LogOut className="w-3.5 h-3.5 text-[var(--text-muted)] group-hover:text-[var(--text-secondary)] flex-shrink-0" />
         </div>

@@ -18,10 +18,18 @@ export async function POST(request: Request) {
   }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const priceId = STRIPE_PRICES[plan].monthly;
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+
+  console.log("[checkout] plan:", plan);
+  console.log("[checkout] priceId:", priceId || "(empty)");
+  console.log("[checkout] STRIPE_SECRET_KEY:", secretKey
+    ? secretKey.slice(0, 7) + "..." + secretKey.slice(-4)
+    : "(not set)");
 
   try {
     const session = await createCheckoutSession({
-      priceId: STRIPE_PRICES[plan].monthly,
+      priceId,
       plan,
       userId: user.id,
       userEmail: user.email!,
@@ -30,8 +38,16 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ url: session.url });
-  } catch (err) {
-    console.error("Stripe checkout error:", err);
+  } catch (err: unknown) {
+    if (err && typeof err === "object") {
+      const e = err as Record<string, unknown>;
+      console.error("[checkout] Stripe error type:", e.type);
+      console.error("[checkout] Stripe error code:", e.code);
+      console.error("[checkout] Stripe error message:", e.message);
+      console.error("[checkout] Stripe error raw:", JSON.stringify(e, null, 2));
+    } else {
+      console.error("[checkout] Unknown error:", err);
+    }
     return NextResponse.json({ error: "Stripe error" }, { status: 500 });
   }
 }

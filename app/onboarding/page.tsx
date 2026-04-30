@@ -256,7 +256,7 @@ export default function OnboardingPage() {
 
     // Cookie de secours si le JWT n'est pas encore propagé
     document.cookie = "onboarded=1; path=/; max-age=31536000; SameSite=Lax";
-    router.push("/dashboard/quotes?welcome=1");
+    window.location.href = "/dashboard";
   }
 
   return (

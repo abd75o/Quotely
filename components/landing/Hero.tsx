@@ -266,7 +266,7 @@ export function Hero() {
             {/* CTAs */}
             <div className="flex flex-col sm:flex-row gap-3 animate-fade-in-up [animation-delay:0.5s] opacity-0 [animation-fill-mode:forwards]">
               <Link
-                href="/signup"
+                href="/inscription"
                 className="group inline-flex items-center justify-center gap-2 px-6 py-3.5 text-base font-semibold text-white bg-[var(--primary)] hover:bg-[var(--primary-dark)] rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 cursor-pointer glow-primary"
               >
                 Essai gratuit 14 jours

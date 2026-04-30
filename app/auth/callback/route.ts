@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
   const next = searchParams.get("next") ?? "/dashboard";
 
   if (!code) {
-    return NextResponse.redirect(`${origin}/login?error=missing_code`);
+    return NextResponse.redirect(`${origin}/connexion?error=missing_code`);
   }
 
   const response = NextResponse.redirect(`${origin}${next}`);
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
   const { data: { user }, error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error || !user) {
-    return NextResponse.redirect(`${origin}/login?error=auth_failed`);
+    return NextResponse.redirect(`${origin}/connexion?error=auth_failed`);
   }
 
   // Ensure profile exists (upsert — DB trigger also handles this for new users)

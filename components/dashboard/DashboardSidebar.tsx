@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   FileText,
   Users,
@@ -19,11 +19,59 @@ import { LogoutButton } from "@/components/dashboard/LogoutButton";
 import { cn } from "@/lib/utils";
 
 const NAV = [
-  { label: "Devis", icon: FileText, href: "/dashboard/quotes" },
-  { label: "Clients", icon: Users, href: "/dashboard/clients" },
+  { label: "Devis",        icon: FileText,  href: "/dashboard/quotes" },
+  { label: "Clients",      icon: Users,     href: "/dashboard/clients" },
   { label: "Statistiques", icon: BarChart2, href: "/dashboard/stats" },
-  { label: "Paramètres", icon: Settings, href: "/dashboard/settings" },
+  { label: "Paramètres",   icon: Settings,  href: "/dashboard/settings" },
 ];
+
+interface SidebarData {
+  email: string;
+  initials: string;
+  company: string;
+  plan: string;
+  trialEndsAt: string | null;
+}
+
+function useSidebarData(): SidebarData {
+  const [data, setData] = useState<SidebarData>({
+    email: "",
+    initials: "?",
+    company: "",
+    plan: "trial",
+    trialEndsAt: null,
+  });
+
+  useEffect(() => {
+    import("@/lib/supabase/client").then(({ createClient }) => {
+      const supabase = createClient();
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        if (!user) return;
+        const email = user.email ?? "";
+        const initials = email.slice(0, 2).toUpperCase();
+        setData((prev) => ({ ...prev, email, initials }));
+
+        supabase
+          .from("profiles")
+          .select("plan, trial_ends_at, company")
+          .eq("id", user.id)
+          .single()
+          .then(({ data: profile }) => {
+            if (!profile) return;
+            setData({
+              email,
+              initials: (profile.company ?? email).slice(0, 2).toUpperCase(),
+              company: profile.company ?? "",
+              plan: profile.plan ?? "trial",
+              trialEndsAt: profile.trial_ends_at ?? null,
+            });
+          });
+      });
+    });
+  }, []);
+
+  return data;
+}
 
 function NavItem({
   item,
@@ -45,7 +93,14 @@ function NavItem({
           : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-gray-100"
       )}
     >
-      <item.icon className={cn("w-4.5 h-4.5 flex-shrink-0", active ? "text-[var(--primary)]" : "text-[var(--text-muted)] group-hover:text-[var(--text-secondary)]")} />
+      <item.icon
+        className={cn(
+          "w-4 h-4 flex-shrink-0",
+          active
+            ? "text-[var(--primary)]"
+            : "text-[var(--text-muted)] group-hover:text-[var(--text-secondary)]"
+        )}
+      />
       {item.label}
       {active && <ChevronRight className="w-3 h-3 ml-auto text-[var(--primary)]" />}
     </Link>
@@ -54,6 +109,16 @@ function NavItem({
 
 function SidebarContent({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { email, initials, company, plan, trialEndsAt } = useSidebarData();
+
+  async function handleLogout() {
+    const { createClient } = await import("@/lib/supabase/client");
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    document.cookie = "onboarded=; path=/; max-age=0";
+    router.push("/connexion");
+  }
 
   return (
     <div className="flex flex-col h-full">
@@ -97,11 +162,8 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
         ))}
       </nav>
 
-      {/* Trial badge */}
-      <TrialBadge
-        trialEndsAt={new Date(Date.now() + 11 * 86400_000).toISOString()}
-        plan="trial"
-      />
+      {/* Trial badge (données réelles) */}
+      <TrialBadge trialEndsAt={trialEndsAt} plan={plan} />
 
       {/* Bottom: logout */}
       <div className="px-3 py-3 border-t border-[var(--border)]">
@@ -145,7 +207,7 @@ export function DashboardSidebar() {
         </div>
       </header>
 
-      {/* Mobile drawer overlay */}
+      {/* Mobile drawer */}
       {mobileOpen && (
         <div className="lg:hidden fixed inset-0 z-50 flex">
           <div

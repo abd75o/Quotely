@@ -1,17 +1,21 @@
 import Stripe from "stripe";
 
-// Stripe client — server-side only
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2026-03-25.dahlia",
-});
+// Lazy singleton — not instantiated at module load so the build never throws
+// when STRIPE_SECRET_KEY is absent from the build environment.
+let _stripe: Stripe | null = null;
 
-// ─── Price IDs (set via environment variables after Stripe setup) ─────────────
+export function getStripe(): Stripe {
+  if (!_stripe) {
+    _stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+  }
+  return _stripe;
+}
+
 export const STRIPE_PRICES = {
-  starter: { monthly: process.env.STRIPE_STARTER_MONTHLY_PRICE_ID! }, // 25€/mois
-  pro:     { monthly: process.env.STRIPE_PRO_MONTHLY_PRICE_ID! },     // 49€/mois
+  starter: { monthly: process.env.STRIPE_STARTER_MONTHLY_PRICE_ID! },
+  pro:     { monthly: process.env.STRIPE_PRO_MONTHLY_PRICE_ID! },
 } as const;
 
-// ─── Amount helpers (in euro cents) ──────────────────────────────────────────
 export const PLAN_AMOUNTS = {
   starter: { monthly: 2500 },
   pro:     { monthly: 4900 },
@@ -22,30 +26,30 @@ export const PLAN_NAMES = {
   pro:     "Quotely Pro",
 } as const;
 
-// ─── Create a checkout session ────────────────────────────────────────────────
 export async function createCheckoutSession({
   priceId,
+  plan,
   userId,
   userEmail,
   successUrl,
   cancelUrl,
 }: {
   priceId: string;
+  plan: "starter" | "pro";
   userId: string;
   userEmail: string;
   successUrl: string;
   cancelUrl: string;
 }) {
-  return stripe.checkout.sessions.create({
+  return getStripe().checkout.sessions.create({
     mode: "subscription",
-    payment_method_types: ["card"],
+    payment_method_types: ["card", "paypal"],
     customer_email: userEmail,
     line_items: [{ price: priceId, quantity: 1 }],
     subscription_data: {
-      trial_period_days: 14,
-      metadata: { userId },
+      metadata: { userId, plan },
     },
-    metadata: { userId },
+    metadata: { userId, plan },
     success_url: successUrl,
     cancel_url: cancelUrl,
     allow_promotion_codes: true,
@@ -53,8 +57,8 @@ export async function createCheckoutSession({
   });
 }
 
-// ─── Create Stripe products & prices (run once during setup) ─────────────────
 export async function bootstrapStripeProducts() {
+  const stripe = getStripe();
   const results: Record<string, string> = {};
 
   const plans = [

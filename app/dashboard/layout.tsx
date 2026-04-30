@@ -17,9 +17,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <LogoutButton variant="full" />
         </div>
         <div className="flex-1 px-4 lg:px-8 py-6 lg:py-8">
+          <TrialBanner />
           {children}
         </div>
       </main>
+      <ChatBotWrapper />
     </div>
   );
 }

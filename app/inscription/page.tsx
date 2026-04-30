@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -24,6 +24,12 @@ export default function InscriptionPage() {
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
+  const [plan, setPlan] = useState("");
+
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search).get("plan") ?? "";
+    if (p === "starter" || p === "pro") setPlan(p);
+  }, []);
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
@@ -34,14 +40,15 @@ export default function InscriptionPage() {
     try {
       const { createClient } = await import("@/lib/supabase/client");
       const supabase = createClient();
+      const callbackUrl = `${window.location.origin}/auth/callback${plan ? `?plan=${plan}` : ""}`;
       const { data, error: sbError } = await supabase.auth.signUp({
         email: email.trim(),
         password,
-        options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+        options: { emailRedirectTo: callbackUrl },
       });
       if (sbError) throw sbError;
       if (data.session) {
-        router.push("/onboarding");
+        router.push(plan ? `/onboarding?plan=${plan}` : "/onboarding");
       } else {
         setSent(true);
       }

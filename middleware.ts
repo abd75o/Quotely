@@ -26,19 +26,26 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   const { pathname } = request.nextUrl;
 
-  const isDashboard = pathname.startsWith("/dashboard");
+  const isDashboard  = pathname.startsWith("/dashboard");
   const isOnboarding = pathname.startsWith("/onboarding");
-  const isAuthPage = pathname.startsWith("/login") || pathname.startsWith("/signup");
+  const isTarifs     = pathname.startsWith("/tarifs");
+  const isPaiement   = pathname.startsWith("/paiement");
+  const isAuthPage   =
+    pathname === "/login" ||
+    pathname === "/signup" ||
+    pathname === "/connexion" ||
+    pathname === "/inscription";
 
-  // Not authenticated → redirect to login
+  // ── 1. Non authentifié sur page protégée → /connexion ────────────────────
   if ((isDashboard || isOnboarding) && !user) {
     const url = request.nextUrl.clone();
-    url.pathname = "/login";
+    url.pathname = "/connexion";
     return NextResponse.redirect(url);
   }
 
-  // Authenticated on auth pages → redirect to dashboard
+  // ── 2. Authentifié sur page auth → paiement si plan présent, sinon dashboard
   if (isAuthPage && user) {
+    const plan = request.nextUrl.searchParams.get("plan");
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
@@ -62,6 +69,10 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // ── 4. /tarifs et /paiement : accessibles sans auth (rien à faire) ────────
+  void isTarifs;
+  void isPaiement;
+
   return response;
 }
 
@@ -71,5 +82,7 @@ export const config = {
     "/onboarding/:path*",
     "/login",
     "/signup",
+    "/connexion",
+    "/inscription",
   ],
 };

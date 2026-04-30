@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -21,6 +21,12 @@ export default function ConnexionPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [plan, setPlan] = useState("");
+
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search).get("plan") ?? "";
+    if (p === "starter" || p === "pro") setPlan(p);
+  }, []);
 
   async function handleSignin(e: React.FormEvent) {
     e.preventDefault();
@@ -44,9 +50,9 @@ export default function ConnexionPage() {
         .single();
 
       if (!profile?.onboarded_at) {
-        router.push("/onboarding");
+        router.push(plan ? `/onboarding?plan=${plan}` : "/onboarding");
       } else {
-        router.push("/dashboard/quotes");
+        router.push(plan ? `/paiement?plan=${plan}` : "/dashboard/quotes");
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "";

@@ -22,7 +22,7 @@ export default async function PaiementPage({
     redirect(`/connexion?plan=${plan}`);
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL!;
   const priceId = STRIPE_PRICES[plan].monthly;
   const secretKey = process.env.STRIPE_SECRET_KEY;
 
@@ -32,7 +32,7 @@ export default async function PaiementPage({
   console.log("[paiement] STRIPE_SECRET_KEY:", secretKey
     ? secretKey.slice(0, 7) + "..." + secretKey.slice(-4)
     : "(not set)");
-  console.log("[paiement] appUrl:", appUrl);
+  console.log("[paiement] NEXT_PUBLIC_APP_URL:", appUrl || "(not set)");
   console.log("[paiement] userId:", user.id);
 
   let session;
@@ -42,7 +42,7 @@ export default async function PaiementPage({
       plan,
       userId: user.id,
       userEmail: user.email!,
-      successUrl: `${appUrl}/paiement/succes?plan=${plan}`,
+      successUrl: `${appUrl}/dashboard?success=true`,
       cancelUrl: `${appUrl}/tarifs`,
     });
   } catch (err: unknown) {

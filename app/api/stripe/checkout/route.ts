@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL!;
   const priceId = STRIPE_PRICES[plan].monthly;
   const secretKey = process.env.STRIPE_SECRET_KEY;
 
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
       plan,
       userId: user.id,
       userEmail: user.email!,
-      successUrl: `${appUrl}/paiement/succes?plan=${plan}`,
+      successUrl: `${appUrl}/dashboard?success=true`,
       cancelUrl: `${appUrl}/tarifs`,
     });
 

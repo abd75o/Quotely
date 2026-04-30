@@ -28,6 +28,8 @@ export async function middleware(request: NextRequest) {
 
   const isDashboard  = pathname.startsWith("/dashboard");
   const isOnboarding = pathname.startsWith("/onboarding");
+  const isTarifs     = pathname.startsWith("/tarifs");
+  const isPaiement   = pathname.startsWith("/paiement");
   const isAuthPage   =
     pathname === "/login" ||
     pathname === "/signup" ||
@@ -48,7 +50,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // ── 3. Vérification onboarding (dashboard ou onboarding) ─────────────────
+  // ── 3. Vérification onboarding + trial (dashboard ou onboarding) ──────────
   if ((isDashboard || isOnboarding) && user) {
     // Source 1 : cookie posé immédiatement par la page onboarding (le plus rapide)
     const cookieOk = request.cookies.get("onboarded")?.value === "1";
@@ -56,15 +58,22 @@ export async function middleware(request: NextRequest) {
     const jwtOk = !!user.user_metadata?.onboarded;
 
     let isOnboarded = cookieOk || jwtOk;
+    let plan: string | null = null;
+    let trialEndsAt: string | null = null;
 
-    // Source 3 : DB — seulement si les deux premiers échouent
-    if (!isOnboarded) {
+    // Source 3 : DB — seulement si les deux premiers échouent (ou pour le trial check)
+    if (!isOnboarded || isDashboard) {
       const { data: profile } = await supabase
         .from("profiles")
-        .select("onboarded_at")
+        .select("onboarded_at, plan, trial_ends_at")
         .eq("id", user.id)
         .single();
-      isOnboarded = !!profile?.onboarded_at;
+
+      if (!isOnboarded) {
+        isOnboarded = !!profile?.onboarded_at;
+      }
+      plan = profile?.plan ?? null;
+      trialEndsAt = profile?.trial_ends_at ?? null;
     }
 
     // Dashboard sans onboarding → /onboarding
@@ -80,7 +89,21 @@ export async function middleware(request: NextRequest) {
       url.pathname = "/dashboard/quotes";
       return NextResponse.redirect(url);
     }
+
+    // Trial expiré → /tarifs (seulement pour les pages dashboard)
+    if (isDashboard && plan === "trial" && trialEndsAt) {
+      const expired = new Date(trialEndsAt) < new Date();
+      if (expired) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/tarifs";
+        return NextResponse.redirect(url);
+      }
+    }
   }
+
+  // ── 4. /tarifs et /paiement : accessibles sans auth (rien à faire) ────────
+  void isTarifs;
+  void isPaiement;
 
   return response;
 }

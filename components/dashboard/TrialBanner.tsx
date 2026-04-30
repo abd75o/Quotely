@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Sparkles, X, ArrowRight } from "lucide-react";
+import { Sparkles, X, ArrowRight, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function TrialBanner() {
@@ -10,7 +10,6 @@ export function TrialBanner() {
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    // Persist dismissal for the session
     if (sessionStorage.getItem("trial-banner-dismissed") === "1") {
       setDismissed(true);
       return;
@@ -48,9 +47,36 @@ export function TrialBanner() {
     setDismissed(true);
   }
 
+  // Trial expired — full-screen blocking overlay
+  if (daysLeft === 0) {
+    return (
+      <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="bg-white rounded-3xl p-8 max-w-md w-full text-center shadow-2xl">
+          <div className="w-16 h-16 bg-amber-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
+            <AlertTriangle className="w-8 h-8 text-amber-600" />
+          </div>
+          <h2 className="text-xl font-bold text-[var(--text-primary)] mb-2">
+            Votre essai est terminé
+          </h2>
+          <p className="text-sm text-[var(--text-secondary)] mb-6 leading-relaxed">
+            Choisissez un plan pour continuer à utiliser Quotely et ne pas perdre vos devis.
+          </p>
+          <Link
+            href="/tarifs"
+            className="flex items-center justify-center gap-2 w-full py-3.5 bg-[var(--primary)] hover:bg-[var(--primary-dark)] text-white text-sm font-bold rounded-xl transition-colors cursor-pointer shadow-lg"
+          >
+            <Sparkles className="w-4 h-4" />
+            Choisir un plan
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   if (dismissed || daysLeft === null) return null;
 
-  const urgent = daysLeft <= 3;
+  const urgent = daysLeft <= 2;
 
   return (
     <div
@@ -61,7 +87,6 @@ export function TrialBanner() {
           : "bg-gradient-to-r from-[var(--primary)] to-indigo-600"
       )}
     >
-      {/* Subtle shine */}
       <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent pointer-events-none" />
 
       <div
@@ -70,12 +95,15 @@ export function TrialBanner() {
           urgent ? "bg-white/20" : "bg-white/15"
         )}
       >
-        <Sparkles className="w-4.5 h-4.5 text-white" />
+        {urgent
+          ? <AlertTriangle className="w-4.5 h-4.5 text-white" />
+          : <Sparkles className="w-4.5 h-4.5 text-white" />
+        }
       </div>
 
       <p className="flex-1 text-sm font-semibold text-white min-w-0">
         {urgent
-          ? `⚠️ Plus que ${daysLeft} jour${daysLeft > 1 ? "s" : ""} d'essai — passez au Pro pour ne pas perdre vos devis.`
+          ? `⚠️ Plus que ${daysLeft} jour${daysLeft > 1 ? "s" : ""} ! Passez au Pro pour ne pas perdre vos devis.`
           : `Il vous reste ${daysLeft} jour${daysLeft > 1 ? "s" : ""} d'essai gratuit.`}
       </p>
 

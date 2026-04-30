@@ -5,9 +5,10 @@ export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
   const code = searchParams.get("code");
   const next = searchParams.get("next") ?? "/dashboard/quotes";
+  const plan = searchParams.get("plan"); // preserved through email confirmation flow
 
   if (!code) {
-    return NextResponse.redirect(`${origin}/login?error=missing_code`);
+    return NextResponse.redirect(`${origin}/connexion?error=missing_code`);
   }
 
   const response = NextResponse.redirect(`${origin}${next}`);
@@ -32,7 +33,7 @@ export async function GET(request: NextRequest) {
   const { data: { user }, error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error || !user) {
-    return NextResponse.redirect(`${origin}/login?error=auth_failed`);
+    return NextResponse.redirect(`${origin}/connexion?error=auth_failed`);
   }
 
   // Check if profile exists
@@ -42,6 +43,10 @@ export async function GET(request: NextRequest) {
     .eq("id", user.id)
     .single();
 
+  const onboardingDest = (plan === "starter" || plan === "pro")
+    ? `/onboarding?plan=${plan}`
+    : "/onboarding";
+
   if (!profile) {
     // New user — create profile with trial
     const trialEndsAt = new Date(Date.now() + 14 * 86400_000).toISOString();
@@ -50,15 +55,16 @@ export async function GET(request: NextRequest) {
       plan: "trial",
       trial_ends_at: trialEndsAt,
     });
-
-    // Redirect to onboarding
-    const onboardingUrl = new URL("/onboarding", origin);
-    return NextResponse.redirect(onboardingUrl, { headers: response.headers });
+    return NextResponse.redirect(new URL(onboardingDest, origin), { headers: response.headers });
   }
 
   if (!profile.onboarded_at) {
-    const onboardingUrl = new URL("/onboarding", origin);
-    return NextResponse.redirect(onboardingUrl, { headers: response.headers });
+    return NextResponse.redirect(new URL(onboardingDest, origin), { headers: response.headers });
+  }
+
+  // Existing onboarded user — go to paiement if plan is set, else dashboard
+  if (plan === "starter" || plan === "pro") {
+    return NextResponse.redirect(new URL(`/paiement?plan=${plan}`, origin), { headers: response.headers });
   }
 
   return response;

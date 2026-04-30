@@ -43,10 +43,17 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // ── 2. Authentifié sur page auth → dashboard ──────────────────────────────
+  // ── 2. Authentifié sur page auth → paiement si plan présent, sinon dashboard
   if (isAuthPage && user) {
+    const plan = request.nextUrl.searchParams.get("plan");
     const url = request.nextUrl.clone();
-    url.pathname = "/dashboard/quotes";
+    if (plan === "starter" || plan === "pro") {
+      url.pathname = "/paiement";
+      url.search = `?plan=${plan}`;
+    } else {
+      url.pathname = "/dashboard/quotes";
+      url.search = "";
+    }
     return NextResponse.redirect(url);
   }
 

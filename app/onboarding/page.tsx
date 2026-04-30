@@ -256,7 +256,12 @@ export default function OnboardingPage() {
 
     // Cookie de secours si le JWT n'est pas encore propagé
     document.cookie = "onboarded=1; path=/; max-age=31536000; SameSite=Lax";
-    window.location.href = "/dashboard";
+
+    // Si un plan a été choisi avant l'inscription, aller directement au paiement
+    const p = new URLSearchParams(window.location.search).get("plan");
+    window.location.href = (p === "starter" || p === "pro")
+      ? `/paiement?plan=${p}`
+      : "/dashboard?welcome=1";
   }
 
   return (

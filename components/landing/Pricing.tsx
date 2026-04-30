@@ -79,7 +79,7 @@ export function Pricing() {
             </div>
 
             <Link
-              href="/signup?plan=starter"
+              href="/inscription?plan=starter"
               className="block w-full py-3.5 text-center text-sm font-semibold text-[var(--primary)] bg-[var(--primary-bg)] hover:bg-indigo-100 rounded-xl transition-colors duration-200 mb-8 cursor-pointer"
             >
               Commencer gratuitement
@@ -129,7 +129,7 @@ export function Pricing() {
             </div>
 
             <Link
-              href="/signup?plan=pro"
+              href="/inscription?plan=pro"
               className="group flex items-center justify-center gap-2 w-full py-3.5 text-center text-sm font-semibold text-[var(--primary)] bg-white hover:bg-gray-50 rounded-xl transition-colors duration-200 mb-8 shadow-lg cursor-pointer"
             >
               <Sparkles className="w-4 h-4" />

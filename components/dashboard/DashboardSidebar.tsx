@@ -165,9 +165,26 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
       {/* Trial badge (données réelles) */}
       <TrialBadge trialEndsAt={trialEndsAt} plan={plan} />
 
-      {/* Bottom: logout */}
-      <div className="px-3 py-3 border-t border-[var(--border)]">
-        <LogoutButton variant="full" className="w-full" />
+      {/* User info + logout */}
+      <div className="px-4 py-4 border-t border-[var(--border)]">
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="flex items-center gap-3 w-full p-2.5 rounded-xl hover:bg-gray-50 cursor-pointer transition-colors group text-left"
+        >
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--primary)] to-purple-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+            {initials}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-[var(--text-primary)] truncate">
+              {company || email || "Mon compte"}
+            </p>
+            <p className="text-xs text-[var(--text-muted)] truncate">
+              {plan === "trial" ? "Essai Pro" : plan === "starter" ? "Starter" : "Pro"}
+            </p>
+          </div>
+          <LogOut className="w-3.5 h-3.5 text-[var(--text-muted)] group-hover:text-red-500 flex-shrink-0 transition-colors" />
+        </button>
       </div>
     </div>
   );

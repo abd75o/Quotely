@@ -47,27 +47,70 @@ export async function middleware(request: NextRequest) {
   if (isAuthPage && user) {
     const plan = request.nextUrl.searchParams.get("plan");
     const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
+    if (plan === "starter" || plan === "pro") {
+      url.pathname = "/paiement";
+      url.search = `?plan=${plan}`;
+    } else {
+      url.pathname = "/dashboard/quotes";
+      url.search = "";
+    }
     return NextResponse.redirect(url);
   }
 
-  // Check onboarded: JWT metadata OR cookie fallback (set on onboarding completion)
-  const onboardedCookie = request.cookies.get("onboarded")?.value;
-  const isOnboarded = !!user?.user_metadata?.onboarded || onboardedCookie === "1";
+  // ── 3. Vérification onboarding + trial (dashboard ou onboarding) ──────────
+  if ((isDashboard || isOnboarding) && user) {
+    // Source 1 : cookie posé immédiatement par la page onboarding (le plus rapide)
+    const cookieOk = request.cookies.get("onboarded")?.value === "1";
+    // Source 2 : metadata JWT (mis à jour par updateUser, propagé sans DB)
+    const jwtOk = !!user.user_metadata?.onboarded;
 
-  // Authenticated on dashboard → check onboarding completion
-  if (isDashboard && user && !isOnboarded) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/onboarding";
-    return NextResponse.redirect(url);
+    let isOnboarded = cookieOk || jwtOk;
+    let plan: string | null = null;
+    let trialEndsAt: string | null = null;
+
+    // Source 3 : DB — seulement si les deux premiers échouent (ou pour le trial check)
+    if (!isOnboarded || isDashboard) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("onboarded_at, plan, trial_ends_at")
+        .eq("id", user.id)
+        .single();
+
+      if (!isOnboarded) {
+        isOnboarded = !!profile?.onboarded_at;
+      }
+      plan = profile?.plan ?? null;
+      trialEndsAt = profile?.trial_ends_at ?? null;
+    }
+
+    // Dashboard sans onboarding → /onboarding
+    if (isDashboard && !isOnboarded) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/onboarding";
+      return NextResponse.redirect(url);
+    }
+
+    // Onboarding déjà fait → dashboard
+    if (isOnboarding && isOnboarded) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/dashboard/quotes";
+      return NextResponse.redirect(url);
+    }
+
+    // Trial expiré → /tarifs (seulement pour les pages dashboard)
+    if (isDashboard && plan === "trial" && trialEndsAt) {
+      const expired = new Date(trialEndsAt) < new Date();
+      if (expired) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/tarifs";
+        return NextResponse.redirect(url);
+      }
+    }
   }
 
-  // On onboarding with completed profile → go to dashboard
-  if (isOnboarding && user && isOnboarded) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
-    return NextResponse.redirect(url);
-  }
+  // ── 4. /tarifs et /paiement : accessibles sans auth (rien à faire) ────────
+  void isTarifs;
+  void isPaiement;
 
   // ── 4. /tarifs et /paiement : accessibles sans auth (rien à faire) ────────
   void isTarifs;

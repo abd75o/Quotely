@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
-import { LogoutButton } from "@/components/dashboard/LogoutButton";
+import { TrialBanner } from "@/components/dashboard/TrialBanner";
+import { ChatBotWrapper } from "@/components/ai/ChatBotWrapper";
 
 export const metadata = {
   title: "Dashboard — Quotely",

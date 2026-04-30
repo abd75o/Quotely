@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
         id: user.id,
         metier: body.metier,
         company: body.company,
-        telephone: body.phone,
+        telephone: body.telephone,
         onboarded_at: new Date().toISOString(),
         reminder_scheduled: true,
       });

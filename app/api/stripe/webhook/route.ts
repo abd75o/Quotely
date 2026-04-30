@@ -1,12 +1,12 @@
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
-import { stripe } from "@/lib/stripe";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { getStripe } from "@/lib/stripe";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type Stripe from "stripe";
 
-// Raw body is required for Stripe signature verification.
-// Next.js App Router reads it correctly via request.text().
 export async function POST(request: Request) {
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET ?? "";
+
   const body = await request.text();
   const headersList = await headers();
   const sig = headersList.get("stripe-signature");
@@ -17,13 +17,9 @@ export async function POST(request: Request) {
 
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(
-      body,
-      sig,
-      process.env.STRIPE_WEBHOOK_SECRET!
-    );
+    event = getStripe().webhooks.constructEvent(body, sig, webhookSecret);
   } catch (err) {
-    console.error("Stripe webhook signature error:", err);
+    console.error("Stripe webhook error:", err);
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
@@ -37,7 +33,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing metadata" }, { status: 400 });
     }
 
-    const { error } = await supabaseAdmin
+    const { error } = await getSupabaseAdmin()
       .from("profiles")
       .update({
         plan,
@@ -60,7 +56,7 @@ export async function POST(request: Request) {
     const userId = subscription.metadata?.userId;
 
     if (userId) {
-      await supabaseAdmin
+      await getSupabaseAdmin()
         .from("profiles")
         .update({ plan: "trial", trial_ends_at: null })
         .eq("id", userId);

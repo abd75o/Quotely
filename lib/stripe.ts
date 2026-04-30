@@ -1,6 +1,15 @@
 import Stripe from "stripe";
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+// Lazy singleton — not instantiated at module load so the build never throws
+// when STRIPE_SECRET_KEY is absent from the build environment.
+let _stripe: Stripe | null = null;
+
+export function getStripe(): Stripe {
+  if (!_stripe) {
+    _stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+  }
+  return _stripe;
+}
 
 export const STRIPE_PRICES = {
   starter: { monthly: process.env.STRIPE_STARTER_MONTHLY_PRICE_ID! },
@@ -32,7 +41,7 @@ export async function createCheckoutSession({
   successUrl: string;
   cancelUrl: string;
 }) {
-  return stripe.checkout.sessions.create({
+  return getStripe().checkout.sessions.create({
     mode: "subscription",
     payment_method_types: ["card"],
     customer_email: userEmail,
@@ -49,6 +58,7 @@ export async function createCheckoutSession({
 }
 
 export async function bootstrapStripeProducts() {
+  const stripe = getStripe();
   const results: Record<string, string> = {};
 
   const plans = [

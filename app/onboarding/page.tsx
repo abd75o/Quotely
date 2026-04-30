@@ -229,15 +229,34 @@ export default function OnboardingPage() {
   async function handleFinish() {
     setLoading(true);
     try {
-      await fetch("/api/auth/complete-onboarding", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ metier, company, phone: phone.trim() || undefined }),
-      });
-      router.push("/dashboard/quotes?welcome=1");
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (user) {
+        // Marquer onboardé dans le JWT (lu par le middleware sans requête DB)
+        await Promise.race([
+          supabase.auth.updateUser({ data: { onboarded: true } }),
+          new Promise((_, reject) => setTimeout(() => reject(), 2000)),
+        ]).catch(() => {});
+
+        // Sauvegarder le profil directement (fire and forget)
+        void supabase.from("profiles").upsert({
+          id: user.id,
+          metier,
+          company,
+          telephone: phone.trim() || null,
+          onboarded_at: new Date().toISOString(),
+        });
+      }
     } catch {
-      setLoading(false);
+      // En cas d'échec on laisse passer — le cookie suffit pour le middleware
     }
+
+    // Cookie de secours si le JWT n'est pas encore propagé
+    document.cookie = "onboarded=1; path=/; max-age=31536000; SameSite=Lax";
+    router.push("/dashboard/quotes?welcome=1");
   }
 
   return (

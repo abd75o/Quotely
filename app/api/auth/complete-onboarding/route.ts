@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 
 export async function POST(request: NextRequest) {
-  let body: { metier?: string; company?: string; phone?: string };
+  let body: { metier?: string; company?: string; telephone?: string };
   try {
     body = await request.json();
   } catch {
@@ -21,16 +21,12 @@ export async function POST(request: NextRequest) {
         id: user.id,
         metier: body.metier,
         company: body.company,
-        telephone: body.phone,
+        telephone: body.telephone,
         onboarded_at: new Date().toISOString(),
+        reminder_scheduled: true,
       });
 
     if (error) throw error;
-
-    // Schedule J+12 reminder (store in db, actual sending via cron/webhook)
-    await supabase.from("profiles").update({
-      reminder_scheduled: true,
-    }).eq("id", user.id);
 
     return Response.json({ success: true });
   } catch (err) {

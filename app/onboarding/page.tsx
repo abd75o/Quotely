@@ -232,36 +232,30 @@ export default function OnboardingPage() {
       const { createClient } = await import("@/lib/supabase/client");
       const supabase = createClient();
 
-      const { data: { user } } = await supabase.auth.getUser();
+      // Mark onboarded in Auth metadata (read by middleware from JWT, no DB query)
+      await Promise.race([
+        supabase.auth.updateUser({ data: { onboarded: true } }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 2000)),
+      ]);
 
-      if (user) {
-        // Marquer onboardé dans le JWT (lu par le middleware sans requête DB)
-        await Promise.race([
-          supabase.auth.updateUser({ data: { onboarded: true } }),
-          new Promise((_, reject) => setTimeout(() => reject(), 2000)),
-        ]).catch(() => {});
-
-        // Sauvegarder le profil directement (fire and forget)
-        void supabase.from("profiles").upsert({
-          id: user.id,
-          metier,
-          company,
-          telephone: phone.trim() || null,
-          onboarded_at: new Date().toISOString(),
-        });
-      }
+      // Save profile data in background — never blocks redirect
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        if (user) {
+          supabase.from("profiles").upsert({
+            id: user.id,
+            metier,
+            company,
+            telephone: phone.trim() || null,
+            onboarded_at: new Date().toISOString(),
+          }).catch(() => {});
+        }
+      });
     } catch {
-      // En cas d'échec on laisse passer — le cookie suffit pour le middleware
+      // updateUser timed out or failed — set cookie so middleware lets us through
     }
-
-    // Cookie de secours si le JWT n'est pas encore propagé
+    // Cookie fallback: middleware reads this if user_metadata not yet propagated
     document.cookie = "onboarded=1; path=/; max-age=31536000; SameSite=Lax";
-
-    // Si un plan a été choisi avant l'inscription, aller directement au paiement
-    const p = new URLSearchParams(window.location.search).get("plan");
-    window.location.href = (p === "starter" || p === "pro")
-      ? `/paiement?plan=${p}`
-      : "/dashboard?welcome=1";
+    router.push("/dashboard?welcome=1");
   }
 
   return (

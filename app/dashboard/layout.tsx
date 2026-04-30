@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
-import { TrialBanner } from "@/components/dashboard/TrialBanner";
+
 import { ChatBotWrapper } from "@/components/ai/ChatBotWrapper";
 import { LogoutButton } from "@/components/dashboard/LogoutButton";
 export const metadata = {

@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
         id: user.id,
         metier: body.metier,
         company: body.company,
-        phone: body.phone,
+        telephone: body.phone,
         onboarded_at: new Date().toISOString(),
       });
 

@@ -26,14 +26,18 @@ export function TrialBanner() {
           .eq("id", user.id)
           .single()
           .then(({ data }) => {
-            if (!data || data.plan !== "trial" || !data.trial_ends_at) return;
-            const days = Math.max(
-              0,
-              Math.ceil(
-                (new Date(data.trial_ends_at).getTime() - Date.now()) / 86400_000
-              )
-            );
-            if (days > 0) setDaysLeft(days);
+            if (!data || data.plan !== "trial") return;
+            if (data.trial_ends_at) {
+              const days = Math.max(
+                0,
+                Math.ceil(
+                  (new Date(data.trial_ends_at).getTime() - Date.now()) / 86400_000
+                )
+              );
+              setDaysLeft(days);
+            } else {
+              setDaysLeft(14);
+            }
           });
       });
     });
@@ -76,7 +80,7 @@ export function TrialBanner() {
       </p>
 
       <Link
-        href="/dashboard/settings/billing"
+        href="/tarifs"
         className={cn(
           "flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold flex-shrink-0 transition-colors cursor-pointer",
           urgent

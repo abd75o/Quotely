@@ -43,7 +43,7 @@ export async function createCheckoutSession({
 }) {
   return getStripe().checkout.sessions.create({
     mode: "subscription",
-    payment_method_types: ["card"],
+    payment_method_types: ["card", "paypal"],
     customer_email: userEmail,
     line_items: [{ price: priceId, quantity: 1 }],
     subscription_data: {

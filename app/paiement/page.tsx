@@ -43,7 +43,7 @@ export default async function PaiementPage({
       userId: user.id,
       userEmail: user.email!,
       successUrl: `${appUrl}/dashboard?success=true`,
-      cancelUrl: `${appUrl}/tarifs`,
+      cancelUrl: `${appUrl}/tarifs?cancelled=true`,
     });
   } catch (err: unknown) {
     // Log the full Stripe error before redirecting

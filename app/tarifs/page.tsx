@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Check, Zap, Star, ArrowRight, Sparkles, Shield, AlertTriangle } from "lucide-react";
+import { Check, Zap, Star, ArrowRight, Sparkles, Shield, AlertTriangle, XCircle } from "lucide-react";
 import { Logo } from "@/components/shared/Logo";
 import { createClient } from "@/lib/supabase/server";
 
@@ -34,7 +34,13 @@ const PRO_FEATURES = [
   "Support prioritaire — réponse sous 1h",
 ];
 
-export default async function TarifsPage() {
+export default async function TarifsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ cancelled?: string; error?: string }>;
+}) {
+  const { cancelled, error } = await searchParams;
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -78,9 +84,25 @@ export default async function TarifsPage() {
 
       <main className="flex-1 py-16 px-4 sm:px-6">
         <div className="max-w-5xl mx-auto">
-          {/* Trial expired notice */}
+
+          {/* Paiement annulé ou refusé */}
+          {(cancelled === "true" || error === "stripe") && (
+            <div className="flex items-start gap-3 px-5 py-4 bg-red-50 border border-red-200 rounded-2xl mb-8 max-w-2xl mx-auto">
+              <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-bold text-red-700">
+                  Votre paiement n'a pas abouti
+                </p>
+                <p className="text-sm text-red-600 mt-0.5">
+                  Réessayez ou choisissez un autre moyen de paiement.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Essai expiré */}
           {isTrialExpired && (
-            <div className="flex items-center gap-3 px-5 py-4 bg-amber-50 border border-amber-200 rounded-2xl mb-10 max-w-2xl mx-auto">
+            <div className="flex items-center gap-3 px-5 py-4 bg-amber-50 border border-amber-200 rounded-2xl mb-8 max-w-2xl mx-auto">
               <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0" />
               <p className="text-sm font-semibold text-amber-800">
                 Votre essai gratuit est terminé — choisissez un plan pour continuer à utiliser Quotely.

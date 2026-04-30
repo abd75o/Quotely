@@ -34,7 +34,7 @@ export async function POST(request: Request) {
       userId: user.id,
       userEmail: user.email!,
       successUrl: `${appUrl}/dashboard?success=true`,
-      cancelUrl: `${appUrl}/tarifs`,
+      cancelUrl: `${appUrl}/tarifs?cancelled=true`,
     });
 
     return NextResponse.json({ url: session.url });

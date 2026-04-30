@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
+import { TrialBanner } from "@/components/dashboard/TrialBanner";
 import { ChatBotWrapper } from "@/components/ai/ChatBotWrapper";
 
 export const metadata = {
@@ -13,6 +14,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       <DashboardSidebar />
       <main className="flex-1 min-w-0 flex flex-col">
         <div className="flex-1 px-4 lg:px-8 py-6 lg:py-8">
+          <TrialBanner />
           {children}
         </div>
       </main>

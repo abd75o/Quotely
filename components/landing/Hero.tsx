@@ -5,15 +5,15 @@ import { Logo } from "@/components/shared/Logo";
 
 export function Hero() {
   return (
-    <section className="relative isolate overflow-hidden bg-gradient-to-br from-white via-white to-[var(--primary-bg)] pt-28 pb-20 md:pt-36 md:pb-32">
+    <section className="relative isolate overflow-hidden bg-gradient-to-br from-white via-white to-[var(--primary-bg)] pt-28 pb-12 md:pt-36 md:pb-20">
       {/* Decorative shapes — XL+ only, ne s'affichent pas sur mobile */}
       <div
         aria-hidden
-        className="hidden xl:block absolute top-0 right-0 w-[36rem] h-[36rem] -translate-y-1/3 translate-x-1/3 rounded-full bg-gradient-to-br from-[var(--primary-bg)] to-transparent opacity-70 blur-2xl pointer-events-none -z-10"
+        className="hidden xl:block absolute top-0 right-0 w-[44rem] h-[44rem] -translate-y-1/3 translate-x-1/3 rounded-full bg-[var(--primary-bg)] opacity-30 blur-3xl pointer-events-none -z-10"
       />
       <div
         aria-hidden
-        className="hidden xl:block absolute bottom-0 left-0 w-[24rem] h-[24rem] -translate-x-1/3 translate-y-1/3 rounded-3xl bg-[var(--accent-warm-bg)] opacity-50 blur-2xl pointer-events-none -z-10"
+        className="hidden xl:block absolute bottom-0 left-0 w-[28rem] h-[28rem] -translate-x-1/3 translate-y-1/3 rounded-3xl bg-[var(--accent-warm-bg)] opacity-35 blur-3xl pointer-events-none -z-10"
       />
 
       <div className="relative max-w-[1600px] mx-auto px-6 lg:px-8">
@@ -54,7 +54,7 @@ export function Hero() {
 
 function PhoneMockup() {
   return (
-    <div className="relative w-full max-w-[300px] sm:max-w-[340px]">
+    <div className="relative w-full max-w-[300px] sm:max-w-[340px] lg:max-w-[400px] xl:max-w-[460px]">
       <div className="bg-[var(--text-primary)] rounded-[2.5rem] p-2.5 shadow-[0_20px_60px_-15px_rgba(99,102,241,0.25)]">
         <div className="bg-[var(--bg-secondary)] rounded-[2rem] overflow-hidden">
           {/* Status bar */}

@@ -136,7 +136,7 @@ export function HowItWorks() {
             <article className="relative h-full p-8 bg-white rounded-2xl border border-[var(--border)] shadow-sm transition-all duration-200 hover:shadow-[var(--shadow-card-hover)] hover:-translate-y-0.5 hover:border-[var(--primary)]/40 overflow-hidden">
               <span
                 aria-hidden
-                className="absolute -top-2 -right-1 font-display text-[100px] font-bold leading-none bg-gradient-to-br from-[var(--primary)] to-[var(--accent-warm)] bg-clip-text text-transparent opacity-50 select-none pointer-events-none"
+                className="absolute -top-4 -right-2 font-display text-[100px] md:text-[160px] font-bold leading-none bg-gradient-to-br from-[var(--primary)] via-[#8B5CF6] to-[var(--accent-warm)] bg-clip-text text-transparent opacity-65 select-none pointer-events-none"
               >
                 {step.number}
               </span>

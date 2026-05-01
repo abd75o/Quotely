@@ -76,7 +76,9 @@ export function Pricing() {
           <ul className="space-y-3 flex-1">
             {STARTER_FEATURES.map((feature) => (
               <li key={feature} className="flex items-start gap-3">
-                <Check className="w-4 h-4 text-[var(--emerald-dark)] flex-shrink-0 mt-0.5" />
+                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[var(--emerald-bg)] flex items-center justify-center mt-0.5">
+                  <Check className="w-3 h-3 text-[var(--emerald-dark)]" strokeWidth={3} />
+                </span>
                 <span className="text-sm text-[var(--text-secondary)] leading-relaxed">
                   {feature}
                 </span>
@@ -135,7 +137,9 @@ export function Pricing() {
           <ul className="space-y-3 flex-1">
             {PRO_FEATURES.map((feature) => (
               <li key={feature} className="flex items-start gap-3">
-                <Check className="w-4 h-4 text-[var(--emerald-dark)] flex-shrink-0 mt-0.5" />
+                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[var(--emerald-bg)] flex items-center justify-center mt-0.5">
+                  <Check className="w-3 h-3 text-[var(--emerald-dark)]" strokeWidth={3} />
+                </span>
                 <span className="text-sm text-[var(--text-secondary)] leading-relaxed">
                   {feature}
                 </span>

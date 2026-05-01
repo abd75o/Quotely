@@ -37,7 +37,7 @@ export function Section({
     <section
       id={id}
       className={cn(
-        "relative isolate overflow-hidden py-20 md:py-32",
+        "relative isolate overflow-hidden py-16 md:py-24",
         variants[variant],
         className
       )}

@@ -31,7 +31,7 @@ export function Reassurance() {
     <Section
       variant="primary"
       size="wide"
-      className="bg-gradient-to-br from-[var(--primary)] to-[#8B5CF6]"
+      className="bg-gradient-to-br from-[var(--primary)] to-[#8B5CF6] py-12 md:py-20"
       decoration={
         <div
           aria-hidden

@@ -100,7 +100,7 @@ export function FAQ() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   return (
-    <section id="faq" className="py-20 md:py-32 bg-[var(--bg-secondary)]">
+    <section id="faq" className="py-16 md:py-24 bg-[var(--bg-secondary)]">
       <div className="max-w-3xl mx-auto px-6 lg:px-8">
         <div className="text-center mb-12">
           <h2 className="font-display text-[32px] md:text-[40px] font-bold leading-[1.15] tracking-tight text-[var(--text-primary)]">

@@ -12,8 +12,8 @@ interface HighlightProps {
 }
 
 const variants: Record<Variant, { bg: string; text: string }> = {
-  primary: { bg: "bg-[var(--primary-bg)]", text: "text-[var(--primary-dark)]" },
-  warm: { bg: "bg-[var(--accent-warm-bg)]", text: "text-[var(--accent-warm-dark)]" },
+  primary: { bg: "bg-[#DDE3FF]", text: "text-[var(--primary-dark)]" },
+  warm: { bg: "bg-[#FDE68A]", text: "text-[#92400E]" },
   light: { bg: "bg-white/15", text: "text-white" },
 };
 

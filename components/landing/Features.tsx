@@ -104,7 +104,7 @@ function FeatureRow({
             {title}
           </h4>
           {showProBadge && (
-            <span className="px-2 py-0.5 text-[10px] font-bold text-white bg-gradient-to-r from-[var(--primary)] to-[#8B5CF6] rounded-full uppercase tracking-wider">
+            <span className="px-2 py-0.5 text-[10px] font-bold text-white bg-gradient-to-r from-[var(--primary)] to-[#8B5CF6] rounded-full uppercase tracking-wider shadow-sm">
               Pro
             </span>
           )}
@@ -117,7 +117,7 @@ function FeatureRow({
 
 export function Features() {
   return (
-    <Section variant="default" id="features">
+    <Section variant="default" id="features" className="pt-8 md:pt-12">
       <Reveal className="text-center max-w-2xl mx-auto mb-16">
         <h2 className="font-display text-[32px] md:text-[40px] font-bold leading-[1.15] tracking-tight text-[var(--text-primary)]">
           Tout ce qu’il vous faut. Rien de plus.

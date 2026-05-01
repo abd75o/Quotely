@@ -129,7 +129,7 @@ const STEPS = [
 
 export function HowItWorks() {
   return (
-    <section className="py-24 bg-[var(--surface)] relative overflow-hidden">
+    <section id="comment-ca-marche" className="py-24 bg-[var(--surface)] relative overflow-hidden">
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[var(--border)] to-transparent" />
       <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[var(--border)] to-transparent" />
 

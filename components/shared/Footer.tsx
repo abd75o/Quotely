@@ -45,7 +45,7 @@ export function Footer() {
               <Logo variant="horizontal" size={32} inverted />
             </Link>
             <p className="text-sm text-gray-300 leading-relaxed mb-6 max-w-xs">
-              Le devis qui part avant que vous quittiez le chantier.
+              Le devis qui part avant que vous passiez à autre chose.
             </p>
             <a
               href="mailto:hello@quotely.fr"

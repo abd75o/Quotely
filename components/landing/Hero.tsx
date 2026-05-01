@@ -11,11 +11,11 @@ export function Hero() {
           <div className="lg:col-span-7 animate-fade-in-up">
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-[1.1] tracking-tight text-[var(--text-primary)]">
               Pendant que vous écrivez,{" "}
-              <span className="text-[var(--primary)]">il signe ailleurs.</span>
+              <span className="text-[var(--primary)]">ils signent ailleurs.</span>
             </h1>
 
             <p className="mt-6 text-lg sm:text-xl leading-relaxed text-[var(--text-secondary)] max-w-xl">
-              Quotely, le devis qui part avant que vous quittiez le chantier.
+              Quotely, le devis qui part avant que vous passiez à autre chose.
               Le client signe sur place, sur son téléphone.
             </p>
 
@@ -24,7 +24,7 @@ export function Hero() {
                 href="/inscription"
                 className="group inline-flex items-center justify-center gap-2 px-6 py-4 min-h-[52px] text-base font-semibold text-white bg-[var(--primary)] hover:bg-[var(--primary-dark)] rounded-xl shadow-md hover:shadow-lg transition-colors duration-200 cursor-pointer"
               >
-                Sécuriser mes chantiers
+                Sécuriser mon activité
                 <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
               </Link>
 

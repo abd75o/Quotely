@@ -17,7 +17,7 @@ export function CTA() {
         </h2>
 
         <p className="mt-6 text-lg sm:text-xl text-[var(--text-secondary)] leading-relaxed max-w-xl mx-auto">
-          Créez votre compte. Testez sur un vrai chantier. Décidez ensuite.
+          Créez votre compte. Testez sur un cas réel. Décidez ensuite.
         </p>
 
         <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">

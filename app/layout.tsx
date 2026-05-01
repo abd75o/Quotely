@@ -9,9 +9,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Quotely — Le devis signé depuis le chantier",
+  title: "Quotely — Le devis signé où que vous soyez",
   description:
-    "Quotely permet aux artisans, freelances et consultants de signer leurs devis depuis le chantier. Signature électronique conforme eIDAS, suivi en temps réel, facturation après signature.",
+    "Quotely permet aux artisans, freelances, commerçants et consultants de signer leurs devis sur le terrain. Signature électronique conforme eIDAS, suivi en temps réel, facturation après signature.",
   keywords: "devis, facture, artisan, freelance, signature électronique, devis en ligne",
   icons: {
     icon: [
@@ -21,8 +21,8 @@ export const metadata: Metadata = {
     apple: "/icon.svg",
   },
   openGraph: {
-    title: "Quotely — Le devis signé depuis le chantier",
-    description: "Le devis qui part avant que vous quittiez le chantier.",
+    title: "Quotely — Le devis signé où que vous soyez",
+    description: "Le devis qui part avant que vous passiez à autre chose.",
     type: "website",
   },
 };

@@ -64,7 +64,7 @@ const FEATURES_PRO: Feature[] = [
     icon: Mic,
     title: "Dictée vocale",
     description:
-      "Parlez sur le chantier. Le devis se rédige pendant que vous travaillez.",
+      "Parlez sur le terrain. Le devis se rédige pendant que vous travaillez.",
   },
   {
     icon: Edit3,

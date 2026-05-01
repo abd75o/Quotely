@@ -18,7 +18,7 @@ const PRO_FEATURES = [
   "Devis créé en quelques secondes par dictée vocale",
   "Rédaction guidée des prestations",
   "Tarifs du marché suggérés",
-  "Signature certifiée pour les chantiers conséquents",
+  "Signature certifiée pour les missions importantes",
   "Relances automatiques (J+3, J+7, J+14)",
   "Tableau de bord (revenus en temps réel)",
   "Score de signature",

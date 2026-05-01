@@ -59,7 +59,7 @@ function PhoneMockup() {
           </div>
 
           {/* Notification */}
-          <div className="mx-3 mt-2 mb-3 p-3 bg-white rounded-2xl shadow-sm border border-[var(--border-light)]">
+          <div className="mx-3 mt-2 mb-3 p-3 bg-white rounded-2xl shadow-sm border border-[var(--border-light)] animate-notification-drop">
             <div className="flex items-start gap-2.5">
               <Logo variant="icon" size={32} />
               <div className="flex-1 min-w-0">
@@ -87,7 +87,7 @@ function PhoneMockup() {
                 <p className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">
                   Devis #042
                 </p>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-[10px] font-semibold text-[var(--emerald-dark)]">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-[10px] font-semibold text-[var(--emerald-dark)] animate-soft-pulse">
                   <CheckCircle2 className="w-3 h-3" />
                   Signé
                 </span>

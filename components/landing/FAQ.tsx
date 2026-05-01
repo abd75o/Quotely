@@ -40,6 +40,11 @@ const FAQS = [
     answer:
       "Oui, à n’importe quel moment, sans justification. Un seul clic dans vos paramètres. Aucun engagement, aucun frais caché.",
   },
+  {
+    question: "Comment Quotely arrive à rédiger un devis aussi vite ?",
+    answer:
+      "Quotely s’appuie sur des modèles de langage avancés pour transformer votre description en devis structuré, avec les bonnes formulations et le bon calcul de TVA. Vous gardez toujours la main : relisez, ajustez, validez avant l’envoi. Vos données ne servent jamais à entraîner les modèles — elles restent privées et hébergées en France.",
+  },
 ];
 
 function FAQItem({

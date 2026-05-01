@@ -111,7 +111,10 @@ export function Footer() {
         </div>
 
         {/* Bottom */}
-        <div className="pt-6 border-t border-white/10">
+        <div className="pt-6 border-t border-white/10 space-y-2">
+          <p className="text-xs text-gray-600 text-center sm:text-left">
+            Quotely utilise des modèles de langage supervisés. Vos données restent privées.
+          </p>
           <p className="text-xs text-gray-500 text-center sm:text-left">
             © 2026 Quotely. Fait en France. Paiements sécurisés par Stripe.
           </p>

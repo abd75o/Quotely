@@ -1,30 +1,32 @@
-import Link from "next/link";
-import { Quote, ArrowRight } from "lucide-react";
+import { Quote } from "lucide-react";
+import { Section } from "@/components/ui/Section";
+import { Button } from "@/components/ui/Button";
+import { Reveal } from "@/components/ui/Reveal";
 
 export function Testimonials() {
   return (
-    <section id="testimonials" className="py-24 bg-[var(--surface)]">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white border border-[var(--border-light)] shadow-sm mb-8">
-          <Quote className="w-7 h-7 text-[var(--primary)]" />
-        </div>
+    <Section variant="default" id="testimonials">
+      <Reveal className="relative max-w-2xl mx-auto text-center">
+        <Quote
+          aria-hidden
+          className="absolute -top-8 left-1/2 -translate-x-1/2 w-32 h-32 text-[var(--bg-tertiary)] -z-10"
+          fill="currentColor"
+        />
 
-        <h2 className="text-3xl sm:text-4xl font-extrabold text-[var(--text-primary)] tracking-tight">
+        <h2 className="relative font-display text-[32px] md:text-[40px] font-bold leading-[1.15] tracking-tight text-[var(--text-primary)]">
           Premiers retours, bientôt.
         </h2>
-        <p className="mt-4 text-lg text-[var(--text-secondary)] leading-relaxed max-w-xl mx-auto">
+        <p className="relative mt-4 text-lg text-[var(--text-secondary)] leading-relaxed">
           Quotely vient de sortir. Les premiers professionnels qui le testent
           partageront leur expérience ici, dès qu’elle sera vécue.
         </p>
 
-        <Link
-          href="/inscription"
-          className="group inline-flex items-center gap-2 mt-8 px-5 py-3 min-h-[44px] text-sm font-semibold text-[var(--primary)] hover:text-[var(--primary-dark)] underline underline-offset-4 decoration-[var(--primary)]/30 hover:decoration-[var(--primary)] transition-colors duration-200 cursor-pointer"
-        >
-          Devenir l’un des premiers
-          <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
-        </Link>
-      </div>
-    </section>
+        <div className="relative mt-8">
+          <Button href="/inscription" variant="secondary" icon>
+            Devenir l’un des premiers
+          </Button>
+        </div>
+      </Reveal>
+    </Section>
   );
 }

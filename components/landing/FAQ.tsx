@@ -56,23 +56,23 @@ function FAQItem({
   return (
     <div
       className={cn(
-        "border border-[var(--border)] rounded-xl overflow-hidden transition-all duration-200",
+        "bg-white rounded-xl border transition-all duration-200 overflow-hidden",
         isOpen
-          ? "shadow-sm border-[var(--primary)]/20"
-          : "hover:border-[var(--primary)]/20"
+          ? "border-[var(--primary)]/30 shadow-sm"
+          : "border-[var(--border)] hover:border-[var(--primary)]/30"
       )}
     >
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between gap-4 p-5 min-h-[56px] text-left cursor-pointer bg-white hover:bg-gray-50/60 transition-colors duration-150"
+        className="w-full flex items-center justify-between gap-4 p-5 min-h-[60px] text-left cursor-pointer transition-colors duration-150 hover:bg-[var(--bg-secondary)]/50"
         aria-expanded={isOpen}
       >
-        <span className="text-sm font-semibold text-[var(--text-primary)] leading-snug">
+        <span className="text-base font-semibold text-[var(--text-primary)] leading-snug">
           {question}
         </span>
         <ChevronDown
           className={cn(
-            "w-4 h-4 text-[var(--text-muted)] flex-shrink-0 transition-transform duration-200",
+            "w-4 h-4 text-[var(--text-muted)] flex-shrink-0 transition-transform duration-300",
             isOpen && "rotate-180"
           )}
         />
@@ -83,7 +83,7 @@ function FAQItem({
           isOpen ? "max-h-96" : "max-h-0"
         )}
       >
-        <p className="px-5 pb-5 text-sm text-[var(--text-secondary)] leading-relaxed bg-white">
+        <p className="px-5 pb-5 text-base text-[var(--text-secondary)] leading-relaxed">
           {answer}
         </p>
       </div>
@@ -95,10 +95,10 @@ export function FAQ() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   return (
-    <section id="faq" className="py-24 bg-white">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-2xl mx-auto mb-12">
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-[var(--text-primary)] tracking-tight">
+    <section id="faq" className="py-20 md:py-32 bg-[var(--bg-secondary)]">
+      <div className="max-w-3xl mx-auto px-6 lg:px-8">
+        <div className="text-center mb-12">
+          <h2 className="font-display text-[32px] md:text-[40px] font-bold leading-[1.15] tracking-tight text-[var(--text-primary)]">
             Vos questions, nos réponses.
           </h2>
           <p className="mt-4 text-lg text-[var(--text-secondary)] leading-relaxed">

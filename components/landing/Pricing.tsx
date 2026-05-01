@@ -1,5 +1,8 @@
-import Link from "next/link";
-import { Check, Star, ArrowRight, Shield } from "lucide-react";
+import { Check, Star, Shield } from "lucide-react";
+import { Section } from "@/components/ui/Section";
+import { Highlight } from "@/components/ui/Highlight";
+import { Button } from "@/components/ui/Button";
+import { Reveal } from "@/components/ui/Reveal";
 
 const STARTER_FEATURES = [
   "Modèles prêts à l’emploi par métier",
@@ -28,120 +31,133 @@ const PRO_FEATURES = [
 
 export function Pricing() {
   return (
-    <section id="pricing" className="py-24 bg-white relative">
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-2xl mx-auto mb-12">
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-[var(--text-primary)] tracking-tight">
-            Un prix simple. Aucun engagement.
-          </h2>
-          <p className="mt-4 text-lg text-[var(--text-secondary)] leading-relaxed">
-            14 jours offerts. Sans carte bancaire. Résiliable en un clic.
-          </p>
-        </div>
+    <Section variant="alt" id="pricing">
+      <Reveal className="text-center max-w-2xl mx-auto mb-16">
+        <h2 className="font-display text-[32px] md:text-[40px] font-bold leading-[1.15] tracking-tight text-[var(--text-primary)]">
+          Un prix simple. Aucun engagement.
+        </h2>
+        <p className="mt-4 text-lg text-[var(--text-secondary)] leading-relaxed">
+          <Highlight variant="warm">14 jours offerts</Highlight>. Sans carte bancaire. Résiliable en un clic.
+        </p>
+      </Reveal>
 
-        <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-          {/* Starter */}
-          <div className="relative flex flex-col p-8 bg-white rounded-3xl border-2 border-[var(--border)] hover:border-[var(--primary)]/40 hover:shadow-lg transition-all duration-200">
-            <div className="mb-6">
-              <h3 className="text-lg font-bold text-[var(--text-primary)] mb-1">Starter</h3>
-              <p className="text-sm text-[var(--text-secondary)]">
-                Pour démarrer et gérer votre activité.
-              </p>
-            </div>
+      <div className="grid md:grid-cols-2 gap-6 lg:gap-8 max-w-5xl mx-auto items-stretch">
+        {/* Starter */}
+        <Reveal className="flex flex-col p-8 bg-white rounded-2xl border border-[var(--border)] shadow-sm transition-all duration-200 hover:shadow-[var(--shadow-card-hover)] hover:-translate-y-0.5">
+          <div className="mb-6">
+            <p className="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)] mb-2">
+              Starter
+            </p>
+            <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
+              Pour démarrer et gérer votre activité.
+            </p>
+          </div>
 
-            <div className="mb-8">
-              <div className="flex items-end gap-2">
-                <span className="text-5xl font-black text-[var(--text-primary)]">25 €</span>
-                <span className="text-[var(--text-muted)] mb-2 font-medium">/mois</span>
-              </div>
-              <p className="text-xs text-[var(--text-muted)] mt-1.5 font-medium">
-                Soit moins de 0,85 € par jour.
-              </p>
-            </div>
-
-            <Link
-              href="/inscription?plan=starter"
-              className="flex items-center justify-center gap-2 w-full min-h-[52px] py-3.5 text-sm font-semibold text-[var(--primary)] bg-[var(--primary-bg)] hover:bg-indigo-100 rounded-xl transition-colors duration-200 mb-8 cursor-pointer"
-            >
-              Commencer gratuitement
-            </Link>
-
-            <ul className="space-y-3 flex-1">
-              {STARTER_FEATURES.map((feature) => (
-                <li key={feature} className="flex items-start gap-3">
-                  <Check className="w-4 h-4 text-[var(--emerald)] flex-shrink-0 mt-0.5" />
-                  <span className="text-sm text-[var(--text-secondary)] leading-relaxed">
-                    {feature}
-                  </span>
-                </li>
-              ))}
-            </ul>
-
-            <div className="mt-6 flex items-start gap-2 p-3 bg-[var(--surface)] rounded-xl">
-              <Shield className="w-4 h-4 text-[var(--text-muted)] flex-shrink-0 mt-0.5" />
-              <span className="text-xs text-[var(--text-muted)] leading-relaxed">
-                Signature simple jusqu’à 1 500 €. Email confirmé jusqu’à 5 000 €.
+          <div className="mb-8">
+            <div className="flex items-end gap-2">
+              <span className="font-display text-5xl font-bold text-[var(--text-primary)]">
+                25 €
               </span>
+              <span className="text-[var(--text-muted)] mb-2 font-medium">/mois</span>
             </div>
+            <p className="text-xs text-[var(--text-muted)] mt-2 font-medium">
+              Soit moins de 0,85 € par jour.
+            </p>
           </div>
 
-          {/* Pro */}
-          <div className="relative flex flex-col p-8 bg-gradient-to-br from-[var(--primary)] via-indigo-600 to-purple-700 rounded-3xl shadow-xl overflow-hidden">
-            <div className="absolute top-6 right-6 flex items-center gap-1.5 px-3 py-1.5 bg-white/15 backdrop-blur-sm rounded-full">
-              <Star className="w-3 h-3 text-yellow-300" fill="currentColor" />
-              <span className="text-xs font-bold text-white">Populaire</span>
-            </div>
+          <Button
+            href="/inscription?plan=starter"
+            variant="secondary"
+            className="w-full mb-8"
+          >
+            Commencer gratuitement
+          </Button>
 
-            <div className="mb-6">
-              <h3 className="text-lg font-bold text-white mb-1">Pro</h3>
-              <p className="text-sm text-indigo-100">
-                Signez plus de clients sans y passer vos soirées.
-              </p>
-            </div>
+          <ul className="space-y-3 flex-1">
+            {STARTER_FEATURES.map((feature) => (
+              <li key={feature} className="flex items-start gap-3">
+                <Check className="w-4 h-4 text-[var(--emerald-dark)] flex-shrink-0 mt-0.5" />
+                <span className="text-sm text-[var(--text-secondary)] leading-relaxed">
+                  {feature}
+                </span>
+              </li>
+            ))}
+          </ul>
 
-            <div className="mb-8">
-              <div className="flex items-end gap-2">
-                <span className="text-5xl font-black text-white">49 €</span>
-                <span className="text-indigo-200 mb-2 font-medium">/mois</span>
-              </div>
-              <p className="text-xs text-indigo-200 mt-1.5 font-medium">
-                Soit moins de 1,65 € par jour.
-              </p>
-            </div>
+          <div className="mt-6 flex items-start gap-2 p-3 bg-[var(--bg-secondary)] rounded-xl">
+            <Shield className="w-4 h-4 text-[var(--text-muted)] flex-shrink-0 mt-0.5" />
+            <span className="text-xs text-[var(--text-muted)] leading-relaxed">
+              Signature simple jusqu’à 1 500 €. Email confirmé jusqu’à 5 000 €.
+            </span>
+          </div>
+        </Reveal>
 
-            <Link
-              href="/inscription?plan=pro"
-              className="group flex items-center justify-center gap-2 w-full min-h-[52px] py-3.5 text-sm font-semibold text-[var(--primary)] bg-white hover:bg-gray-50 rounded-xl transition-colors duration-200 mb-8 shadow-md cursor-pointer"
-            >
-              Démarrer mon essai Pro
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" />
-            </Link>
+        {/* Pro */}
+        <Reveal
+          delay={0.1}
+          className="relative flex flex-col p-8 bg-white rounded-2xl border-2 border-[var(--primary)] shadow-xl transition-all duration-200 hover:shadow-2xl hover:-translate-y-0.5"
+        >
+          <span className="absolute -top-3 right-8 inline-flex items-center gap-1.5 px-3 py-1 bg-[var(--primary)] text-white text-xs font-bold rounded-full shadow-md">
+            <Star className="w-3 h-3" fill="currentColor" />
+            Populaire
+          </span>
 
-            <ul className="space-y-3 flex-1">
-              {PRO_FEATURES.map((feature) => (
-                <li key={feature} className="flex items-start gap-3">
-                  <Check className="w-4 h-4 text-emerald-300 flex-shrink-0 mt-0.5" />
-                  <span className="text-sm text-indigo-50 leading-relaxed">{feature}</span>
-                </li>
-              ))}
-            </ul>
+          <div className="mb-6">
+            <p className="text-xs font-bold uppercase tracking-widest text-[var(--primary)] mb-2">
+              Pro
+            </p>
+            <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
+              Signez plus de clients sans y passer vos soirées.
+            </p>
+          </div>
 
-            <div className="mt-6 flex items-start gap-2 p-3 bg-white/10 rounded-xl">
-              <Shield className="w-4 h-4 text-emerald-300 flex-shrink-0 mt-0.5" />
-              <span className="text-xs text-indigo-100 leading-relaxed">
-                Signature certifiée eIDAS pour devis &gt; 5 000 €.
+          <div className="mb-8">
+            <div className="flex items-end gap-2">
+              <span className="font-display text-5xl font-bold text-[var(--text-primary)]">
+                49 €
               </span>
+              <span className="text-[var(--text-muted)] mb-2 font-medium">/mois</span>
             </div>
+            <p className="text-xs text-[var(--text-muted)] mt-2 font-medium">
+              Soit moins de 1,65 € par jour.
+            </p>
           </div>
-        </div>
 
-        <div className="mt-12 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-sm text-[var(--text-secondary)]">
-            <Shield className="w-4 h-4 text-[var(--text-muted)]" />
-            14 jours d’essai gratuit · Sans carte bancaire · Résiliable en un clic
+          <Button
+            href="/inscription?plan=pro"
+            variant="primary"
+            icon
+            className="w-full mb-8"
+          >
+            Démarrer mon essai Pro
+          </Button>
+
+          <ul className="space-y-3 flex-1">
+            {PRO_FEATURES.map((feature) => (
+              <li key={feature} className="flex items-start gap-3">
+                <Check className="w-4 h-4 text-[var(--emerald-dark)] flex-shrink-0 mt-0.5" />
+                <span className="text-sm text-[var(--text-secondary)] leading-relaxed">
+                  {feature}
+                </span>
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-6 flex items-start gap-2 p-3 bg-[var(--primary-bg)] rounded-xl">
+            <Shield className="w-4 h-4 text-[var(--primary)] flex-shrink-0 mt-0.5" />
+            <span className="text-xs text-[var(--primary-dark)] leading-relaxed">
+              Signature certifiée eIDAS pour devis &gt; 5 000 €.
+            </span>
           </div>
-        </div>
+        </Reveal>
       </div>
-    </section>
+
+      <Reveal className="mt-12 text-center" delay={0.2}>
+        <div className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-[var(--border)] rounded-full text-sm text-[var(--text-secondary)]">
+          <Shield className="w-4 h-4 text-[var(--text-muted)]" />
+          14 jours d’essai gratuit · Sans carte bancaire · Résiliable en un clic
+        </div>
+      </Reveal>
+    </Section>
   );
 }

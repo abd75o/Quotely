@@ -1,45 +1,40 @@
-import Link from "next/link";
-import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { Highlight } from "@/components/ui/Highlight";
 import { Logo } from "@/components/shared/Logo";
 
 export function Hero() {
   return (
-    <section className="relative bg-[var(--background)] overflow-hidden pt-24 pb-16 sm:pt-32 sm:pb-24 lg:pt-32 lg:pb-32">
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section className="relative overflow-hidden bg-gradient-to-b from-[var(--bg-primary)] to-[var(--bg-secondary)] pt-28 pb-20 md:pt-36 md:pb-32">
+      <div className="relative max-w-7xl mx-auto px-6 lg:px-8">
         <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 items-center">
           {/* Copy */}
           <div className="lg:col-span-7 animate-fade-in-up">
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-[1.1] tracking-tight text-[var(--text-primary)]">
+            <h1 className="font-display text-[40px] md:text-[56px] font-bold leading-[1.05] tracking-tight text-[var(--text-primary)]">
               Pendant que vous écrivez,{" "}
-              <span className="text-[var(--primary)]">ils signent ailleurs.</span>
+              <Highlight variant="primary">ils signent ailleurs</Highlight>.
             </h1>
 
-            <p className="mt-6 text-lg sm:text-xl leading-relaxed text-[var(--text-secondary)] max-w-xl">
+            <p className="mt-6 text-lg md:text-xl leading-relaxed text-[var(--text-secondary)] max-w-xl">
               Quotely, le devis qui part avant que vous passiez à autre chose.
               Le client signe sur place, sur son téléphone.
             </p>
 
-            <div className="mt-8 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
-              <Link
-                href="/inscription"
-                className="group inline-flex items-center justify-center gap-2 px-6 py-4 min-h-[52px] text-base font-semibold text-white bg-[var(--primary)] hover:bg-[var(--primary-dark)] rounded-xl shadow-md hover:shadow-lg transition-colors duration-200 cursor-pointer"
-              >
+            <div className="mt-10 flex flex-col sm:flex-row sm:items-center gap-4">
+              <Button href="/inscription" variant="primary" icon>
                 Sécuriser mon activité
-                <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
-              </Link>
-
-              <Link
-                href="#comment-ca-marche"
-                className="inline-flex items-center justify-center px-2 py-3 min-h-[44px] text-base font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] underline underline-offset-4 decoration-gray-300 hover:decoration-gray-500 transition-colors duration-200 cursor-pointer"
-              >
+              </Button>
+              <Button href="#comment-ca-marche" variant="secondary">
                 Voir comment ça marche
-              </Link>
+              </Button>
             </div>
           </div>
 
           {/* Phone mockup */}
           <div className="lg:col-span-5 flex justify-center lg:justify-end animate-fade-in-up">
-            <PhoneMockup />
+            <div className="animate-float">
+              <PhoneMockup />
+            </div>
           </div>
         </div>
       </div>
@@ -50,8 +45,8 @@ export function Hero() {
 function PhoneMockup() {
   return (
     <div className="relative w-full max-w-[300px] sm:max-w-[340px]">
-      <div className="relative bg-[var(--text-primary)] rounded-[2.5rem] p-2.5 shadow-xl">
-        <div className="bg-[var(--surface)] rounded-[2rem] overflow-hidden">
+      <div className="bg-[var(--text-primary)] rounded-[2.5rem] p-2.5 shadow-xl">
+        <div className="bg-[var(--bg-secondary)] rounded-[2rem] overflow-hidden">
           {/* Status bar */}
           <div className="flex items-center justify-between px-6 pt-3 pb-2 text-[11px] font-semibold text-[var(--text-primary)]">
             <span>14:32</span>
@@ -59,7 +54,7 @@ function PhoneMockup() {
           </div>
 
           {/* Notification */}
-          <div className="mx-3 mt-2 mb-3 p-3 bg-white rounded-2xl shadow-sm border border-[var(--border-light)] animate-notification-drop">
+          <div className="mx-3 mt-2 mb-3 p-3 bg-white rounded-2xl shadow-sm border border-[var(--border-light)]">
             <div className="flex items-start gap-2.5">
               <Logo variant="icon" size={32} />
               <div className="flex-1 min-w-0">
@@ -87,7 +82,7 @@ function PhoneMockup() {
                 <p className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">
                   Devis #042
                 </p>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-[10px] font-semibold text-[var(--emerald-dark)] animate-soft-pulse">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--emerald-bg)] text-[10px] font-semibold text-[var(--emerald-dark)]">
                   <CheckCircle2 className="w-3 h-3" />
                   Signé
                 </span>
@@ -96,11 +91,10 @@ function PhoneMockup() {
                 Restaurant Le Provençal
               </p>
             </div>
-
             <div className="p-4 space-y-2">
-              <QuoteRow label="Carrelage cuisine 40m²" price="2 400 €" />
-              <QuoteRow label="Réfection sol" price="1 800 €" />
-              <QuoteRow label="Main d'œuvre" price="960 €" />
+              <Row label="Carrelage cuisine 40 m²" price="2 400 €" />
+              <Row label="Réfection sol" price="1 800 €" />
+              <Row label="Main d’œuvre" price="960 €" />
               <div className="pt-2 mt-1 border-t border-[var(--border-light)] flex justify-between">
                 <span className="text-xs font-semibold text-[var(--text-primary)]">
                   Total TTC
@@ -115,7 +109,7 @@ function PhoneMockup() {
   );
 }
 
-function QuoteRow({ label, price }: { label: string; price: string }) {
+function Row({ label, price }: { label: string; price: string }) {
   return (
     <div className="flex justify-between text-xs">
       <span className="text-[var(--text-secondary)]">{label}</span>

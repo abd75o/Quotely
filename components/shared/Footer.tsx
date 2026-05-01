@@ -34,7 +34,7 @@ const METIERS = [
 export function Footer() {
   return (
     <footer className="bg-[var(--text-primary)] text-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-8">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 pt-16 pb-8">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
           {/* Brand */}
           <div className="col-span-2">
@@ -42,7 +42,7 @@ export function Footer() {
               href="/"
               className="inline-flex mb-4 hover:opacity-80 transition-opacity duration-150"
             >
-              <Logo variant="horizontal" size={32} inverted />
+              <Logo variant="horizontal" size={36} inverted />
             </Link>
             <p className="text-sm text-gray-300 leading-relaxed mb-6 max-w-xs">
               Le devis qui part avant que vous passiez à autre chose.

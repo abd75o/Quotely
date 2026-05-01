@@ -119,7 +119,7 @@ export function HowItWorks() {
     <Section
       variant="alt"
       id="comment-ca-marche"
-      className="bg-gradient-to-b from-[var(--bg-secondary)] via-[var(--bg-secondary)] to-white"
+      className="bg-gradient-to-b from-white via-[#F8FAFC] to-[#EEF2FF]"
     >
       <Reveal className="text-center max-w-2xl mx-auto mb-16">
         <h2 className="font-display text-[32px] md:text-[40px] font-bold leading-[1.15] tracking-tight text-[var(--text-primary)]">
@@ -136,7 +136,7 @@ export function HowItWorks() {
             <article className="relative h-full p-8 bg-white rounded-2xl border border-[var(--border)] shadow-sm transition-all duration-200 hover:shadow-[var(--shadow-card-hover)] hover:-translate-y-0.5 hover:border-[var(--primary)]/40 overflow-hidden">
               <span
                 aria-hidden
-                className="absolute -top-4 -right-2 font-display text-[100px] md:text-[160px] font-bold leading-none bg-gradient-to-br from-[var(--primary)] via-[#8B5CF6] to-[var(--accent-warm)] bg-clip-text text-transparent opacity-65 select-none pointer-events-none"
+                className="absolute -top-4 -right-2 font-display text-[100px] md:text-[160px] font-bold leading-none bg-gradient-to-br from-[var(--primary)] via-[#8B5CF6] to-[var(--accent-warm)] bg-clip-text text-transparent opacity-75 select-none pointer-events-none"
               >
                 {step.number}
               </span>

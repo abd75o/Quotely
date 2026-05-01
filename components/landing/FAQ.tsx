@@ -61,23 +61,23 @@ function FAQItem({
   return (
     <div
       className={cn(
-        "bg-white rounded-xl border transition-all duration-200 overflow-hidden",
+        "rounded-2xl overflow-hidden transition-all duration-300 border-2",
         isOpen
-          ? "border-[var(--primary)]/30 shadow-sm"
-          : "border-[var(--border)] hover:border-[var(--primary)]/30"
+          ? "border-[var(--primary)] bg-gradient-to-r from-white to-[var(--primary-bg)] shadow-xl"
+          : "border-[var(--border)] bg-white shadow-md hover:border-[var(--primary)]/50 hover:shadow-xl"
       )}
     >
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between gap-4 p-5 min-h-[60px] text-left cursor-pointer transition-colors duration-150 hover:bg-[var(--bg-secondary)]/50"
+        className="w-full flex items-center justify-between gap-4 px-6 sm:px-8 py-6 min-h-[64px] text-left cursor-pointer"
         aria-expanded={isOpen}
       >
-        <span className="text-base font-semibold text-[var(--text-primary)] leading-snug">
+        <span className="text-base font-bold text-[var(--text-primary)] leading-snug">
           {question}
         </span>
         <ChevronDown
           className={cn(
-            "w-4 h-4 text-[var(--text-muted)] flex-shrink-0 transition-transform duration-300",
+            "w-5 h-5 text-[var(--primary)] flex-shrink-0 transition-transform duration-300",
             isOpen && "rotate-180"
           )}
         />
@@ -85,10 +85,10 @@ function FAQItem({
       <div
         className={cn(
           "overflow-hidden transition-all duration-300",
-          isOpen ? "max-h-96" : "max-h-0"
+          isOpen ? "max-h-[28rem]" : "max-h-0"
         )}
       >
-        <p className="px-5 pb-5 text-base text-[var(--text-secondary)] leading-relaxed">
+        <p className="px-6 sm:px-8 pb-6 text-base text-[var(--text-secondary)] leading-relaxed">
           {answer}
         </p>
       </div>
@@ -100,8 +100,21 @@ export function FAQ() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   return (
-    <section id="faq" className="py-16 md:py-24 bg-[var(--bg-secondary)]">
-      <div className="max-w-3xl mx-auto px-6 lg:px-8">
+    <section
+      id="faq"
+      className="relative isolate overflow-hidden py-16 md:py-24 bg-gradient-to-br from-[#F1F5F9] via-[#EEF2FF] to-[#FEF3C7]"
+    >
+      {/* Decorative blobs — hidden on mobile */}
+      <div
+        aria-hidden
+        className="hidden md:block absolute -top-32 -right-32 w-[28rem] h-[28rem] rounded-full bg-[var(--primary-bg)] opacity-30 blur-3xl pointer-events-none -z-10"
+      />
+      <div
+        aria-hidden
+        className="hidden md:block absolute -bottom-32 -left-32 w-[24rem] h-[24rem] rounded-3xl bg-[var(--accent-warm-bg)] opacity-25 blur-3xl pointer-events-none -z-10"
+      />
+
+      <div className="relative max-w-3xl mx-auto px-6 lg:px-8">
         <div className="text-center mb-12">
           <h2 className="font-display text-[32px] md:text-[40px] font-bold leading-[1.15] tracking-tight text-[var(--text-primary)]">
             Vos questions, nos réponses.

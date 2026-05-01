@@ -12,6 +12,7 @@ import {
   Menu,
   X,
   ChevronRight,
+  LogOut,
 } from "lucide-react";
 import { Logo } from "@/components/shared/Logo";
 import { TrialBadge } from "@/components/auth/TrialBadge";

@@ -1,126 +1,100 @@
-"use client";
-
 import {
-  Mic,
   FileText,
   Calculator,
   Send,
   PenLine,
+  Clock,
+  ReceiptText,
+  Mic,
+  Edit3,
   TrendingUp,
   RefreshCw,
   BarChart3,
-  Sparkles,
-  Clock,
-  Shield,
-  Smartphone,
+  Target,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const FEATURES_STARTER = [
+type Feature = {
+  icon: React.ElementType;
+  title: string;
+  description: string;
+};
+
+const FEATURES_STARTER: Feature[] = [
   {
     icon: FileText,
-    title: "Templates par métier",
+    title: "Modèles par métier",
     description:
-      "Plombier, électricien, peintre, freelance, commerce — des modèles préconfigurés pour chaque corps de métier.",
-    color: "text-blue-500",
-    bg: "bg-blue-50",
+      "Plombier, électricien, peintre, freelance, commerce. Configurés d’avance.",
   },
   {
     icon: Calculator,
-    title: "Calcul TVA automatique",
+    title: "TVA calculée pour vous",
     description:
-      "Saisissez vos lignes, Quotely calcule la TVA et le total TTC instantanément. Zéro erreur.",
-    color: "text-violet-500",
-    bg: "bg-violet-50",
+      "Vous saisissez les lignes. Le calcul est exact, à chaque fois.",
   },
   {
     icon: Send,
-    title: "Envoi email en 1 clic",
+    title: "Envoi en un clic",
     description:
-      "Envoyez votre devis directement depuis la plateforme. Le client reçoit un lien professionnel signable.",
-    color: "text-indigo-500",
-    bg: "bg-indigo-50",
+      "Un lien propre, lisible, sécurisé. Direct dans la boîte de votre client.",
   },
   {
     icon: PenLine,
-    title: "Signature électronique",
+    title: "Signature électronique légale",
     description:
-      "Signature en ligne légale et sécurisée. Votre client signe depuis son téléphone en quelques secondes.",
-    color: "text-emerald-500",
-    bg: "bg-emerald-50",
+      "Conforme eIDAS. Le client signe depuis son téléphone.",
   },
   {
     icon: Clock,
     title: "Suivi en temps réel",
     description:
-      "Signé, en attente, refusé — suivez l'état de chaque devis et recevez des notifications instantanées.",
-    color: "text-orange-500",
-    bg: "bg-orange-50",
+      "Signé, en attente, refusé. Vous savez toujours où vous en êtes.",
   },
   {
-    icon: FileText,
-    title: "Facture en 1 clic",
+    icon: ReceiptText,
+    title: "Facture après signature",
     description:
-      "Votre devis accepté se transforme en facture en un seul clic. Numérotation automatique et conforme.",
-    color: "text-pink-500",
-    bg: "bg-pink-50",
+      "Le devis accepté devient une facture conforme. Numérotation automatique.",
   },
 ];
 
-const FEATURES_PRO = [
+const FEATURES_PRO: Feature[] = [
   {
     icon: Mic,
-    title: "Dictée vocale IA",
+    title: "Dictée vocale",
     description:
-      "Parlez, Quotely génère. Décrivez votre prestation à voix haute, l'IA structure et rédige le devis complet.",
-    color: "text-purple-500",
-    bg: "bg-purple-50",
-    badge: "PRO",
+      "Parlez sur le chantier. Le devis se rédige pendant que vous travaillez.",
   },
   {
-    icon: Sparkles,
-    title: "Génération par Claude AI",
+    icon: Edit3,
+    title: "Rédaction guidée",
     description:
-      "L'IA analyse votre demande, suggère les bonnes lignes de devis et les formulations professionnelles.",
-    color: "text-indigo-500",
-    bg: "bg-indigo-50",
-    badge: "PRO",
+      "Les bonnes formulations professionnelles, suggérées au bon moment.",
   },
   {
     icon: TrendingUp,
-    title: "Suggestions de prix IA",
+    title: "Tarifs du marché",
     description:
-      "L'IA vous suggère des tarifs cohérents avec le marché selon votre région et votre corps de métier.",
-    color: "text-emerald-500",
-    bg: "bg-emerald-50",
-    badge: "PRO",
+      "Des suggestions cohérentes selon votre métier et votre région.",
   },
   {
     icon: RefreshCw,
-    title: "Relances automatiques",
+    title: "Relances qui tournent toutes seules",
     description:
-      "Quotely relance automatiquement les devis non signés à J+3, J+7 et J+14 avec un message personnalisé.",
-    color: "text-blue-500",
-    bg: "bg-blue-50",
-    badge: "PRO",
+      "À J+3, J+7, J+14. Vous ne courez plus après personne.",
   },
   {
     icon: BarChart3,
-    title: "Statistiques intelligentes",
+    title: "Vos chiffres clairs",
     description:
-      "Taux de signature, CA prévisionnel, délai moyen — des métriques actionnables pour piloter votre activité.",
-    color: "text-violet-500",
-    bg: "bg-violet-50",
-    badge: "PRO",
+      "Taux de signature, délai moyen, chiffre d’affaires. Tout sous les yeux.",
   },
   {
-    icon: Shield,
-    title: "Score de performance",
+    icon: Target,
+    title: "Score de chaque devis",
     description:
-      "Chaque devis reçoit un score IA basé sur la clarté, la compétitivité des prix et la formulation.",
-    color: "text-rose-500",
-    bg: "bg-rose-50",
-    badge: "PRO",
+      "Comprenez ce qui marche. Ajustez ce qui pèche.",
   },
 ];
 
@@ -128,69 +102,53 @@ function FeatureCard({
   icon: Icon,
   title,
   description,
-  color,
-  bg,
-  badge,
-}: {
-  icon: React.ElementType;
-  title: string;
-  description: string;
-  color: string;
-  bg: string;
-  badge?: string;
-}) {
+  showProBadge,
+}: Feature & { showProBadge?: boolean }) {
   return (
-    <div className="group relative p-6 bg-white rounded-2xl border border-[var(--border)] hover:border-[var(--primary)]/30 hover:shadow-lg transition-all duration-300 cursor-default">
-      {badge && (
-        <span className="absolute top-4 right-4 px-2 py-0.5 text-[10px] font-bold text-[var(--primary)] bg-[var(--primary-bg)] rounded-full uppercase tracking-wide">
-          {badge}
+    <div className="group relative p-6 bg-white rounded-2xl border border-[var(--border)] hover:border-[var(--primary)]/30 hover:shadow-md transition-all duration-200">
+      {showProBadge && (
+        <span className="absolute top-4 right-4 px-2 py-0.5 text-[10px] font-bold text-[var(--primary)] bg-[var(--primary-bg)] rounded-full uppercase tracking-wider">
+          Pro
         </span>
       )}
       <div
         className={cn(
-          "w-10 h-10 rounded-xl flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110",
-          bg
+          "w-10 h-10 rounded-xl bg-[var(--primary-bg)] flex items-center justify-center mb-4 transition-transform duration-200 group-hover:scale-105"
         )}
       >
-        <Icon className={cn("w-5 h-5", color)} />
+        <Icon className="w-5 h-5 text-[var(--primary)]" />
       </div>
-      <h3 className="text-base font-semibold text-[var(--text-primary)] mb-2">{title}</h3>
-      <p className="text-sm text-[var(--text-secondary)] leading-relaxed">{description}</p>
+      <h3 className="text-base font-semibold text-[var(--text-primary)] mb-2 leading-snug">
+        {title}
+      </h3>
+      <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
+        {description}
+      </p>
     </div>
   );
 }
 
 export function Features() {
   return (
-    <section id="features" className="py-24 bg-white relative overflow-hidden">
-      {/* Subtle top gradient */}
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[var(--border)] to-transparent" />
-
+    <section id="features" className="py-24 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Section header */}
-        <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[var(--primary-bg)] text-[var(--primary)] text-xs font-semibold rounded-full mb-4">
-            <Sparkles className="w-3.5 h-3.5" />
-            Tout ce dont vous avez besoin
-          </div>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-[var(--text-primary)] tracking-tight mb-4">
-            De la prestation à la facture,{" "}
-            <span className="gradient-text">entièrement automatisé</span>
+        <div className="text-center max-w-2xl mx-auto mb-16">
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-[var(--text-primary)] tracking-tight">
+            Tout ce qu’il vous faut. Rien de plus.
           </h2>
-          <p className="text-lg text-[var(--text-secondary)] max-w-2xl mx-auto">
-            Chaque fonctionnalité est conçue pour vous faire gagner du temps et
-            augmenter votre taux de signature.
+          <p className="mt-4 text-lg text-[var(--text-secondary)] leading-relaxed">
+            Chaque outil pensé pour votre quotidien sur le terrain.
           </p>
         </div>
 
-        {/* Starter features */}
+        {/* Starter */}
         <div className="mb-16">
           <div className="flex items-center gap-3 mb-8">
-            <span className="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-bold rounded-full uppercase tracking-widest">
+            <span className="px-3 py-1 bg-gray-100 text-[var(--text-secondary)] text-xs font-bold rounded-full uppercase tracking-widest">
               Plan Starter
             </span>
             <div className="flex-1 h-px bg-[var(--border)]" />
-            <span className="text-sm font-bold text-[var(--text-secondary)]">25€/mois</span>
+            <span className="text-sm font-semibold text-[var(--text-secondary)]">25 €/mois</span>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {FEATURES_STARTER.map((f) => (
@@ -199,18 +157,18 @@ export function Features() {
           </div>
         </div>
 
-        {/* Pro features */}
+        {/* Pro */}
         <div>
           <div className="flex items-center gap-3 mb-8">
             <span className="px-3 py-1 bg-[var(--primary-bg)] text-[var(--primary)] text-xs font-bold rounded-full uppercase tracking-widest">
               Plan Pro
             </span>
             <div className="flex-1 h-px bg-gradient-to-r from-[var(--primary)]/30 to-transparent" />
-            <span className="text-sm font-bold text-[var(--primary)]">49€/mois</span>
+            <span className="text-sm font-semibold text-[var(--primary)]">49 €/mois</span>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {FEATURES_PRO.map((f) => (
-              <FeatureCard key={f.title} {...f} />
+              <FeatureCard key={f.title} {...f} showProBadge />
             ))}
           </div>
         </div>

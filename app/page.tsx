@@ -1,9 +1,8 @@
 import { Navbar } from "@/components/shared/Navbar";
 import { Footer } from "@/components/shared/Footer";
 import { Hero } from "@/components/landing/Hero";
-import { Demo } from "@/components/landing/Demo";
-import { Features } from "@/components/landing/Features";
 import { HowItWorks } from "@/components/landing/HowItWorks";
+import { Features } from "@/components/landing/Features";
 import { Pricing } from "@/components/landing/Pricing";
 import { Testimonials } from "@/components/landing/Testimonials";
 import { FAQ } from "@/components/landing/FAQ";
@@ -15,9 +14,8 @@ export default function LandingPage() {
       <Navbar />
       <main>
         <Hero />
-        <Demo />
-        <Features />
         <HowItWorks />
+        <Features />
         <Pricing />
         <Testimonials />
         <FAQ />

@@ -10,28 +10,28 @@ export const metadata: Metadata = {
 };
 
 const STARTER_FEATURES = [
-  "Templates prêts à l'emploi (par métier)",
-  "Devis en 30 secondes (5 champs seulement)",
+  "Modèles prêts à l’emploi par métier",
+  "Devis créé en quelques secondes (5 champs)",
   "TVA calculée automatiquement",
-  "Lien de signature envoyé en 1 clic",
+  "Lien de signature envoyé en un clic",
   "Signature en ligne (simple ou par email)",
-  "Suivi en temps réel (signé, en attente, refusé)",
-  "Facture générée automatiquement après signature",
-  "30 devis/mois",
-  "Support par email (réponse sous 24h)",
+  "Suivi en temps réel",
+  "Facture générée après signature",
+  "30 devis par mois",
+  "Support par email sous 24 h",
 ];
 
 const PRO_FEATURES = [
   "Tout le plan Starter inclus",
-  "Devis en 10 secondes par dictée vocale",
-  "Rédaction automatique des prestations par IA",
+  "Devis créé en quelques secondes par dictée vocale",
+  "Rédaction guidée des prestations",
   "Tarifs du marché suggérés",
-  "Signature certifiée eIDAS (YouSign)",
-  "Relances automatiques (zéro oubli)",
-  "Tableau de bord revenus en temps réel",
-  "Score de signature (sache ce qui marche)",
+  "Signature certifiée pour les chantiers conséquents",
+  "Relances automatiques (J+3, J+7, J+14)",
+  "Tableau de bord (revenus en temps réel)",
+  "Score de signature",
   "Devis illimités",
-  "Support prioritaire — réponse sous 1h",
+  "Support prioritaire",
 ];
 
 export default async function TarifsPage({
@@ -131,17 +131,17 @@ export default async function TarifsPage({
               <div className="mb-6">
                 <h2 className="text-lg font-bold text-[var(--text-primary)] mb-1">Starter</h2>
                 <p className="text-sm text-[var(--text-secondary)]">
-                  Pour artisans qui veulent gagner du temps
+                  Pour démarrer et gérer votre activité.
                 </p>
               </div>
 
               <div className="mb-8">
                 <div className="flex items-end gap-2">
-                  <span className="text-5xl font-black text-[var(--text-primary)]">25€</span>
+                  <span className="text-5xl font-black text-[var(--text-primary)]">25 €</span>
                   <span className="text-[var(--text-muted)] mb-2 font-medium">/mois</span>
                 </div>
                 <p className="text-xs text-[var(--text-muted)] mt-1.5 font-medium">
-                  soit 0,83€/jour
+                  Soit moins de 0,85 € par jour.
                 </p>
               </div>
 
@@ -182,18 +182,18 @@ export default async function TarifsPage({
 
               <div className="mb-6">
                 <h2 className="text-lg font-bold text-white mb-1">Pro</h2>
-                <p className="text-sm text-indigo-200">
-                  Pour ceux qui veulent signer plus de clients
+                <p className="text-sm text-indigo-100">
+                  Signez plus de clients sans y passer vos soirées.
                 </p>
               </div>
 
               <div className="mb-8">
                 <div className="flex items-end gap-2">
-                  <span className="text-5xl font-black text-white">49€</span>
+                  <span className="text-5xl font-black text-white">49 €</span>
                   <span className="text-indigo-200 mb-2 font-medium">/mois</span>
                 </div>
-                <p className="text-xs text-indigo-300 mt-1.5 font-medium">
-                  soit 1,63€/jour
+                <p className="text-xs text-indigo-200 mt-1.5 font-medium">
+                  Soit moins de 1,65 € par jour.
                 </p>
               </div>
 
@@ -215,17 +215,10 @@ export default async function TarifsPage({
                 ))}
               </ul>
 
-              <div className="mt-6 flex items-center gap-2 p-3 bg-white/10 rounded-xl">
-                <Shield className="w-4 h-4 text-emerald-300 flex-shrink-0" />
-                <span className="text-xs text-indigo-200">
-                  Signature certifiée eIDAS pour les devis &gt;5 000€
-                </span>
-              </div>
-
-              <div className="mt-4 flex items-center gap-2.5 p-3.5 bg-emerald-500/20 border border-emerald-400/30 rounded-xl">
-                <span className="text-base flex-shrink-0">💰</span>
-                <span className="text-xs font-semibold text-emerald-200">
-                  +34% de devis signés en moyenne chez nos utilisateurs Pro
+              <div className="mt-6 flex items-start gap-2 p-3 bg-white/10 rounded-xl">
+                <Shield className="w-4 h-4 text-emerald-300 flex-shrink-0 mt-0.5" />
+                <span className="text-xs text-indigo-100 leading-relaxed">
+                  Signature certifiée eIDAS pour devis &gt; 5 000 €.
                 </span>
               </div>
             </div>

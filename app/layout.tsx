@@ -9,9 +9,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Quotely — Créez des devis professionnels en 30 secondes",
+  title: "Quotely — Le devis signé depuis le chantier",
   description:
-    "Quotely aide les artisans, freelances et consultants à créer des devis professionnels en quelques secondes. Signature électronique, suivi en temps réel, facturation en 1 clic.",
+    "Quotely permet aux artisans, freelances et consultants de signer leurs devis depuis le chantier. Signature électronique conforme eIDAS, suivi en temps réel, facturation après signature.",
   keywords: "devis, facture, artisan, freelance, signature électronique, devis en ligne",
   icons: {
     icon: [
@@ -21,8 +21,8 @@ export const metadata: Metadata = {
     apple: "/icon.svg",
   },
   openGraph: {
-    title: "Quotely — Devis professionnels en 30 secondes",
-    description: "Créez, envoyez et suivez vos devis professionnels avec l'IA.",
+    title: "Quotely — Le devis signé depuis le chantier",
+    description: "Le devis qui part avant que vous quittiez le chantier.",
     type: "website",
   },
 };

@@ -64,7 +64,7 @@ export function Navbar() {
               href="/signup"
               className="px-4 py-2 text-sm font-semibold text-white bg-[var(--primary)] hover:bg-[var(--primary-dark)] rounded-lg shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
             >
-              Démarrer · 14 jours gratuits
+              Démarrer · 14 jours offerts
             </Link>
           </div>
 
@@ -103,7 +103,7 @@ export function Navbar() {
                   href="/signup"
                   className="block px-4 py-3 text-sm font-semibold text-center text-white bg-[var(--primary)] rounded-lg hover:bg-[var(--primary-dark)] transition-colors duration-150 cursor-pointer"
                 >
-                  Démarrer · 14 jours gratuits
+                  Démarrer · 14 jours offerts
                 </Link>
               </div>
             </div>

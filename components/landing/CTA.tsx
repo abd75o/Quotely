@@ -8,7 +8,17 @@ const REASSURANCES = ["14 jours offerts", "Sans carte bancaire", "Résiliable en
 
 export function CTA() {
   return (
-    <Section variant="primary">
+    <Section
+      variant="primary"
+      size="wide"
+      className="bg-gradient-to-br from-[var(--primary)] via-[var(--primary)] to-[var(--primary-dark)]"
+      decoration={
+        <div
+          aria-hidden
+          className="absolute -top-40 -right-40 w-[40rem] h-[40rem] rounded-full bg-[var(--primary-light)]/30 blur-3xl pointer-events-none"
+        />
+      }
+    >
       <Reveal className="text-center max-w-3xl mx-auto">
         <h2 className="font-display text-[32px] md:text-[48px] font-bold leading-[1.1] tracking-tight text-white">
           Votre prochain devis pourrait être signé{" "}

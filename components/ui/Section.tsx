@@ -1,13 +1,16 @@
 import { cn } from "@/lib/utils";
 
 type Variant = "default" | "alt" | "primary";
+type Size = "default" | "wide";
 
 interface SectionProps {
   children: React.ReactNode;
   variant?: Variant;
+  size?: Size;
   id?: string;
   className?: string;
   containerClassName?: string;
+  decoration?: React.ReactNode;
 }
 
 const variants: Record<Variant, string> = {
@@ -16,19 +19,37 @@ const variants: Record<Variant, string> = {
   primary: "bg-[var(--primary)] text-white",
 };
 
+const sizes: Record<Size, string> = {
+  default: "max-w-[1440px]",
+  wide: "max-w-[1600px]",
+};
+
 export function Section({
   children,
   variant = "default",
+  size = "default",
   id,
   className,
   containerClassName,
+  decoration,
 }: SectionProps) {
   return (
     <section
       id={id}
-      className={cn("py-20 md:py-32", variants[variant], className)}
+      className={cn(
+        "relative isolate overflow-hidden py-20 md:py-32",
+        variants[variant],
+        className
+      )}
     >
-      <div className={cn("max-w-7xl mx-auto px-6 lg:px-8", containerClassName)}>
+      {decoration}
+      <div
+        className={cn(
+          "relative mx-auto px-6 lg:px-8",
+          sizes[size],
+          containerClassName
+        )}
+      >
         {children}
       </div>
     </section>

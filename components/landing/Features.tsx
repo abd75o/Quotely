@@ -104,7 +104,7 @@ function FeatureRow({
             {title}
           </h4>
           {showProBadge && (
-            <span className="px-2 py-0.5 text-[10px] font-bold text-[var(--primary)] bg-[var(--primary-bg)] rounded-full uppercase tracking-wider">
+            <span className="px-2 py-0.5 text-[10px] font-bold text-white bg-gradient-to-r from-[var(--primary)] to-[#8B5CF6] rounded-full uppercase tracking-wider">
               Pro
             </span>
           )}
@@ -129,7 +129,7 @@ export function Features() {
 
       <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
         {/* Starter */}
-        <Reveal className="bg-white rounded-2xl border border-[var(--border)] p-8 shadow-sm">
+        <Reveal className="bg-white rounded-2xl border border-[var(--border)] p-8 shadow-sm transition-all duration-300 hover:bg-gradient-to-br hover:from-white hover:to-[var(--primary-bg)]/40 hover:shadow-[var(--shadow-card-hover)]">
           <header className="flex items-baseline justify-between gap-4 pb-4 border-b border-[var(--border)] mb-2">
             <div>
               <p className="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)] mb-1">
@@ -147,7 +147,7 @@ export function Features() {
 
         {/* Pro */}
         <Reveal
-          className="bg-white rounded-2xl border border-[var(--primary)]/30 p-8 shadow-sm"
+          className="bg-white rounded-2xl border border-[var(--primary)]/30 p-8 shadow-sm transition-all duration-300 hover:bg-gradient-to-br hover:from-white hover:to-[var(--primary-bg)]/40 hover:shadow-[var(--shadow-card-hover)]"
           delay={0.1}
         >
           <header className="flex items-baseline justify-between gap-4 pb-4 border-b border-[var(--border)] mb-2">

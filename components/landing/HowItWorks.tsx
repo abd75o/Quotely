@@ -116,7 +116,11 @@ const STEPS: Step[] = [
 
 export function HowItWorks() {
   return (
-    <Section variant="alt" id="comment-ca-marche">
+    <Section
+      variant="alt"
+      id="comment-ca-marche"
+      className="bg-gradient-to-b from-[var(--bg-secondary)] via-[var(--bg-secondary)] to-white"
+    >
       <Reveal className="text-center max-w-2xl mx-auto mb-16">
         <h2 className="font-display text-[32px] md:text-[40px] font-bold leading-[1.15] tracking-tight text-[var(--text-primary)]">
           En 4 étapes, votre devis est signé.
@@ -126,13 +130,13 @@ export function HowItWorks() {
         </p>
       </Reveal>
 
-      <RevealStagger className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <RevealStagger className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 xl:gap-12">
         {STEPS.map((step) => (
           <RevealItem key={step.number}>
             <article className="relative h-full p-8 bg-white rounded-2xl border border-[var(--border)] shadow-sm transition-all duration-200 hover:shadow-[var(--shadow-card-hover)] hover:-translate-y-0.5 hover:border-[var(--primary)]/40 overflow-hidden">
               <span
                 aria-hidden
-                className="absolute -top-2 -right-1 font-display text-[100px] font-bold leading-none text-[var(--bg-tertiary)] select-none pointer-events-none"
+                className="absolute -top-2 -right-1 font-display text-[100px] font-bold leading-none bg-gradient-to-br from-[var(--primary)] to-[var(--accent-warm)] bg-clip-text text-transparent opacity-50 select-none pointer-events-none"
               >
                 {step.number}
               </span>

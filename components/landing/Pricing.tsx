@@ -41,7 +41,7 @@ export function Pricing() {
         </p>
       </Reveal>
 
-      <div className="grid md:grid-cols-2 gap-6 lg:gap-8 max-w-5xl mx-auto items-stretch">
+      <div className="grid md:grid-cols-2 gap-6 lg:gap-8 max-w-5xl xl:max-w-[992px] mx-auto items-stretch">
         {/* Starter */}
         <Reveal className="flex flex-col p-8 bg-white rounded-2xl border border-[var(--border)] shadow-sm transition-all duration-200 hover:shadow-[var(--shadow-card-hover)] hover:-translate-y-0.5">
           <div className="mb-6">
@@ -97,7 +97,7 @@ export function Pricing() {
           delay={0.1}
           className="relative flex flex-col p-8 bg-white rounded-2xl border-2 border-[var(--primary)] shadow-xl transition-all duration-200 hover:shadow-2xl hover:-translate-y-0.5"
         >
-          <span className="absolute -top-3 right-8 inline-flex items-center gap-1.5 px-3 py-1 bg-[var(--primary)] text-white text-xs font-bold rounded-full shadow-md">
+          <span className="absolute -top-3 right-8 inline-flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-[var(--primary)] to-[#8B5CF6] text-white text-xs font-bold rounded-full shadow-md">
             <Star className="w-3 h-3" fill="currentColor" />
             Populaire
           </span>

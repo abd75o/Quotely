@@ -5,8 +5,18 @@ import { Logo } from "@/components/shared/Logo";
 
 export function Hero() {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-b from-[var(--bg-primary)] to-[var(--bg-secondary)] pt-28 pb-20 md:pt-36 md:pb-32">
-      <div className="relative max-w-7xl mx-auto px-6 lg:px-8">
+    <section className="relative isolate overflow-hidden bg-gradient-to-br from-white via-white to-[var(--primary-bg)] pt-28 pb-20 md:pt-36 md:pb-32">
+      {/* Decorative shapes — XL+ only, ne s'affichent pas sur mobile */}
+      <div
+        aria-hidden
+        className="hidden xl:block absolute top-0 right-0 w-[36rem] h-[36rem] -translate-y-1/3 translate-x-1/3 rounded-full bg-gradient-to-br from-[var(--primary-bg)] to-transparent opacity-70 blur-2xl pointer-events-none -z-10"
+      />
+      <div
+        aria-hidden
+        className="hidden xl:block absolute bottom-0 left-0 w-[24rem] h-[24rem] -translate-x-1/3 translate-y-1/3 rounded-3xl bg-[var(--accent-warm-bg)] opacity-50 blur-2xl pointer-events-none -z-10"
+      />
+
+      <div className="relative max-w-[1600px] mx-auto px-6 lg:px-8">
         <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 items-center">
           {/* Copy */}
           <div className="lg:col-span-7 animate-fade-in-up">
@@ -45,7 +55,7 @@ export function Hero() {
 function PhoneMockup() {
   return (
     <div className="relative w-full max-w-[300px] sm:max-w-[340px]">
-      <div className="bg-[var(--text-primary)] rounded-[2.5rem] p-2.5 shadow-xl">
+      <div className="bg-[var(--text-primary)] rounded-[2.5rem] p-2.5 shadow-[0_20px_60px_-15px_rgba(99,102,241,0.25)]">
         <div className="bg-[var(--bg-secondary)] rounded-[2rem] overflow-hidden">
           {/* Status bar */}
           <div className="flex items-center justify-between px-6 pt-3 pb-2 text-[11px] font-semibold text-[var(--text-primary)]">

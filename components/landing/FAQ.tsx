@@ -43,7 +43,7 @@ const FAQS = [
   {
     question: "Comment Quotely arrive à rédiger un devis aussi vite ?",
     answer:
-      "Quotely s’appuie sur des modèles de langage avancés pour transformer votre description en devis structuré, avec les bonnes formulations et le bon calcul de TVA. Vous gardez toujours la main : relisez, ajustez, validez avant l’envoi. Vos données ne servent jamais à entraîner les modèles — elles restent privées et hébergées en France.",
+      "Quotely s’appuie sur des modèles de langage avancés (intelligence artificielle) pour transformer votre description en devis structuré : prestations détaillées, calcul de TVA, formulations professionnelles. Vous gardez toujours la main : relisez, ajustez, validez avant l’envoi. Vos données ne servent jamais à entraîner les modèles — elles restent privées et hébergées en France.",
   },
 ];
 

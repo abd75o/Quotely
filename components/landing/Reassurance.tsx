@@ -12,7 +12,7 @@ const PILLARS: Pillar[] = [
   {
     icon: Shield,
     title: "Conforme RGPD",
-    detail: "Vos données restent privées.",
+    detail: "Vos données restent privées. Pas d’entraînement IA.",
   },
   {
     icon: Flag,

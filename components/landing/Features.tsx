@@ -4,9 +4,9 @@ import {
   Send,
   PenLine,
   Clock,
-  ReceiptText,
+  Receipt,
   Mic,
-  Edit3,
+  Pencil,
   TrendingUp,
   RefreshCw,
   BarChart3,
@@ -20,23 +20,27 @@ type Feature = {
   icon: React.ElementType;
   title: string;
   description: string;
+  isPro?: boolean;
 };
 
-const FEATURES_STARTER: Feature[] = [
+const FEATURES: Feature[] = [
   {
     icon: FileText,
     title: "Modèles par métier",
-    description: "Plombier, électricien, peintre, freelance, commerce. Configurés d’avance.",
+    description:
+      "Plombier, électricien, peintre, freelance, commerce. Configurés d’avance.",
   },
   {
     icon: Calculator,
     title: "TVA calculée pour vous",
-    description: "Vous saisissez les lignes. Le calcul est exact, à chaque fois.",
+    description:
+      "Vous saisissez les lignes. Le calcul est exact, à chaque fois.",
   },
   {
     icon: Send,
     title: "Envoi en un clic",
-    description: "Un lien propre, lisible, sécurisé. Direct dans la boîte de votre client.",
+    description:
+      "Un lien propre, lisible, sécurisé. Direct dans la boîte de votre client.",
   },
   {
     icon: PenLine,
@@ -46,83 +50,97 @@ const FEATURES_STARTER: Feature[] = [
   {
     icon: Clock,
     title: "Suivi en temps réel",
-    description: "Signé, en attente, refusé. Vous savez toujours où vous en êtes.",
+    description:
+      "Signé, en attente, refusé. Vous savez toujours où vous en êtes.",
   },
   {
-    icon: ReceiptText,
+    icon: Receipt,
     title: "Facture après signature",
-    description: "Le devis accepté devient une facture conforme. Numérotation automatique.",
+    description:
+      "Le devis accepté devient une facture conforme. Numérotation automatique.",
   },
-];
-
-const FEATURES_PRO: Feature[] = [
   {
     icon: Mic,
     title: "Dictée vocale",
-    description: "Parlez sur le terrain. Le devis se rédige pendant que vous travaillez.",
+    description:
+      "Parlez sur le terrain. Le devis se rédige pendant que vous travaillez.",
+    isPro: true,
   },
   {
-    icon: Edit3,
+    icon: Pencil,
     title: "Rédaction guidée",
-    description: "Les bonnes formulations professionnelles, suggérées au bon moment.",
+    description:
+      "Les bonnes formulations professionnelles, suggérées au bon moment.",
+    isPro: true,
   },
   {
     icon: TrendingUp,
     title: "Tarifs du marché",
-    description: "Des suggestions cohérentes selon votre métier et votre région.",
+    description:
+      "Des suggestions cohérentes selon votre métier et votre région.",
+    isPro: true,
   },
   {
     icon: RefreshCw,
     title: "Relances qui tournent toutes seules",
     description: "À J+3, J+7, J+14. Vous ne courez plus après personne.",
+    isPro: true,
   },
   {
     icon: BarChart3,
     title: "Vos chiffres clairs",
-    description: "Taux de signature, délai moyen, chiffre d’affaires. Tout sous les yeux.",
+    description:
+      "Taux de signature, délai moyen, chiffre d’affaires. Tout sous les yeux.",
+    isPro: true,
   },
   {
     icon: Target,
     title: "Score de chaque devis",
     description: "Comprenez ce qui marche. Ajustez ce qui pèche.",
+    isPro: true,
   },
 ];
 
-function FeatureRow({
-  icon: Icon,
-  title,
-  description,
-  isPro,
-}: Feature & { isPro?: boolean }) {
+function FeatureCard({ icon: Icon, title, description, isPro }: Feature) {
   return (
-    <div className="flex gap-4 py-4 border-b border-[var(--border-light)] last:border-0 -mx-2 px-2 rounded-lg transition-colors duration-150 hover:bg-[var(--primary-bg)]/40">
+    <div
+      className={cn(
+        "group relative flex flex-col bg-white rounded-2xl p-6 min-h-[44px]",
+        "border-[1.5px] border-[var(--border)]",
+        "transition-all duration-200 ease-out",
+        "hover:border-[var(--primary)] hover:-translate-y-0.5",
+        "hover:shadow-lg hover:shadow-[var(--primary)]/15"
+      )}
+    >
+      {isPro && (
+        <span className="absolute top-4 right-4 px-2.5 py-0.5 text-[11px] font-bold tracking-wider text-white uppercase rounded-full bg-gradient-to-r from-[var(--primary)] to-[#8B5CF6] shadow-sm">
+          Pro
+        </span>
+      )}
+
       <div
         className={cn(
-          "flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center",
+          "w-11 h-11 rounded-full flex items-center justify-center mb-4",
           isPro
             ? "bg-gradient-to-br from-[var(--primary)] to-[#8B5CF6] shadow-sm"
             : "bg-[var(--primary-bg)]"
         )}
       >
         <Icon
-          className={cn("w-5 h-5", isPro ? "text-white" : "text-[var(--primary)]")}
+          aria-label={title}
+          className={cn(
+            "w-5 h-5",
+            isPro ? "text-white" : "text-[var(--primary)]"
+          )}
         />
       </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1 flex-wrap">
-          <h4 className="text-base font-semibold text-[var(--text-primary)] leading-snug">
-            {title}
-          </h4>
-          {isPro && (
-            <span className="px-3 py-1 text-[10px] font-bold text-white bg-gradient-to-r from-[var(--primary)] to-[#8B5CF6] rounded-full uppercase tracking-wider shadow-sm">
-              Pro
-            </span>
-          )}
-        </div>
-        <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
-          {description}
-        </p>
-      </div>
+
+      <h3 className="text-base font-semibold text-[var(--text-primary)] leading-snug mb-2 pr-12">
+        {title}
+      </h3>
+      <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
+        {description}
+      </p>
     </div>
   );
 }
@@ -132,50 +150,27 @@ export function Features() {
     <Section
       variant="default"
       id="features"
-      className="pt-8 md:pt-12 bg-gradient-to-b from-white via-[#FAFBFF] to-white"
+      className="py-20 md:py-32 bg-gradient-to-b from-white via-[#FAFBFF] to-white"
     >
-      <Reveal className="text-center max-w-2xl mx-auto mb-16">
+      <Reveal className="text-center max-w-2xl mx-auto mb-12 md:mb-16">
         <h2 className="font-display text-[32px] md:text-[40px] font-bold leading-[1.15] tracking-tight text-[var(--text-primary)]">
           Tout ce qu’il vous faut. Rien de plus.
         </h2>
         <p className="mt-4 text-lg text-[var(--text-secondary)] leading-relaxed">
           Chaque outil pensé pour votre quotidien sur le terrain.
         </p>
+        <p className="mt-3 text-sm text-[var(--text-tertiary,var(--text-secondary))]">
+          12 outils inclus. Les fonctionnalités marquées PRO sont disponibles
+          avec le plan à 49 €/mois.
+        </p>
       </Reveal>
 
-      <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
-        {/* Starter */}
-        <Reveal className="bg-white rounded-2xl border-2 border-[var(--border)] p-8 shadow-lg transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
-          <header className="pb-4 border-b border-[var(--border)] mb-2">
-            <span className="inline-block px-3 py-1 mb-3 text-[10px] font-bold uppercase tracking-widest rounded-full bg-[var(--primary-bg)] text-[var(--primary-dark)]">
-              Plan Starter
-            </span>
-            <h3 className="text-2xl font-bold text-[var(--text-primary)]">25 €/mois</h3>
-          </header>
-          <div>
-            {FEATURES_STARTER.map((f) => (
-              <FeatureRow key={f.title} {...f} />
-            ))}
-          </div>
-        </Reveal>
-
-        {/* Pro */}
-        <Reveal
-          className="bg-white rounded-2xl border-2 border-[var(--primary)] p-8 shadow-2xl shadow-[var(--primary)]/10 transition-all duration-300 hover:shadow-2xl hover:shadow-[var(--primary)]/20 hover:-translate-y-1"
-          delay={0.1}
-        >
-          <header className="pb-4 border-b border-[var(--border)] mb-2">
-            <span className="inline-block px-3 py-1 mb-3 text-[10px] font-bold uppercase tracking-widest rounded-full bg-gradient-to-r from-[var(--primary)] to-[#8B5CF6] text-white shadow-sm">
-              Plan Pro
-            </span>
-            <h3 className="text-2xl font-bold text-[var(--text-primary)]">49 €/mois</h3>
-          </header>
-          <div>
-            {FEATURES_PRO.map((f) => (
-              <FeatureRow key={f.title} {...f} isPro />
-            ))}
-          </div>
-        </Reveal>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5 lg:gap-6">
+        {FEATURES.map((feature, i) => (
+          <Reveal key={feature.title} delay={Math.min(i * 0.04, 0.3)}>
+            <FeatureCard {...feature} />
+          </Reveal>
+        ))}
       </div>
     </Section>
   );

@@ -6,14 +6,23 @@ import { Logo } from "@/components/shared/Logo";
 export function Hero() {
   return (
     <section className="relative isolate overflow-hidden bg-gradient-to-br from-white via-white to-[var(--primary-bg)] pt-28 pb-12 md:pt-36 md:pb-20">
-      {/* Decorative shapes — XL+ only, ne s'affichent pas sur mobile */}
+      {/* Subtle warm overlay — empile un 2ème dégradé pour la profondeur */}
       <div
         aria-hidden
-        className="hidden xl:block absolute top-0 right-0 w-[44rem] h-[44rem] -translate-y-1/3 translate-x-1/3 rounded-full bg-[var(--primary-bg)] opacity-30 blur-3xl pointer-events-none -z-10"
+        className="absolute inset-0 bg-gradient-to-tl from-[var(--accent-warm-bg)] via-transparent to-transparent pointer-events-none -z-10"
+      />
+      {/* Decorative blobs — opacity bridée à 30 sur mobile pour ne pas écraser le texte */}
+      <div
+        aria-hidden
+        className="hidden md:block absolute top-0 right-0 w-[600px] h-[600px] -translate-y-1/4 translate-x-1/4 rounded-full bg-[var(--primary)] opacity-30 xl:opacity-50 blur-3xl pointer-events-none -z-10"
       />
       <div
         aria-hidden
-        className="hidden xl:block absolute bottom-0 left-0 w-[28rem] h-[28rem] -translate-x-1/3 translate-y-1/3 rounded-3xl bg-[var(--accent-warm-bg)] opacity-35 blur-3xl pointer-events-none -z-10"
+        className="hidden md:block absolute bottom-0 left-0 w-[500px] h-[500px] -translate-x-1/4 translate-y-1/4 rounded-3xl bg-[var(--accent-warm)] opacity-30 xl:opacity-50 blur-3xl pointer-events-none -z-10"
+      />
+      <div
+        aria-hidden
+        className="hidden lg:block absolute bottom-1/4 left-1/2 -translate-x-1/2 w-[400px] h-[400px] rounded-full bg-[#8B5CF6] opacity-20 xl:opacity-30 blur-3xl pointer-events-none -z-10"
       />
 
       <div className="relative max-w-[1600px] mx-auto px-6 lg:px-8">

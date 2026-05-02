@@ -112,18 +112,22 @@ function FeatureCard({ icon: Icon, title, description, isPro }: Feature) {
         "hover:shadow-lg hover:shadow-[var(--primary)]/15"
       )}
     >
-      {isPro && (
-        <span className="absolute top-4 right-4 px-2.5 py-0.5 text-[11px] font-bold tracking-wider text-white uppercase rounded-full bg-gradient-to-r from-[var(--primary)] to-[#8B5CF6] shadow-sm">
+      {isPro ? (
+        <span className="absolute top-4 right-4 px-2 py-0.5 text-[11px] font-bold tracking-wider text-white uppercase rounded-full bg-gradient-to-r from-[var(--primary)] to-[#A78BFA] shadow-sm">
           Pro
+        </span>
+      ) : (
+        <span className="absolute top-3 right-4 text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+          Inclus
         </span>
       )}
 
       <div
         className={cn(
-          "w-11 h-11 rounded-full flex items-center justify-center mb-4",
+          "w-12 h-12 rounded-full flex items-center justify-center mb-4",
           isPro
-            ? "bg-gradient-to-br from-[var(--primary)] to-[#8B5CF6] shadow-sm"
-            : "bg-[var(--primary-bg)]"
+            ? "bg-gradient-to-br from-[var(--primary)] to-[#A78BFA] shadow-sm"
+            : "bg-gradient-to-br from-[var(--primary-bg)] to-[#DDE3FF] border-[1.5px] border-[#DDE3FF]"
         )}
       >
         <Icon

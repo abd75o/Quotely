@@ -15,16 +15,22 @@ export function Hero() {
       {/* Decorative blobs — opacity bridée à 30 sur mobile pour ne pas écraser le texte */}
       <div
         aria-hidden
-        className="hidden md:block absolute top-0 right-0 w-[600px] h-[600px] -translate-y-1/4 translate-x-1/4 rounded-full bg-[var(--primary)] opacity-30 xl:opacity-50 blur-3xl pointer-events-none -z-10"
-      />
+        className="hidden md:block absolute top-0 right-0 w-[600px] h-[600px] -translate-y-1/4 translate-x-1/4 pointer-events-none -z-10"
+      >
+        <div className="w-full h-full rounded-full bg-[var(--primary)] opacity-30 xl:opacity-50 blur-3xl animate-blob-1" />
+      </div>
       <div
         aria-hidden
-        className="hidden md:block absolute bottom-0 left-0 w-[500px] h-[500px] -translate-x-1/4 translate-y-1/4 rounded-3xl bg-[var(--accent-warm)] opacity-30 xl:opacity-50 blur-3xl pointer-events-none -z-10"
-      />
+        className="hidden md:block absolute bottom-0 left-0 w-[500px] h-[500px] -translate-x-1/4 translate-y-1/4 pointer-events-none -z-10"
+      >
+        <div className="w-full h-full rounded-3xl bg-[var(--accent-warm)] opacity-30 xl:opacity-50 blur-3xl animate-blob-2" />
+      </div>
       <div
         aria-hidden
-        className="hidden lg:block absolute bottom-1/4 left-1/2 -translate-x-1/2 w-[400px] h-[400px] rounded-full bg-[#8B5CF6] opacity-20 xl:opacity-30 blur-3xl pointer-events-none -z-10"
-      />
+        className="hidden lg:block absolute bottom-1/4 left-1/2 -translate-x-1/2 w-[400px] h-[400px] pointer-events-none -z-10"
+      >
+        <div className="w-full h-full rounded-full bg-[#8B5CF6] opacity-20 xl:opacity-30 blur-3xl animate-blob-3" />
+      </div>
 
       <div className="relative max-w-[1600px] mx-auto px-6 lg:px-8">
         <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 items-center">

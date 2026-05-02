@@ -41,7 +41,7 @@ export function Hero() {
 
             <div className="mt-10 flex flex-col sm:flex-row sm:items-center gap-4">
               <Button href="/inscription" variant="primary" icon>
-                Sécuriser mon activité
+                Créer mon premier devis
               </Button>
               <Button href="#comment-ca-marche" variant="secondary">
                 Voir comment ça marche

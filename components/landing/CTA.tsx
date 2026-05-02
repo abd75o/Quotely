@@ -31,7 +31,7 @@ export function CTA() {
 
         <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
           <Button href="/inscription" variant="primary-inverted" icon>
-            Commencer maintenant
+            Démarrer · 14 jours gratuits
           </Button>
           <Button href="/tarifs" variant="secondary-outline-light">
             Voir les tarifs

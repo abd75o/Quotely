@@ -70,7 +70,7 @@ export function Pricing() {
             variant="secondary"
             className="w-full mb-8"
           >
-            Commencer gratuitement
+            Tester gratuitement
           </Button>
 
           <ul className="space-y-3 flex-1">
@@ -131,7 +131,7 @@ export function Pricing() {
             icon
             className="w-full mb-8"
           >
-            Démarrer mon essai Pro
+            Démarrer mon essai · 14 jours
           </Button>
 
           <ul className="space-y-3 flex-1">

@@ -6,44 +6,29 @@ import { cn } from "@/lib/utils";
 
 const FAQS = [
   {
-    question: "La signature électronique de Quotely est-elle légalement valide ?",
+    question: "Y a-t-il un engagement ?",
     answer:
-      "Oui, totalement. Elle suit le règlement européen eIDAS. Chaque signature est horodatée, liée à l’email du signataire, et accompagnée d’un certificat d’audit. Elle a la même valeur juridique qu’une signature papier en France et en Europe.",
+      "Aucun engagement. Vous pouvez résilier votre abonnement à tout moment depuis votre espace, en un clic.",
   },
   {
-    question: "Faut-il être à l’aise avec l’informatique pour utiliser Quotely ?",
+    question: "Que se passe-t-il après les 14 jours d’essai ?",
     answer:
-      "Non. Si vous savez écrire un SMS, vous savez utiliser Quotely. Tout est pensé pour le terrain, pas pour le bureau.",
+      "Si vous décidez de continuer, vous serez prélevé du montant de votre plan. Sinon, votre compte est désactivé sans frais. Aucune carte bancaire n’est demandée pour commencer.",
   },
   {
-    question: "Puis-je importer mes clients et mes anciens modèles ?",
+    question: "Puis-je changer de plan en cours de route ?",
     answer:
-      "Oui. Import depuis un fichier Excel, CSV, ou directement depuis votre carnet d’adresses. Vos modèles existants, on les recrée avec vous si besoin.",
+      "Oui, à tout moment. Vous pouvez passer de Starter à Pro (ou inversement) depuis votre espace. La facturation est ajustée au prorata.",
   },
   {
-    question: "Mon client doit-il créer un compte Quotely pour signer ?",
+    question: "Comment fonctionne la facturation ?",
     answer:
-      "Non, jamais. Il reçoit un lien, il clique, il signe. C’est tout.",
+      "Mensuelle, par carte bancaire via Stripe. Une facture est automatiquement générée et envoyée par email. Vos données restent privées et hébergées en France.",
   },
   {
-    question: "Puis-je personnaliser les devis avec mon logo et mes couleurs ?",
+    question: "Y a-t-il une réduction pour un paiement annuel ?",
     answer:
-      "Oui. Logo, couleurs, mentions légales, conditions de paiement. Tout est ajustable en quelques minutes.",
-  },
-  {
-    question: "Comment fonctionnent les relances automatiques ?",
-    answer:
-      "Quotely relance votre client à J+3, J+7 et J+14 si le devis n’est pas signé. Avec un message courtois, personnalisé. Vous pouvez les désactiver, les modifier, ou en programmer d’autres.",
-  },
-  {
-    question: "Puis-je résilier à tout moment ?",
-    answer:
-      "Oui, à n’importe quel moment, sans justification. Un seul clic dans vos paramètres. Aucun engagement, aucun frais caché.",
-  },
-  {
-    question: "Comment Quotely arrive à rédiger un devis aussi vite ?",
-    answer:
-      "Quotely s’appuie sur des modèles de langage avancés pour transformer votre description en devis structuré, avec les bonnes formulations et le bon calcul de TVA. Vous gardez toujours la main : relisez, ajustez, validez avant l’envoi. Vos données ne servent jamais à entraîner les modèles — elles restent privées et hébergées en France.",
+      "Pas pour le moment. Quotely vient de sortir, nous gardons les choses simples : un prix mensuel, sans engagement.",
   },
 ];
 
@@ -96,15 +81,14 @@ function FAQItem({
   );
 }
 
-export function FAQ() {
+export function PricingFAQ() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   return (
     <section
-      id="faq"
+      id="faq-tarifs"
       className="relative isolate overflow-hidden py-16 md:py-24 bg-gradient-to-br from-[#F8FAFC] via-[#EEF2FF] to-[#FEF9F0]"
     >
-      {/* Decorative blobs — hidden on mobile */}
       <div
         aria-hidden
         className="hidden md:block absolute -top-32 -right-32 w-[28rem] h-[28rem] rounded-full bg-[var(--primary-bg)] opacity-20 blur-3xl pointer-events-none -z-10"
@@ -117,17 +101,10 @@ export function FAQ() {
       <div className="relative max-w-3xl mx-auto px-6 lg:px-8">
         <div className="text-center mb-12">
           <h2 className="font-display text-[32px] md:text-[40px] font-bold leading-[1.15] tracking-tight text-[var(--text-primary)]">
-            Vos questions, nos réponses.
+            Questions sur les tarifs
           </h2>
           <p className="mt-4 text-lg text-[var(--text-secondary)] leading-relaxed">
-            Une question manque ?{" "}
-            <a
-              href="mailto:support@quotely.fr"
-              className="text-[var(--primary)] font-semibold hover:underline cursor-pointer"
-            >
-              Écrivez-nous
-            </a>
-            , on répond vite.
+            Tout ce qu’il faut savoir avant de choisir.
           </p>
         </div>
 
@@ -138,7 +115,9 @@ export function FAQ() {
               question={faq.question}
               answer={faq.answer}
               isOpen={openIndex === index}
-              onToggle={() => setOpenIndex(openIndex === index ? null : index)}
+              onToggle={() =>
+                setOpenIndex(openIndex === index ? null : index)
+              }
             />
           ))}
         </div>

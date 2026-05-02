@@ -29,17 +29,32 @@ const PRO_FEATURES = [
   "Support prioritaire",
 ];
 
-export function Pricing() {
-  return (
-    <Section variant="alt" id="pricing">
-      <Reveal className="text-center max-w-2xl mx-auto mb-16">
-        <h2 className="font-display text-[32px] md:text-[40px] font-bold leading-[1.15] tracking-tight text-[var(--text-primary)]">
-          Un prix simple. Aucun engagement.
-        </h2>
-        <p className="mt-4 text-lg text-[var(--text-secondary)] leading-relaxed">
-          <Highlight variant="warm">14 jours offerts</Highlight>. Sans carte bancaire. Résiliable en un clic.
-        </p>
-      </Reveal>
+interface PricingProps {
+  starterHref?: string;
+  proHref?: string;
+  showHeading?: boolean;
+  unwrapped?: boolean;
+}
+
+export function Pricing({
+  starterHref = "/inscription?plan=starter",
+  proHref = "/inscription?plan=pro",
+  showHeading = true,
+  unwrapped = false,
+}: PricingProps = {}) {
+  const inner = (
+    <>
+      {showHeading && (
+        <Reveal className="text-center max-w-2xl mx-auto mb-16">
+          <h2 className="font-display text-[32px] md:text-[40px] font-bold leading-[1.15] tracking-tight text-[var(--text-primary)]">
+            Un prix simple. Aucun engagement.
+          </h2>
+          <p className="mt-4 text-lg text-[var(--text-secondary)] leading-relaxed">
+            <Highlight variant="warm">14 jours offerts</Highlight>. Sans carte
+            bancaire. Résiliable en un clic.
+          </p>
+        </Reveal>
+      )}
 
       <div className="grid md:grid-cols-2 gap-6 lg:gap-8 max-w-5xl xl:max-w-[992px] mx-auto items-stretch">
         {/* Starter */}
@@ -58,18 +73,16 @@ export function Pricing() {
               <span className="font-display text-5xl font-bold text-[var(--text-primary)]">
                 25 €
               </span>
-              <span className="text-[var(--text-muted)] mb-2 font-medium">/mois</span>
+              <span className="text-[var(--text-muted)] mb-2 font-medium">
+                /mois
+              </span>
             </div>
             <p className="text-xs text-[var(--text-muted)] mt-2 font-medium">
               Soit moins de 0,85 € par jour.
             </p>
           </div>
 
-          <Button
-            href="/inscription?plan=starter"
-            variant="secondary"
-            className="w-full mb-8"
-          >
+          <Button href={starterHref} variant="secondary" className="w-full mb-8">
             Tester gratuitement
           </Button>
 
@@ -77,7 +90,10 @@ export function Pricing() {
             {STARTER_FEATURES.map((feature) => (
               <li key={feature} className="flex items-start gap-3">
                 <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[var(--emerald-bg)] flex items-center justify-center mt-0.5">
-                  <Check className="w-3 h-3 text-[var(--emerald-dark)]" strokeWidth={3} />
+                  <Check
+                    className="w-3 h-3 text-[var(--emerald-dark)]"
+                    strokeWidth={3}
+                  />
                 </span>
                 <span className="text-sm text-[var(--text-secondary)] leading-relaxed">
                   {feature}
@@ -118,19 +134,16 @@ export function Pricing() {
               <span className="font-display text-5xl font-bold text-[var(--text-primary)]">
                 49 €
               </span>
-              <span className="text-[var(--text-muted)] mb-2 font-medium">/mois</span>
+              <span className="text-[var(--text-muted)] mb-2 font-medium">
+                /mois
+              </span>
             </div>
             <p className="text-xs text-[var(--text-muted)] mt-2 font-medium">
               Soit moins de 1,65 € par jour.
             </p>
           </div>
 
-          <Button
-            href="/inscription?plan=pro"
-            variant="primary"
-            icon
-            className="w-full mb-8"
-          >
+          <Button href={proHref} variant="primary" icon className="w-full mb-8">
             Démarrer mon essai · 14 jours
           </Button>
 
@@ -138,7 +151,10 @@ export function Pricing() {
             {PRO_FEATURES.map((feature) => (
               <li key={feature} className="flex items-start gap-3">
                 <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[var(--emerald-bg)] flex items-center justify-center mt-0.5">
-                  <Check className="w-3 h-3 text-[var(--emerald-dark)]" strokeWidth={3} />
+                  <Check
+                    className="w-3 h-3 text-[var(--emerald-dark)]"
+                    strokeWidth={3}
+                  />
                 </span>
                 <span className="text-sm text-[var(--text-secondary)] leading-relaxed">
                   {feature}
@@ -162,6 +178,16 @@ export function Pricing() {
           14 jours d’essai gratuit · Sans carte bancaire · Résiliable en un clic
         </div>
       </Reveal>
+    </>
+  );
+
+  if (unwrapped) {
+    return inner;
+  }
+
+  return (
+    <Section variant="alt" id="pricing">
+      {inner}
     </Section>
   );
 }

@@ -2,10 +2,11 @@ import { CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Highlight } from "@/components/ui/Highlight";
 import { Logo } from "@/components/shared/Logo";
+import { ScrollIndicator } from "@/components/landing/ScrollIndicator";
 
 export function Hero() {
   return (
-    <section className="relative isolate overflow-hidden bg-gradient-to-br from-white via-white to-[var(--primary-bg)] pt-28 pb-12 md:pt-36 md:pb-20">
+    <section className="relative isolate overflow-hidden bg-gradient-to-br from-white via-white to-[var(--primary-bg)] flex flex-col justify-center min-h-screen min-h-[100svh] pt-20 pb-16">
       {/* Subtle warm overlay — empile un 2ème dégradé pour la profondeur */}
       <div
         aria-hidden
@@ -57,6 +58,8 @@ export function Hero() {
           </div>
         </div>
       </div>
+
+      <ScrollIndicator targetId="comment-ca-marche" />
     </section>
   );
 }

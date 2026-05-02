@@ -8,10 +8,10 @@ import { Logo } from "@/components/shared/Logo";
 import { Button } from "@/components/ui/Button";
 
 const NAV_LINKS = [
-  { label: "Fonctionnalités", href: "#features" },
-  { label: "Tarifs", href: "#pricing" },
-  { label: "Témoignages", href: "#testimonials" },
-  { label: "FAQ", href: "#faq" },
+  { label: "Fonctionnalités", href: "/#features" },
+  { label: "Tarifs", href: "/tarifs" },
+  { label: "Témoignages", href: "/#testimonials" },
+  { label: "FAQ", href: "/#faq" },
 ];
 
 export function Navbar() {

@@ -8,7 +8,19 @@ export function Testimonials() {
     <Section
       variant="default"
       id="testimonials"
-      className="py-16 md:py-20 bg-gradient-to-br from-white via-[#FEF3C7]/30 to-white"
+      className="py-16 md:py-20 bg-gradient-to-br from-white via-[#FFFBEA] to-[#F5F3FF]"
+      decoration={
+        <>
+          <div
+            aria-hidden
+            className="hidden md:block absolute top-0 left-0 w-[350px] h-[350px] -translate-y-1/3 -translate-x-1/4 rounded-full bg-[var(--accent-warm)] opacity-30 blur-3xl pointer-events-none -z-10"
+          />
+          <div
+            aria-hidden
+            className="hidden md:block absolute bottom-0 right-0 w-[400px] h-[400px] translate-y-1/4 translate-x-1/4 rounded-3xl bg-[#8B5CF6] opacity-25 blur-3xl pointer-events-none -z-10"
+          />
+        </>
+      }
     >
       <Reveal className="relative max-w-2xl mx-auto text-center mb-12">
         <Quote

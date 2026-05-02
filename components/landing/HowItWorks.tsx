@@ -119,7 +119,19 @@ export function HowItWorks() {
     <Section
       variant="alt"
       id="comment-ca-marche"
-      className="bg-gradient-to-b from-white via-[#F8FAFC] to-[#EEF2FF]"
+      className="bg-gradient-to-br from-[#FAFBFF] via-white to-[#FEF9F0]"
+      decoration={
+        <>
+          <div
+            aria-hidden
+            className="hidden md:block absolute top-0 right-0 w-[400px] h-[400px] -translate-y-1/4 translate-x-1/4 rounded-full bg-[var(--primary)] opacity-25 blur-3xl pointer-events-none -z-10"
+          />
+          <div
+            aria-hidden
+            className="hidden md:block absolute bottom-0 left-0 w-[350px] h-[350px] translate-y-1/4 -translate-x-1/4 rounded-3xl bg-[var(--accent-warm)] opacity-20 blur-3xl pointer-events-none -z-10"
+          />
+        </>
+      }
     >
       <Reveal className="text-center max-w-2xl mx-auto mb-16">
         <h2 className="font-display text-[32px] md:text-[40px] font-bold leading-[1.15] tracking-tight text-[var(--text-primary)]">

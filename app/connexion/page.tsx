@@ -69,14 +69,9 @@ export default function ConnexionPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--surface)] flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-[#FAFBFF] via-white to-[#FEF9F0] flex flex-col">
       <div className="fixed inset-0 pointer-events-none overflow-hidden" aria-hidden>
-        <div className="absolute -top-40 -right-40 w-[600px] h-[600px] bg-gradient-to-br from-indigo-100 to-purple-100 rounded-full blur-3xl opacity-60" />
-        <div className="absolute -bottom-40 -left-40 w-[500px] h-[500px] bg-gradient-to-tr from-indigo-50 to-blue-100 rounded-full blur-3xl opacity-40" />
-        <div
-          className="absolute inset-0 opacity-[0.03]"
-          style={{ backgroundImage: "radial-gradient(circle, #6366f1 1px, transparent 1px)", backgroundSize: "28px 28px" }}
-        />
+        <div className="absolute -top-40 -right-40 w-[400px] h-[400px] bg-[var(--primary)] rounded-full blur-3xl opacity-20" />
       </div>
 
       <header className="relative z-10 flex justify-center pt-8 pb-4">
@@ -87,7 +82,7 @@ export default function ConnexionPage() {
 
       <main className="relative z-10 flex-1 flex items-center justify-center px-4 py-8">
         <div className="w-full max-w-[400px]">
-          <div className="bg-white rounded-3xl border border-[var(--border)] shadow-xl p-8">
+          <div className="bg-white rounded-3xl border border-[var(--border)] shadow-xl p-8 md:p-12">
             <div className="text-center mb-8">
               <h1 className="text-2xl font-extrabold text-[var(--text-primary)] tracking-tight">
                 Connexion à Quotely

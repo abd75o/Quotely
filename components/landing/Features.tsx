@@ -63,21 +63,21 @@ const FEATURES: Feature[] = [
     icon: Mic,
     title: "Dictée vocale",
     description:
-      "Parlez sur le terrain. Le devis se rédige pendant que vous travaillez.",
+      "Parlez sur le terrain. L’IA transforme votre voix en devis structuré pendant que vous travaillez.",
     isPro: true,
   },
   {
     icon: Pencil,
     title: "Rédaction guidée",
     description:
-      "Les bonnes formulations professionnelles, suggérées au bon moment.",
+      "L’IA suggère les bonnes formulations professionnelles au bon moment.",
     isPro: true,
   },
   {
     icon: TrendingUp,
     title: "Tarifs du marché",
     description:
-      "Des suggestions cohérentes selon votre métier et votre région.",
+      "Des suggestions IA cohérentes selon votre métier et votre région.",
     isPro: true,
   },
   {

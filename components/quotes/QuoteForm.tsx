@@ -2,12 +2,13 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Sparkles, Save, Eye, Loader2, Mic, AlertCircle, Plus, Info, X } from "lucide-react";
+import { Sparkles, Save, Eye, Loader2, Mic, AlertCircle, Plus, Info, X, Edit, TrendingUp } from "lucide-react";
 import { ClientSelector } from "./ClientSelector";
 import { LineItemsEditor, LineItem } from "./LineItemsEditor";
 import { toastSuccess, toastError } from "@/lib/toast";
 import { useUserPlan } from "@/lib/hooks/useUserState";
 import { useUpgradeModal } from "@/lib/hooks/useUpgradeModal";
+import { ProBadge } from "@/components/ui/ProBadge";
 import { cn } from "@/lib/utils";
 
 type ClientValue =
@@ -172,10 +173,15 @@ export function QuoteForm() {
                 }
                 setAiExpanded(!aiExpanded);
               }}
-              className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-[var(--primary)] bg-[var(--primary-bg)] hover:bg-indigo-100 rounded-xl cursor-pointer transition-colors"
+              className="relative flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-[var(--primary)] bg-[var(--primary-bg)] hover:bg-indigo-100 rounded-xl cursor-pointer transition-colors"
             >
               <Sparkles className="w-4 h-4" />
-              Générer avec l'IA
+              Générer avec l&apos;IA
+              {isStarter && (
+                <span className="absolute -top-1.5 -right-1.5">
+                  <ProBadge size="sm" />
+                </span>
+              )}
             </button>
             <button
               type="submit"
@@ -214,9 +220,26 @@ export function QuoteForm() {
               <button
                 type="button"
                 aria-label="Dictée vocale"
+                onClick={() => {
+                  if (isStarter) {
+                    showUpgradeModal(
+                      "Dictée vocale",
+                      "Créez vos devis en parlant. L'IA structure automatiquement votre dictée en lignes de prestations.",
+                      Mic
+                    );
+                    return;
+                  }
+                  // TODO Phase 2 — démarrer la reconnaissance vocale Web Speech API
+                  toastSuccess("Dictée vocale bientôt disponible");
+                }}
                 className="absolute bottom-3 right-3 p-1.5 rounded-lg text-indigo-400 hover:text-[var(--primary)] hover:bg-indigo-50 cursor-pointer transition-colors"
               >
                 <Mic className="w-4 h-4" />
+                {isStarter && (
+                  <span className="absolute -top-2 -right-2">
+                    <ProBadge size="sm" withIcon={false} />
+                  </span>
+                )}
               </button>
             </div>
             {aiError && (

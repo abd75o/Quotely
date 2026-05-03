@@ -14,8 +14,13 @@ import {
   CheckCircle2,
   XCircle,
   ArrowLeft,
+  Award,
+  Bell,
 } from "lucide-react";
 import { Logo } from "@/components/shared/Logo";
+import { ProBadge } from "@/components/ui/ProBadge";
+import { useUserPlan } from "@/lib/hooks/useUserState";
+import { useUpgradeModal } from "@/lib/hooks/useUpgradeModal";
 import { cn } from "@/lib/utils";
 
 interface QuoteItem {
@@ -80,6 +85,8 @@ export function QuotePreview({ quote }: { quote: Quote }) {
   const [sent, setSent] = useState(false);
   const [copied, setCopied] = useState(false);
   const [signLink, setSignLink] = useState("");
+  const { isStarter } = useUserPlan();
+  const { showUpgradeModal } = useUpgradeModal();
 
   const status = STATUS[quote.status as keyof typeof STATUS] ?? STATUS.pending;
   const StatusIcon = status.icon;
@@ -162,6 +169,46 @@ export function QuotePreview({ quote }: { quote: Quote }) {
           )}
         </div>
       </div>
+
+      {/* Pro features teaser — Starter uniquement */}
+      {isStarter && (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() =>
+              showUpgradeModal(
+                "Score de signature",
+                "Découvrez la probabilité de signature de ce devis et nos conseils pour l'optimiser.",
+                Award
+              )
+            }
+            className="relative inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold text-[var(--text-secondary)] bg-white border border-[var(--border)] hover:border-[var(--primary)] hover:text-[var(--primary)] rounded-xl cursor-pointer transition-colors"
+          >
+            <Award className="w-3.5 h-3.5" />
+            Score de signature
+            <span className="absolute -top-1.5 -right-1.5">
+              <ProBadge size="sm" withIcon={false} />
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              showUpgradeModal(
+                "Relances automatiques",
+                "Quotely relance automatiquement vos clients à J+3, J+7 et J+14 si le devis n'est pas signé.",
+                Bell
+              )
+            }
+            className="relative inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold text-[var(--text-secondary)] bg-white border border-[var(--border)] hover:border-[var(--primary)] hover:text-[var(--primary)] rounded-xl cursor-pointer transition-colors"
+          >
+            <Bell className="w-3.5 h-3.5" />
+            Configurer les relances automatiques
+            <span className="absolute -top-1.5 -right-1.5">
+              <ProBadge size="sm" withIcon={false} />
+            </span>
+          </button>
+        </div>
+      )}
 
       {/* Sent confirmation */}
       {sent && (

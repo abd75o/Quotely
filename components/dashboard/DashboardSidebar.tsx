@@ -17,13 +17,24 @@ import {
 import { Logo } from "@/components/shared/Logo";
 import { TrialBadge } from "@/components/auth/TrialBadge";
 import { NewQuoteButton } from "@/components/quotes/NewQuoteButton";
+import { ProBadge } from "@/components/ui/ProBadge";
+import { useUserPlan } from "@/lib/hooks/useUserState";
+import { useUpgradeModal } from "@/lib/hooks/useUpgradeModal";
 import { cn } from "@/lib/utils";
 
-const NAV = [
-  { label: "Devis",        icon: FileText,  href: "/dashboard/quotes" },
-  { label: "Clients",      icon: Users,     href: "/dashboard/clients" },
-  { label: "Statistiques", icon: BarChart2, href: "/dashboard/stats" },
-  { label: "Paramètres",   icon: Settings,  href: "/dashboard/parametres" },
+interface NavItemDef {
+  label: string;
+  icon: React.ElementType;
+  href: string;
+  /** Si true, l'item est verrouillé pour les Starter (badge PRO + modal au clic). */
+  proOnly?: boolean;
+}
+
+const NAV: NavItemDef[] = [
+  { label: "Devis",                  icon: FileText,  href: "/dashboard/quotes" },
+  { label: "Clients",                icon: Users,     href: "/dashboard/clients" },
+  { label: "Statistiques avancées",  icon: BarChart2, href: "/dashboard/stats", proOnly: true },
+  { label: "Paramètres",             icon: Settings,  href: "/dashboard/parametres" },
 ];
 
 interface SidebarData {
@@ -77,31 +88,53 @@ function useSidebarData(): SidebarData {
 function NavItem({
   item,
   active,
+  locked,
   onClick,
+  onLockedClick,
 }: {
-  item: (typeof NAV)[0];
+  item: NavItemDef;
   active: boolean;
+  locked: boolean;
   onClick?: () => void;
+  onLockedClick?: () => void;
 }) {
+  const baseCls = cn(
+    "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 cursor-pointer group",
+    active
+      ? "bg-[var(--primary-bg)] text-[var(--primary)]"
+      : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-gray-100"
+  );
+  const iconCls = cn(
+    "w-4 h-4 flex-shrink-0",
+    active
+      ? "text-[var(--primary)]"
+      : "text-[var(--text-muted)] group-hover:text-[var(--text-secondary)]"
+  );
+
+  if (locked) {
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          onClick?.();
+          onLockedClick?.();
+        }}
+        className={cn(baseCls, "w-full text-left")}
+      >
+        <item.icon className={iconCls} />
+        <span className="truncate">{item.label}</span>
+        <ProBadge size="sm" withIcon={false} className="ml-auto" />
+      </button>
+    );
+  }
+
   return (
     <Link
       href={item.href}
       onClick={onClick}
-      className={cn(
-        "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 cursor-pointer group",
-        active
-          ? "bg-[var(--primary-bg)] text-[var(--primary)]"
-          : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-gray-100"
-      )}
+      className={baseCls}
     >
-      <item.icon
-        className={cn(
-          "w-4 h-4 flex-shrink-0",
-          active
-            ? "text-[var(--primary)]"
-            : "text-[var(--text-muted)] group-hover:text-[var(--text-secondary)]"
-        )}
-      />
+      <item.icon className={iconCls} />
       {item.label}
       {active && <ChevronRight className="w-3 h-3 ml-auto text-[var(--primary)]" />}
     </Link>
@@ -112,6 +145,8 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
   const { email, initials, company, plan, trialEndsAt } = useSidebarData();
+  const { isStarter } = useUserPlan();
+  const { showUpgradeModal } = useUpgradeModal();
 
   async function handleLogout() {
     const { createClient } = await import("@/lib/supabase/client");
@@ -152,14 +187,25 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
-        {NAV.map((item) => (
-          <NavItem
-            key={item.href}
-            item={item}
-            active={pathname.startsWith(item.href)}
-            onClick={onClose}
-          />
-        ))}
+        {NAV.map((item) => {
+          const locked = !!item.proOnly && isStarter;
+          return (
+            <NavItem
+              key={item.href}
+              item={item}
+              active={!locked && pathname.startsWith(item.href)}
+              locked={locked}
+              onClick={onClose}
+              onLockedClick={() =>
+                showUpgradeModal(
+                  "Statistiques avancées",
+                  "Graphiques d'évolution du chiffre d'affaires, score de signature et tableaux de bord détaillés.",
+                  BarChart2
+                )
+              }
+            />
+          );
+        })}
       </nav>
 
       {/* Trial badge (données réelles) */}

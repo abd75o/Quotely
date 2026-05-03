@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Fraunces } from "next/font/google";
 import "./globals.css";
 import { UserStateProvider } from "@/lib/hooks/useUserState";
+import { CookieBanner } from "@/components/shared/CookieBanner";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -46,6 +47,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans">
         <UserStateProvider>{children}</UserStateProvider>
+        <CookieBanner />
       </body>
     </html>
   );

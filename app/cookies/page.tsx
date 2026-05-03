@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Navbar } from "@/components/shared/Navbar";
 import { Footer } from "@/components/shared/Footer";
+import { CookiePreferencesButton } from "@/components/shared/CookiePreferencesButton";
 import { LEGAL_INFO } from "@/lib/legal-info";
 
 export const metadata: Metadata = {
@@ -162,16 +163,9 @@ export default function CookiesPage() {
               </li>
             </ul>
 
-            <button
-              type="button"
-              disabled
-              title="Bannière de gestion du consentement — disponible dans une prochaine version"
-              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-[var(--text-muted)] bg-[var(--bg-secondary)] border border-[var(--border)] rounded-xl cursor-not-allowed opacity-70"
-            >
-              Modifier mes préférences cookies
-            </button>
+            <CookiePreferencesButton />
             <p className="text-xs text-[var(--text-muted)] mt-2">
-              La bannière de gestion sera disponible prochainement.
+              Cliquez pour réafficher la bannière et ajuster vos choix.
             </p>
           </section>
 

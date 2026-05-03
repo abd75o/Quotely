@@ -6,7 +6,7 @@ import { ScrollIndicator } from "@/components/landing/ScrollIndicator";
 
 export function Hero() {
   return (
-    <section className="relative isolate overflow-hidden bg-gradient-to-br from-white via-white to-[var(--primary-bg)] flex flex-col justify-center min-h-screen min-h-[100svh] pt-20 pb-16">
+    <section className="relative isolate overflow-hidden bg-gradient-to-br from-white via-white to-[var(--primary-bg)] flex flex-col justify-center min-h-screen min-h-[100svh] pt-24 md:pt-20 pb-12 md:pb-32">
       {/* Subtle warm overlay — empile un 2ème dégradé pour la profondeur */}
       <div
         aria-hidden
@@ -32,21 +32,21 @@ export function Hero() {
         <div className="w-full h-full rounded-full bg-[#8B5CF6] opacity-20 xl:opacity-30 blur-3xl animate-blob-3" />
       </div>
 
-      <div className="relative max-w-[1600px] mx-auto px-6 lg:px-8">
-        <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 items-center">
+      <div className="relative w-full max-w-[1600px] mx-auto px-6 lg:px-8">
+        <div className="grid lg:grid-cols-12 gap-10 lg:gap-16 items-center">
           {/* Copy */}
-          <div className="lg:col-span-7 animate-fade-in-up">
-            <h1 className="font-display text-[40px] md:text-[56px] font-bold leading-[1.05] tracking-tight text-[var(--text-primary)]">
+          <div className="lg:col-span-7 animate-fade-in-up text-center lg:text-left">
+            <h1 className="font-display text-[36px] sm:text-[40px] md:text-[56px] font-bold leading-[1.05] tracking-tight text-[var(--text-primary)]">
               Pendant que vous écrivez,{" "}
               <Highlight variant="primary">ils signent ailleurs</Highlight>.
             </h1>
 
-            <p className="mt-6 text-lg md:text-xl leading-relaxed text-[var(--text-secondary)] max-w-xl">
+            <p className="mt-6 text-base md:text-xl leading-relaxed text-[var(--text-secondary)] max-w-xl mx-auto lg:mx-0">
               Quotely, le devis qui part avant que vous passiez à autre chose.
               Le client signe sur place, sur son téléphone.
             </p>
 
-            <div className="mt-10 flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="mt-8 md:mt-10 flex flex-col sm:flex-row items-stretch sm:items-center justify-center lg:justify-start gap-3 sm:gap-4">
               <Button href="/inscription" variant="primary" icon>
                 Créer mon premier devis
               </Button>
@@ -57,7 +57,7 @@ export function Hero() {
           </div>
 
           {/* Phone mockup */}
-          <div className="lg:col-span-5 flex justify-center lg:justify-end animate-fade-in-up">
+          <div className="lg:col-span-5 flex justify-center lg:justify-end animate-fade-in-up mt-4 lg:mt-0">
             <div className="animate-float">
               <PhoneMockup />
             </div>
@@ -72,7 +72,7 @@ export function Hero() {
 
 function PhoneMockup() {
   return (
-    <div className="relative w-full max-w-[300px] sm:max-w-[340px] lg:max-w-[400px] xl:max-w-[460px]">
+    <div className="relative w-full max-w-[280px] sm:max-w-[320px] lg:max-w-[400px] xl:max-w-[460px] mx-auto">
       <div className="bg-[var(--text-primary)] rounded-[2.5rem] p-2.5 shadow-[0_20px_60px_-15px_rgba(99,102,241,0.25)]">
         <div className="bg-[var(--bg-secondary)] rounded-[2rem] overflow-hidden">
           {/* Status bar */}

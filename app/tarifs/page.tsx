@@ -93,10 +93,7 @@ export default async function TarifsPage({
                   </>
                 )}
                 {userState === "trial_active" && (
-                  <>
-                    Choisissez le plan qui correspond à votre activité. Il vous
-                    reste {daysLeft} jour{daysLeft !== 1 ? "s" : ""} d&apos;essai.
-                  </>
+                  <>{`Choisissez le plan qui correspond à votre activité. Il vous reste ${daysLeft} jour${daysLeft !== 1 ? "s" : ""} d'essai.`}</>
                 )}
                 {userState === "trial_expired" && (
                   <>Reprenez votre activité avec le plan qui vous correspond.</>

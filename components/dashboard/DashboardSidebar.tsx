@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import { Logo } from "@/components/shared/Logo";
 import { TrialBadge } from "@/components/auth/TrialBadge";
-import { LogoutButton } from "@/components/dashboard/LogoutButton";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -201,38 +200,38 @@ export function DashboardSidebar() {
         <SidebarContent />
       </aside>
 
-      {/* Mobile top bar */}
-      <header className="lg:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-[var(--border)] sticky top-0 z-30">
-        <Link href="/dashboard">
-          <Logo variant="horizontal" size={26} id="mobile-header" />
+      {/* Mobile top bar — burger | logo centré | + */}
+      <header className="lg:hidden grid grid-cols-3 items-center h-14 px-2 bg-white border-b border-[var(--border)] sticky top-0 z-30">
+        <button
+          type="button"
+          onClick={() => setMobileOpen(true)}
+          className="justify-self-start inline-flex items-center justify-center w-11 h-11 rounded-xl text-[var(--text-primary)] hover:bg-gray-100 cursor-pointer transition-colors"
+          aria-label="Ouvrir le menu"
+        >
+          <Menu className="w-6 h-6" />
+        </button>
+
+        <Link href="/dashboard" className="justify-self-center cursor-pointer" aria-label="Tableau de bord">
+          <Logo variant="horizontal" size={28} id="mobile-header" />
         </Link>
-        <div className="flex items-center gap-1">
-          <Link
-            href="/dashboard/quotes/new"
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--primary)] text-white text-xs font-semibold rounded-lg cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Nouveau
-          </Link>
-          <LogoutButton variant="icon" />
-          <button
-            onClick={() => setMobileOpen(true)}
-            className="p-2 rounded-lg text-[var(--text-secondary)] hover:bg-gray-100 cursor-pointer"
-            aria-label="Ouvrir le menu"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
-        </div>
+
+        <Link
+          href="/dashboard/quotes/new"
+          className="justify-self-end inline-flex items-center justify-center w-11 h-11 rounded-xl bg-[var(--primary)] hover:bg-[var(--primary-dark)] text-white cursor-pointer transition-colors shadow-sm"
+          aria-label="Nouveau devis"
+        >
+          <Plus className="w-5 h-5" />
+        </Link>
       </header>
 
       {/* Mobile drawer */}
       {mobileOpen && (
         <div className="lg:hidden fixed inset-0 z-50 flex">
           <div
-            className="absolute inset-0 bg-black/30 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
             onClick={() => setMobileOpen(false)}
           />
-          <aside className="relative w-72 bg-white h-full flex flex-col shadow-2xl">
+          <aside className="relative w-[280px] max-w-[85vw] bg-white h-full flex flex-col shadow-2xl">
             <SidebarContent onClose={() => setMobileOpen(false)} />
           </aside>
         </div>

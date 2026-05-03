@@ -91,14 +91,14 @@ function StatCard({
     violet: "bg-violet-50 text-violet-600",
   };
   return (
-    <div className="bg-white rounded-2xl border border-[var(--border)] p-5 flex items-start gap-4">
-      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${colors[color]}`}>
-        <Icon className="w-5 h-5" />
+    <div className="bg-white rounded-2xl border border-[var(--border)] p-4 sm:p-5 flex items-start gap-3 sm:gap-4">
+      <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${colors[color]}`}>
+        <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
       </div>
-      <div>
+      <div className="min-w-0">
         <p className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wide mb-0.5">{label}</p>
-        <p className="text-2xl font-extrabold text-[var(--text-primary)] leading-none">{value}</p>
-        {sub && <p className="text-xs text-[var(--text-muted)] mt-1">{sub}</p>}
+        <p className="text-xl sm:text-2xl font-extrabold text-[var(--text-primary)] leading-none">{value}</p>
+        {sub && <p className="text-[11px] sm:text-xs text-[var(--text-muted)] mt-1">{sub}</p>}
       </div>
     </div>
   );
@@ -186,20 +186,22 @@ export default async function DashboardPage({
         </div>
       )}
 
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-extrabold text-[var(--text-primary)] tracking-tight">Tableau de bord</h1>
-          <p className="text-sm text-[var(--text-secondary)] mt-0.5">
+      <div className="flex items-center justify-between mb-5 sm:mb-6 gap-3">
+        <div className="min-w-0">
+          <h1 className="text-2xl md:text-3xl font-extrabold text-[var(--text-primary)] tracking-tight truncate">
+            Tableau de bord
+          </h1>
+          <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-0.5 truncate">
             Essai Pro · <span className="font-semibold text-emerald-600">14 jours restants</span>
           </p>
         </div>
+        {/* Sur mobile, le bouton "+" est déjà dans le header sticky — on évite le doublon */}
         <Link
           href="/dashboard/quotes/new"
-          className="flex items-center gap-2 px-4 py-2.5 bg-[var(--primary)] hover:bg-[var(--primary-dark)] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm cursor-pointer"
+          className="hidden lg:flex items-center gap-2 px-4 py-2.5 bg-[var(--primary)] hover:bg-[var(--primary-dark)] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm cursor-pointer flex-shrink-0"
         >
           <Plus className="w-4 h-4" />
-          <span className="hidden sm:inline">Créer un devis</span>
-          <span className="sm:hidden">Nouveau</span>
+          Créer un devis
         </Link>
       </div>
 

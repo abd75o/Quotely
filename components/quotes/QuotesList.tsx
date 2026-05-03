@@ -13,7 +13,6 @@ import {
   MoreHorizontal,
   Copy,
   Trash2,
-  ChevronRight,
 } from "lucide-react";
 import { StatsCards } from "./StatsCards";
 import { cn } from "@/lib/utils";
@@ -146,14 +145,15 @@ export function QuotesList({ initialQuotes }: { initialQuotes: QuoteRow[] }) {
   return (
     <div className="max-w-6xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-[var(--text-primary)]">Mes devis</h1>
-          <p className="text-sm text-[var(--text-muted)] mt-0.5">{total} devis au total</p>
+      <div className="flex items-center justify-between mb-5 sm:mb-6 gap-3">
+        <div className="min-w-0">
+          <h1 className="text-2xl md:text-3xl font-bold text-[var(--text-primary)] truncate">Mes devis</h1>
+          <p className="text-xs sm:text-sm text-[var(--text-muted)] mt-0.5 truncate">{total} devis au total</p>
         </div>
+        {/* Sur mobile, le bouton "+" est dans le header sticky du dashboard */}
         <Link
           href="/dashboard/quotes/new"
-          className="flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white bg-[var(--primary)] hover:bg-[var(--primary-dark)] rounded-xl cursor-pointer transition-colors shadow-sm"
+          className="hidden lg:flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white bg-[var(--primary)] hover:bg-[var(--primary-dark)] rounded-xl cursor-pointer transition-colors shadow-sm flex-shrink-0"
         >
           <Plus className="w-4 h-4" />
           Nouveau devis
@@ -165,8 +165,8 @@ export function QuotesList({ initialQuotes }: { initialQuotes: QuoteRow[] }) {
         <StatsCards total={total} signed={signed} pending={pending} revenue={revenue} />
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-4">
+      {/* Filters — sur mobile la recherche est au-dessus des onglets */}
+      <div className="flex flex-col-reverse sm:flex-row gap-3 mb-4">
         {/* Tabs — scroll horizontal sur mobile pour ne pas casser le layout */}
         <div className="-mx-4 sm:mx-0 px-4 sm:px-0 overflow-x-auto sm:overflow-visible [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
           <div className="inline-flex gap-1 p-1 bg-[var(--surface)] border border-[var(--border)] rounded-xl whitespace-nowrap">
@@ -230,77 +230,97 @@ export function QuotesList({ initialQuotes }: { initialQuotes: QuoteRow[] }) {
           )}
         </div>
       ) : (
-        <div className="bg-white rounded-3xl border border-[var(--border)] overflow-hidden">
-          {/* Table header */}
-          <div className="hidden md:grid grid-cols-[1fr_160px_120px_140px_100px_40px] gap-4 px-6 py-3 border-b border-[var(--border)] bg-[var(--surface)]">
-            {["Devis", "Client", "Montant TTC", "Date", "Statut", ""].map((h) => (
-              <span key={h} className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider">
-                {h}
-              </span>
-            ))}
-          </div>
-
-          {/* Rows */}
-          <ul className="divide-y divide-[var(--border-light)]">
+        <>
+          {/* Mobile : liste de cartes */}
+          <ul className="md:hidden flex flex-col gap-3">
             {filtered.map((quote) => (
               <li key={quote.id}>
                 <Link
                   href={`/dashboard/quotes/${quote.id}`}
-                  className="flex md:grid md:grid-cols-[1fr_160px_120px_140px_100px_40px] gap-4 items-center px-6 py-4 hover:bg-[var(--surface)] cursor-pointer transition-colors group"
+                  className="block bg-white rounded-2xl border border-[var(--border)] p-4 hover:border-[var(--primary)]/30 hover:shadow-sm cursor-pointer transition-all"
                 >
-                  {/* Number + preview */}
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-9 h-9 rounded-xl bg-[var(--primary-bg)] flex items-center justify-center flex-shrink-0">
-                      <FileText className="w-4 h-4 text-[var(--primary)]" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-[var(--text-primary)] font-mono">{quote.number}</p>
-                      <p className="text-xs text-[var(--text-muted)] truncate hidden md:block">
-                        {quote.items?.[0]?.description || "—"}
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-7 h-7 rounded-lg bg-[var(--primary-bg)] flex items-center justify-center flex-shrink-0">
+                        <FileText className="w-3.5 h-3.5 text-[var(--primary)]" />
+                      </div>
+                      <p className="text-xs font-semibold text-[var(--text-muted)] font-mono truncate">
+                        {quote.number}
                       </p>
                     </div>
-                  </div>
-
-                  {/* Client */}
-                  <div className="hidden md:block min-w-0">
-                    <p className="text-sm font-medium text-[var(--text-primary)] truncate">{quote.client?.name ?? "—"}</p>
-                    <p className="text-xs text-[var(--text-muted)] truncate">{quote.client?.email ?? ""}</p>
-                  </div>
-
-                  {/* Amount */}
-                  <p className="hidden md:block text-sm font-bold text-[var(--text-primary)] tabular-nums ml-auto md:ml-0">
-                    {quote.total.toLocaleString("fr-FR", { style: "currency", currency: "EUR" })}
-                  </p>
-
-                  {/* Date */}
-                  <p className="hidden md:block text-sm text-[var(--text-secondary)]">
-                    {fmtDate(quote.created_at)}
-                  </p>
-
-                  {/* Status */}
-                  <div className="hidden md:block">
                     <StatusBadge status={quote.status} />
                   </div>
-
-                  {/* Mobile: right side */}
-                  <div className="flex md:hidden flex-col items-end gap-1 ml-auto">
-                    <p className="text-sm font-bold text-[var(--text-primary)] tabular-nums">
+                  <p className="text-sm font-bold text-[var(--text-primary)] truncate mb-1">
+                    {quote.client?.name ?? "—"}
+                  </p>
+                  <div className="flex items-end justify-between gap-2">
+                    <p className="text-lg font-bold text-[var(--text-primary)] tabular-nums leading-none">
                       {quote.total.toLocaleString("fr-FR", { style: "currency", currency: "EUR" })}
                     </p>
-                    <StatusBadge status={quote.status} />
+                    <p className="text-xs text-[var(--text-muted)] flex-shrink-0">
+                      {fmtDate(quote.created_at)}
+                    </p>
                   </div>
-
-                  {/* Actions */}
-                  <div onClick={(e) => e.preventDefault()} className="hidden md:flex justify-end">
-                    <QuoteRowMenu quote={quote} />
-                  </div>
-
-                  <ChevronRight className="w-4 h-4 text-[var(--text-muted)] md:hidden ml-2 flex-shrink-0 group-hover:text-[var(--text-secondary)] transition-colors" />
                 </Link>
               </li>
             ))}
           </ul>
-        </div>
+
+          {/* Desktop : table classique */}
+          <div className="hidden md:block bg-white rounded-3xl border border-[var(--border)] overflow-hidden">
+            <div className="grid grid-cols-[1fr_160px_120px_140px_100px_40px] gap-4 px-6 py-3 border-b border-[var(--border)] bg-[var(--surface)]">
+              {["Devis", "Client", "Montant TTC", "Date", "Statut", ""].map((h) => (
+                <span key={h} className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider">
+                  {h}
+                </span>
+              ))}
+            </div>
+
+            <ul className="divide-y divide-[var(--border-light)]">
+              {filtered.map((quote) => (
+                <li key={quote.id}>
+                  <Link
+                    href={`/dashboard/quotes/${quote.id}`}
+                    className="grid grid-cols-[1fr_160px_120px_140px_100px_40px] gap-4 items-center px-6 py-4 hover:bg-[var(--surface)] cursor-pointer transition-colors group"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-9 h-9 rounded-xl bg-[var(--primary-bg)] flex items-center justify-center flex-shrink-0">
+                        <FileText className="w-4 h-4 text-[var(--primary)]" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-[var(--text-primary)] font-mono">{quote.number}</p>
+                        <p className="text-xs text-[var(--text-muted)] truncate">
+                          {quote.items?.[0]?.description || "—"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-[var(--text-primary)] truncate">{quote.client?.name ?? "—"}</p>
+                      <p className="text-xs text-[var(--text-muted)] truncate">{quote.client?.email ?? ""}</p>
+                    </div>
+
+                    <p className="text-sm font-bold text-[var(--text-primary)] tabular-nums">
+                      {quote.total.toLocaleString("fr-FR", { style: "currency", currency: "EUR" })}
+                    </p>
+
+                    <p className="text-sm text-[var(--text-secondary)]">
+                      {fmtDate(quote.created_at)}
+                    </p>
+
+                    <div>
+                      <StatusBadge status={quote.status} />
+                    </div>
+
+                    <div onClick={(e) => e.preventDefault()} className="flex justify-end">
+                      <QuoteRowMenu quote={quote} />
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </>
       )}
     </div>
   );

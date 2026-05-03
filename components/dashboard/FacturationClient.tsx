@@ -27,29 +27,71 @@ interface InvoiceRow {
   invoice_pdf: string | null;
 }
 
+interface PaymentCard {
+  brand: string;
+  last4: string;
+  exp_month: number;
+  exp_year: number;
+}
+
+function formatDate(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  return d.toLocaleDateString("fr-FR", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
 export function FacturationClient() {
-  const { state, daysLeft } = useUserState();
+  const { state, daysLeft, profile } = useUserState();
   const { isStarter, isPro, isTrialing } = useUserPlan();
   const { showUpgradeModal } = useUpgradeModal();
 
+  const cancelAt = profile?.subscription_cancel_at ?? null;
+  const periodEnd = profile?.subscription_current_period_end ?? null;
+  const isCancelled = !!cancelAt && new Date(cancelAt).getTime() > Date.now();
+  const cancelDateLabel = formatDate(cancelAt);
+  const nextChargeLabel = formatDate(periodEnd);
+
   const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
   const [loadingInvoices, setLoadingInvoices] = useState(true);
+  const [card, setCard] = useState<PaymentCard | null>(null);
   const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch("/api/stripe/invoices");
-        if (!res.ok) {
-          if (!cancelled) setInvoices([]);
-          return;
+        const [invRes, pmRes] = await Promise.all([
+          fetch("/api/stripe/invoices"),
+          fetch("/api/stripe/payment-method"),
+        ]);
+
+        if (!cancelled) {
+          if (invRes.ok) {
+            const data = await invRes.json();
+            setInvoices(data.invoices ?? []);
+          } else {
+            setInvoices([]);
+          }
         }
-        const data = await res.json();
-        if (cancelled) return;
-        setInvoices(data.invoices ?? []);
+
+        if (!cancelled) {
+          if (pmRes.ok) {
+            const data = await pmRes.json();
+            setCard(data.card ?? null);
+          } else {
+            setCard(null);
+          }
+        }
       } catch {
-        if (!cancelled) setInvoices([]);
+        if (!cancelled) {
+          setInvoices([]);
+          setCard(null);
+        }
       } finally {
         if (!cancelled) setLoadingInvoices(false);
       }
@@ -86,6 +128,9 @@ export function FacturationClient() {
         isStarter={isStarter}
         isPro={isPro}
         isTrialing={isTrialing}
+        isCancelled={isCancelled}
+        nextChargeLabel={nextChargeLabel}
+        cancelDateLabel={cancelDateLabel}
         onUpgradeProClick={() =>
           showUpgradeModal(
             "Plan Pro",
@@ -93,6 +138,8 @@ export function FacturationClient() {
             Sparkles
           )
         }
+        onCancelClick={() => setConfirmCancelOpen(true)}
+        onReactivate={openStripePortal}
       />
 
       {/* Méthode de paiement */}
@@ -101,12 +148,20 @@ export function FacturationClient() {
           <div className="w-10 h-10 rounded-xl bg-[var(--surface)] flex items-center justify-center">
             <CreditCard className="w-5 h-5 text-[var(--text-muted)]" />
           </div>
-          <div>
+          <div className="min-w-0">
             <p className="text-sm font-semibold text-[var(--text-primary)]">
-              {isPro || isStarter ? "Carte bancaire enregistrée" : "Aucune carte enregistrée"}
+              {card
+                ? `Carte bancaire enregistrée : •••• ${card.last4}`
+                : isPro || isStarter
+                ? "Carte bancaire enregistrée"
+                : "Aucune carte enregistrée"}
             </p>
             <p className="text-xs text-[var(--text-muted)]">
-              Gérez votre carte directement sur le portail sécurisé Stripe.
+              {card
+                ? `${card.brand.toUpperCase()} · expire ${String(card.exp_month).padStart(2, "0")}/${String(
+                    card.exp_year
+                  ).slice(-2)}`
+                : "Gérez votre carte directement sur le portail sécurisé Stripe."}
             </p>
           </div>
         </div>
@@ -116,7 +171,7 @@ export function FacturationClient() {
           className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-[var(--text-primary)] bg-white border border-[var(--border)] hover:bg-[var(--surface)] rounded-xl cursor-pointer transition-colors"
         >
           <ExternalLink className="w-4 h-4" />
-          Ouvrir le portail Stripe
+          {card ? "Modifier ma carte" : "Ouvrir le portail Stripe"}
         </button>
       </Section>
 
@@ -215,21 +270,47 @@ function PlanCard({
   isStarter,
   isPro,
   isTrialing,
+  isCancelled,
+  nextChargeLabel,
+  cancelDateLabel,
   onUpgradeProClick,
+  onCancelClick,
+  onReactivate,
 }: {
   state: ReturnType<typeof useUserState>["state"];
   daysLeft: number | null;
   isStarter: boolean;
   isPro: boolean;
   isTrialing: boolean;
+  isCancelled: boolean;
+  nextChargeLabel: string | null;
+  cancelDateLabel: string | null;
   onUpgradeProClick: () => void;
+  onCancelClick: () => void;
+  onReactivate: () => void;
 }) {
   let badge = "Plan inconnu";
   let title = "Choisissez un plan pour démarrer";
-  let subtitle = "";
+  let subtitle: React.ReactNode = "";
   let action: React.ReactNode = null;
+  let inlineCancel = false;
 
-  if (state === "trial_active") {
+  if (isCancelled && (isStarter || isPro)) {
+    badge = "Abonnement annulé";
+    title = "Votre abonnement a été annulé.";
+    subtitle = cancelDateLabel
+      ? `Votre accès se termine le ${cancelDateLabel}.`
+      : "Votre accès se termine à la fin de la période en cours.";
+    action = (
+      <button
+        type="button"
+        onClick={onReactivate}
+        className="inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-bold text-white bg-[var(--primary)] hover:bg-[var(--primary-dark)] rounded-xl cursor-pointer transition-colors shadow-sm"
+      >
+        Réactiver mon abonnement
+      </button>
+    );
+  } else if (state === "trial_active") {
     badge = "Essai en cours";
     title = "Vous testez actuellement le plan Pro pendant 14 jours.";
     subtitle = `Il vous reste ${daysLeft ?? 14} jour${(daysLeft ?? 14) > 1 ? "s" : ""} d'essai.`;
@@ -256,7 +337,9 @@ function PlanCard({
   } else if (isStarter) {
     badge = "Plan Starter · 25 €/mois";
     title = "Vous êtes sur le plan Starter.";
-    subtitle = "Passez au Pro pour débloquer toutes les fonctionnalités avancées.";
+    subtitle = nextChargeLabel
+      ? `Prochain prélèvement : ${nextChargeLabel}.`
+      : "Passez au Pro pour débloquer toutes les fonctionnalités avancées.";
     action = (
       <button
         type="button"
@@ -266,10 +349,13 @@ function PlanCard({
         Passer au Pro
       </button>
     );
+    inlineCancel = true;
   } else if (isPro && !isTrialing) {
     badge = "Plan Pro · 49 €/mois";
     title = "Vous êtes sur le plan Pro.";
-    subtitle = "Toutes les fonctionnalités sont débloquées.";
+    subtitle = nextChargeLabel
+      ? `Prochain prélèvement : ${nextChargeLabel}.`
+      : "Toutes les fonctionnalités sont débloquées.";
     action = (
       <a
         href="/tarifs"
@@ -278,17 +364,33 @@ function PlanCard({
         Repasser à Starter
       </a>
     );
+    inlineCancel = true;
   }
 
+  const cardCls = isCancelled
+    ? "bg-gradient-to-br from-amber-500 to-orange-600"
+    : "bg-gradient-to-br from-[var(--primary)] to-indigo-700";
+
   return (
-    <section className="bg-gradient-to-br from-[var(--primary)] to-indigo-700 text-white rounded-2xl p-5 sm:p-6 shadow-sm">
+    <section className={cn(cardCls, "text-white rounded-2xl p-5 sm:p-6 shadow-sm")}>
       <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/15 text-[10px] font-bold uppercase tracking-widest mb-3">
         <Sparkles className="w-3 h-3" />
         {badge}
       </div>
       <h2 className="text-lg sm:text-xl font-bold leading-tight mb-1">{title}</h2>
-      {subtitle && <p className="text-sm text-white/80 mb-4">{subtitle}</p>}
+      {subtitle && <p className="text-sm text-white/85 mb-4">{subtitle}</p>}
       {action}
+      {inlineCancel && (
+        <div className="mt-4 pt-4 border-t border-white/15">
+          <button
+            type="button"
+            onClick={onCancelClick}
+            className="text-xs font-semibold text-white/80 hover:text-white underline underline-offset-4 cursor-pointer"
+          >
+            Annuler mon abonnement
+          </button>
+        </div>
+      )}
     </section>
   );
 }

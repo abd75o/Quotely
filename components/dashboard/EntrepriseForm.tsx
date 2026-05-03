@@ -1,10 +1,21 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { ImageIcon, Loader2, Save } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ImageIcon, Loader2, Save, Trash2, Upload } from "lucide-react";
 import { TextField, SelectField, FieldShell } from "@/components/ui/Field";
 import { createClient } from "@/lib/supabase/client";
 import { toastError, toastSuccess } from "@/lib/toast";
+
+const LOGO_BUCKET = "company-logos";
+const LOGO_MAX_BYTES = 2 * 1024 * 1024;
+const LOGO_ACCEPT = "image/png,image/jpeg,image/svg+xml,image/webp";
+const LOGO_EXT_FROM_TYPE: Record<string, string> = {
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/jpg": "jpg",
+  "image/svg+xml": "svg",
+  "image/webp": "webp",
+};
 
 const METIER_OPTIONS = [
   { value: "", label: "— Sélectionner —" },
@@ -68,7 +79,10 @@ export function EntrepriseForm() {
   const [initial, setInitial] = useState<CompanyForm>(EMPTY);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
   const [errors, setErrors] = useState<Partial<Record<keyof CompanyForm, string>>>({});
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -82,6 +96,7 @@ export function EntrepriseForm() {
         if (!cancelled) setLoading(false);
         return;
       }
+      if (!cancelled) setUserId(user.id);
       const { data: profile } = await supabase
         .from("profiles")
         .select(
@@ -125,6 +140,52 @@ export function EntrepriseForm() {
 
   function update<K extends keyof CompanyForm>(key: K, value: CompanyForm[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  async function handleLogoSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // permettre de re-sélectionner le même fichier
+    if (!file) return;
+    if (!userId) {
+      toastError("Session expirée — reconnectez-vous.");
+      return;
+    }
+    if (file.size > LOGO_MAX_BYTES) {
+      toastError("Logo trop lourd (2 Mo max).");
+      return;
+    }
+    const ext = LOGO_EXT_FROM_TYPE[file.type];
+    if (!ext) {
+      toastError("Format non supporté (PNG, JPG, SVG ou WebP).");
+      return;
+    }
+    setUploadingLogo(true);
+    try {
+      const supabase = createClient();
+      const path = `${userId}/logo.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from(LOGO_BUCKET)
+        .upload(path, file, {
+          upsert: true,
+          contentType: file.type,
+          cacheControl: "0",
+        });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from(LOGO_BUCKET).getPublicUrl(path);
+      // Cache-buster pour forcer le rafraîchissement après réécriture
+      const url = `${pub.publicUrl}?v=${Date.now()}`;
+      update("logo_url", url);
+      toastSuccess("Logo téléversé");
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : "Échec du téléversement");
+    } finally {
+      setUploadingLogo(false);
+    }
+  }
+
+  async function handleLogoRemove() {
+    if (!form.logo_url) return;
+    update("logo_url", "");
   }
 
   function validate(): boolean {
@@ -196,19 +257,51 @@ export function EntrepriseForm() {
     <form onSubmit={handleSubmit} className="pb-24">
       {/* Section 1 — Identité */}
       <Section title="Identité de l'entreprise">
-        <FieldShell label="Logo" hint="Format PNG, JPG ou SVG · 2 MB max. Bientôt disponible.">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-[var(--surface)] border border-dashed border-[var(--border)] flex items-center justify-center text-[var(--text-muted)]">
-              <ImageIcon className="w-6 h-6" />
+        <FieldShell label="Logo" hint="PNG, JPG, SVG ou WebP · 2 Mo max. Apparaît sur vos devis et factures.">
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="w-16 h-16 rounded-2xl bg-[var(--surface)] border border-dashed border-[var(--border)] flex items-center justify-center text-[var(--text-muted)] overflow-hidden">
+              {form.logo_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={form.logo_url}
+                  alt="Logo de l'entreprise"
+                  className="w-full h-full object-contain"
+                />
+              ) : (
+                <ImageIcon className="w-6 h-6" />
+              )}
             </div>
+            <input
+              ref={logoInputRef}
+              type="file"
+              accept={LOGO_ACCEPT}
+              onChange={handleLogoSelect}
+              className="sr-only"
+              aria-label="Téléverser un logo"
+            />
             <button
               type="button"
-              disabled
-              className="px-4 py-2 text-sm font-semibold text-[var(--text-muted)] bg-[var(--surface)] border border-[var(--border)] rounded-xl cursor-not-allowed"
-              title="Upload du logo — Phase 2"
+              onClick={() => logoInputRef.current?.click()}
+              disabled={uploadingLogo}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-[var(--text-primary)] bg-white border border-[var(--border)] hover:bg-[var(--surface)] disabled:opacity-60 disabled:cursor-not-allowed rounded-xl cursor-pointer transition-colors"
             >
-              Téléverser un logo
+              {uploadingLogo ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Upload className="w-4 h-4" />
+              )}
+              {form.logo_url ? "Remplacer" : "Téléverser un logo"}
             </button>
+            {form.logo_url && !uploadingLogo && (
+              <button
+                type="button"
+                onClick={handleLogoRemove}
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-lg cursor-pointer transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Retirer
+              </button>
+            )}
           </div>
         </FieldShell>
 

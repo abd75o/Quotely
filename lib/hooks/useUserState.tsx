@@ -21,6 +21,8 @@ export interface UserProfile {
   id: string;
   plan: "trial" | "starter" | "pro" | null;
   trial_ends_at: string | null;
+  subscription_cancel_at: string | null;
+  subscription_current_period_end: string | null;
 }
 
 export interface UserStateContextValue {
@@ -129,7 +131,9 @@ export function UserStateProvider({ children }: { children: ReactNode }) {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("id, plan, trial_ends_at")
+        .select(
+          "id, plan, trial_ends_at, subscription_cancel_at, subscription_current_period_end"
+        )
         .eq("id", user.id)
         .single();
 

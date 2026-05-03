@@ -9,11 +9,11 @@ const PRODUCT_LINKS = [
 ];
 
 const LEGAL_LINKS = [
-  { label: "Mentions légales", href: "/legal/mentions" },
-  { label: "CGU", href: "/legal/terms" },
-  { label: "Politique de confidentialité", href: "/legal/privacy" },
-  { label: "Cookies", href: "/legal/cookies" },
-  { label: "RGPD", href: "/legal/rgpd" },
+  { label: "Mentions légales", href: "/mentions-legales" },
+  { label: "CGU", href: "/cgu" },
+  { label: "Politique de confidentialité", href: "/politique-confidentialite" },
+  { label: "Cookies", href: "/cookies" },
+  { label: "RGPD", href: "/rgpd" },
 ];
 
 const METIERS = [

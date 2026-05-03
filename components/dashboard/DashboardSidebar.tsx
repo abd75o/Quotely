@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { Logo } from "@/components/shared/Logo";
 import { TrialBadge } from "@/components/auth/TrialBadge";
+import { NewQuoteButton } from "@/components/quotes/NewQuoteButton";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -140,14 +141,13 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
 
       {/* New quote CTA */}
       <div className="px-4 pt-4 pb-2">
-        <Link
-          href="/dashboard/quotes/new"
+        <NewQuoteButton
           onClick={onClose}
           className="flex items-center justify-center gap-2 w-full py-2.5 bg-[var(--primary)] hover:bg-[var(--primary-dark)] text-white text-sm font-semibold rounded-xl transition-colors duration-150 cursor-pointer shadow-sm"
         >
           <Plus className="w-4 h-4" />
           Nouveau devis
-        </Link>
+        </NewQuoteButton>
       </div>
 
       {/* Nav */}
@@ -215,13 +215,12 @@ export function DashboardSidebar() {
           <Logo variant="horizontal" size={28} id="mobile-header" />
         </Link>
 
-        <Link
-          href="/dashboard/quotes/new"
+        <NewQuoteButton
+          ariaLabel="Nouveau devis"
           className="justify-self-end inline-flex items-center justify-center w-11 h-11 rounded-xl bg-[var(--primary)] hover:bg-[var(--primary-dark)] text-white cursor-pointer transition-colors shadow-sm"
-          aria-label="Nouveau devis"
         >
           <Plus className="w-5 h-5" />
-        </Link>
+        </NewQuoteButton>
       </header>
 
       {/* Mobile drawer */}

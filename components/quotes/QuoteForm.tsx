@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { Sparkles, Save, Eye, Loader2, Mic, AlertCircle, Plus, Info, X } from "lucide-react";
 import { ClientSelector } from "./ClientSelector";
 import { LineItemsEditor, LineItem } from "./LineItemsEditor";
+import { toastSuccess, toastError } from "@/lib/toast";
+import { useUserPlan } from "@/lib/hooks/useUserState";
+import { useUpgradeModal } from "@/lib/hooks/useUpgradeModal";
 import { cn } from "@/lib/utils";
 
 type ClientValue =
@@ -29,6 +32,8 @@ function todayStr(): string {
 
 export function QuoteForm() {
   const router = useRouter();
+  const { isStarter } = useUserPlan();
+  const { showUpgradeModal } = useUpgradeModal();
 
   // Metadata
   const [number] = useState(generateNumber);
@@ -132,9 +137,12 @@ export function QuoteForm() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Erreur serveur");
 
+      toastSuccess("Devis créé avec succès");
       router.push(`/dashboard/quotes/${data.quote.id}`);
     } catch (err) {
-      setErrors({ submit: err instanceof Error ? err.message : "Erreur lors de la création" });
+      const msg = err instanceof Error ? err.message : "Erreur lors de la création";
+      setErrors({ submit: msg });
+      toastError(msg);
       setIsSubmitting(false);
     }
   }
@@ -153,7 +161,17 @@ export function QuoteForm() {
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => setAiExpanded(!aiExpanded)}
+              onClick={() => {
+                if (isStarter) {
+                  showUpgradeModal(
+                    "Génération IA",
+                    "Décrivez la prestation en quelques mots. L'IA structure automatiquement les lignes, détecte le type de client et suggère la TVA adaptée.",
+                    Sparkles
+                  );
+                  return;
+                }
+                setAiExpanded(!aiExpanded);
+              }}
               className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-[var(--primary)] bg-[var(--primary-bg)] hover:bg-indigo-100 rounded-xl cursor-pointer transition-colors"
             >
               <Sparkles className="w-4 h-4" />

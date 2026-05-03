@@ -161,3 +161,38 @@ export function UserStateProvider({ children }: { children: ReactNode }) {
 export function useUserState() {
   return useContext(UserStateContext);
 }
+
+// ─── Plan-aware helpers (foundation pour la différenciation Starter / Pro) ──
+
+export type EffectivePlan = "starter" | "pro" | null;
+
+export interface UserPlanValue {
+  isLoading: boolean;
+  /** Plan effectif appliqué aux features. Pendant l'essai = "pro" (générosité). */
+  plan: EffectivePlan;
+  isStarter: boolean;
+  isPro: boolean;
+  isTrialing: boolean;
+}
+
+/**
+ * Vue plan-aware du UserStateContext.
+ * - Starter abonné → isStarter = true (limites Starter appliquées)
+ * - Pro abonné OU en essai → isPro = true (toutes features débloquées)
+ * - isTrialing dérivé de l'état trial_active
+ */
+export function useUserPlan(): UserPlanValue {
+  const { isLoading, state } = useUserState();
+
+  const isTrialing = state === "trial_active" || state === "trial_expired";
+  const isStarter = state === "subscribed_starter";
+  // Pendant l'essai, on traite l'utilisateur comme Pro pour ne pas brider
+  // l'expérience découverte (sauf si l'essai a expiré).
+  const isPro = state === "subscribed_pro" || state === "trial_active";
+
+  let plan: EffectivePlan = null;
+  if (isStarter) plan = "starter";
+  else if (isPro) plan = "pro";
+
+  return { isLoading, plan, isStarter, isPro, isTrialing };
+}

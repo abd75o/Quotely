@@ -15,6 +15,8 @@ import {
   Trash2,
 } from "lucide-react";
 import { StatsCards } from "./StatsCards";
+import { NewQuoteButton } from "./NewQuoteButton";
+import { toastSuccess, toastError } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
 type Status = "all" | "pending" | "signed" | "refused" | "invoiced";
@@ -87,7 +89,14 @@ function QuoteRowMenu({ quote }: { quote: QuoteRow }) {
             <button
               type="button"
               onClick={async () => {
-                await navigator.clipboard.writeText(`${window.location.origin}/devis/${quote.public_token}`);
+                try {
+                  await navigator.clipboard.writeText(
+                    `${window.location.origin}/devis/${quote.public_token}`
+                  );
+                  toastSuccess("Lien copié dans le presse-papier");
+                } catch {
+                  toastError("Impossible de copier le lien");
+                }
                 setOpen(false);
               }}
               className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-gray-50 cursor-pointer"
@@ -103,11 +112,16 @@ function QuoteRowMenu({ quote }: { quote: QuoteRow }) {
             <div className="border-t border-[var(--border)] my-1" />
             <button
               type="button"
-              onClick={() => {
-                if (confirm("Supprimer ce devis ?")) {
-                  fetch(`/api/quotes/${quote.id}`, { method: "DELETE" });
-                }
+              onClick={async () => {
                 setOpen(false);
+                if (!confirm("Supprimer ce devis ?")) return;
+                try {
+                  const res = await fetch(`/api/quotes/${quote.id}`, { method: "DELETE" });
+                  if (!res.ok) throw new Error("Suppression impossible");
+                  toastSuccess("Devis supprimé");
+                } catch {
+                  toastError("Impossible de supprimer ce devis. Réessayez.");
+                }
               }}
               className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 cursor-pointer"
             >
@@ -151,13 +165,12 @@ export function QuotesList({ initialQuotes }: { initialQuotes: QuoteRow[] }) {
           <p className="text-xs sm:text-sm text-[var(--text-muted)] mt-0.5 truncate">{total} devis au total</p>
         </div>
         {/* Sur mobile, le bouton "+" est dans le header sticky du dashboard */}
-        <Link
-          href="/dashboard/quotes/new"
+        <NewQuoteButton
           className="hidden lg:flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white bg-[var(--primary)] hover:bg-[var(--primary-dark)] rounded-xl cursor-pointer transition-colors shadow-sm flex-shrink-0"
         >
           <Plus className="w-4 h-4" />
           Nouveau devis
-        </Link>
+        </NewQuoteButton>
       </div>
 
       {/* Stats */}
@@ -220,13 +233,12 @@ export function QuotesList({ initialQuotes }: { initialQuotes: QuoteRow[] }) {
             {search ? "Essayez avec d'autres termes" : "Créez votre premier devis en 30 secondes"}
           </p>
           {!search && (
-            <Link
-              href="/dashboard/quotes/new"
+            <NewQuoteButton
               className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-[var(--primary)] hover:bg-[var(--primary-dark)] rounded-xl cursor-pointer transition-colors"
             >
               <Plus className="w-4 h-4" />
               Nouveau devis
-            </Link>
+            </NewQuoteButton>
           )}
         </div>
       ) : (

@@ -12,6 +12,8 @@ import {
   AlertCircle,
 } from "lucide-react";
 import type { Metadata } from "next";
+import { NewQuoteButton } from "@/components/quotes/NewQuoteButton";
+import { MonthlyQuoteCounter } from "@/components/dashboard/MonthlyQuoteCounter";
 
 export const metadata: Metadata = {
   title: "Dashboard — Quotely",
@@ -175,13 +177,12 @@ export default async function DashboardPage({
                 Votre essai Pro de 14 jours est actif. Créez votre premier devis maintenant.
               </p>
             </div>
-            <Link
-              href="/dashboard/quotes/new"
+            <NewQuoteButton
               className="flex items-center gap-2 px-5 py-2.5 bg-white text-[var(--primary)] text-sm font-bold rounded-xl hover:bg-gray-50 cursor-pointer transition-colors shadow-md flex-shrink-0"
             >
               <Plus className="w-4 h-4" />
               Créer un devis
-            </Link>
+            </NewQuoteButton>
           </div>
         </div>
       )}
@@ -194,15 +195,15 @@ export default async function DashboardPage({
           <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-0.5 truncate">
             Essai Pro · <span className="font-semibold text-emerald-600">14 jours restants</span>
           </p>
+          <MonthlyQuoteCounter className="mt-1" />
         </div>
         {/* Sur mobile, le bouton "+" est déjà dans le header sticky — on évite le doublon */}
-        <Link
-          href="/dashboard/quotes/new"
+        <NewQuoteButton
           className="hidden lg:flex items-center gap-2 px-4 py-2.5 bg-[var(--primary)] hover:bg-[var(--primary-dark)] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm cursor-pointer flex-shrink-0"
         >
           <Plus className="w-4 h-4" />
           Créer un devis
-        </Link>
+        </NewQuoteButton>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
@@ -253,13 +254,12 @@ export default async function DashboardPage({
             <p className="text-sm text-[var(--text-secondary)] max-w-xs mb-6">
               Créez votre premier devis en 30 secondes et envoyez-le directement à votre client.
             </p>
-            <Link
-              href="/dashboard/quotes/new"
+            <NewQuoteButton
               className="flex items-center gap-2 px-5 py-2.5 bg-[var(--primary)] hover:bg-[var(--primary-dark)] text-white text-sm font-bold rounded-xl transition-colors shadow-sm cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               Créer mon premier devis
-            </Link>
+            </NewQuoteButton>
           </div>
         ) : (
           <div className="divide-y divide-[var(--border)]">

@@ -10,10 +10,10 @@ export const metadata = {
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-[var(--surface)] flex">
+    <div className="min-h-screen bg-[var(--surface)] flex flex-col lg:flex-row">
       <DashboardSidebar />
-      <main className="flex-1 min-w-0 flex flex-col">
-        <div className="flex-1 px-4 lg:px-8 py-6 lg:py-8">
+      <main className="flex-1 min-w-0 flex flex-col w-full">
+        <div className="flex-1 px-4 lg:px-8 py-5 lg:py-8">
           <TrialBanner />
           {children}
         </div>

@@ -167,28 +167,30 @@ export function QuotesList({ initialQuotes }: { initialQuotes: QuoteRow[] }) {
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
-        {/* Tabs */}
-        <div className="flex gap-1 p-1 bg-[var(--surface)] border border-[var(--border)] rounded-xl">
-          {TABS.map((tab) => (
-            <button
-              key={tab.value}
-              type="button"
-              onClick={() => setActiveTab(tab.value)}
-              className={cn(
-                "px-4 py-1.5 text-sm font-semibold rounded-lg transition-all duration-150 cursor-pointer",
-                activeTab === tab.value
-                  ? "bg-white shadow-sm text-[var(--text-primary)]"
-                  : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-              )}
-            >
-              {tab.label}
-              {tab.value === "pending" && pending > 0 && (
-                <span className="ml-1.5 px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-bold rounded-full">
-                  {pending}
-                </span>
-              )}
-            </button>
-          ))}
+        {/* Tabs — scroll horizontal sur mobile pour ne pas casser le layout */}
+        <div className="-mx-4 sm:mx-0 px-4 sm:px-0 overflow-x-auto sm:overflow-visible [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
+          <div className="inline-flex gap-1 p-1 bg-[var(--surface)] border border-[var(--border)] rounded-xl whitespace-nowrap">
+            {TABS.map((tab) => (
+              <button
+                key={tab.value}
+                type="button"
+                onClick={() => setActiveTab(tab.value)}
+                className={cn(
+                  "px-4 py-1.5 text-sm font-semibold rounded-lg transition-all duration-150 cursor-pointer flex-shrink-0",
+                  activeTab === tab.value
+                    ? "bg-white shadow-sm text-[var(--text-primary)]"
+                    : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                )}
+              >
+                {tab.label}
+                {tab.value === "pending" && pending > 0 && (
+                  <span className="ml-1.5 px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-bold rounded-full">
+                    {pending}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Search */}

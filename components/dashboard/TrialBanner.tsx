@@ -81,7 +81,7 @@ export function TrialBanner() {
   return (
     <div
       className={cn(
-        "relative flex items-center gap-4 px-5 py-3.5 rounded-2xl mb-6 overflow-hidden",
+        "relative flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 px-4 sm:px-5 py-3.5 pr-10 sm:pr-5 rounded-2xl mb-6 overflow-hidden",
         urgent
           ? "bg-gradient-to-r from-amber-500 to-orange-500"
           : "bg-gradient-to-r from-[var(--primary)] to-indigo-600"
@@ -89,28 +89,40 @@ export function TrialBanner() {
     >
       <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent pointer-events-none" />
 
-      <div
-        className={cn(
-          "w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0",
-          urgent ? "bg-white/20" : "bg-white/15"
-        )}
+      {/* Close X — toujours en absolute en haut-droite sur mobile, inline sur desktop */}
+      <button
+        type="button"
+        onClick={dismiss}
+        aria-label="Fermer"
+        className="absolute top-2 right-2 sm:static sm:order-3 p-1.5 rounded-full text-white/60 hover:text-white hover:bg-white/15 cursor-pointer transition-colors flex-shrink-0"
       >
-        {urgent
-          ? <AlertTriangle className="w-4.5 h-4.5 text-white" />
-          : <Sparkles className="w-4.5 h-4.5 text-white" />
-        }
-      </div>
+        <X className="w-4 h-4" />
+      </button>
 
-      <p className="flex-1 text-sm font-semibold text-white min-w-0">
-        {urgent
-          ? `⚠️ Plus que ${daysLeft} jour${daysLeft > 1 ? "s" : ""} ! Passez au Pro pour ne pas perdre vos devis.`
-          : `Il vous reste ${daysLeft} jour${daysLeft > 1 ? "s" : ""} d'essai gratuit.`}
-      </p>
+      <div className="flex items-center gap-3 flex-1 min-w-0">
+        <div
+          className={cn(
+            "w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0",
+            urgent ? "bg-white/20" : "bg-white/15"
+          )}
+        >
+          {urgent
+            ? <AlertTriangle className="w-4.5 h-4.5 text-white" />
+            : <Sparkles className="w-4.5 h-4.5 text-white" />
+          }
+        </div>
+
+        <p className="flex-1 text-sm font-semibold text-white min-w-0">
+          {urgent
+            ? `⚠️ Plus que ${daysLeft} jour${daysLeft > 1 ? "s" : ""} ! Passez au Pro pour ne pas perdre vos devis.`
+            : `Il vous reste ${daysLeft} jour${daysLeft > 1 ? "s" : ""} d'essai gratuit.`}
+        </p>
+      </div>
 
       <Link
         href="/tarifs"
         className={cn(
-          "flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold flex-shrink-0 transition-colors cursor-pointer",
+          "flex items-center justify-center gap-1.5 w-full sm:w-auto px-4 py-2 rounded-xl text-sm font-bold flex-shrink-0 transition-colors cursor-pointer",
           urgent
             ? "bg-white text-amber-600 hover:bg-amber-50"
             : "bg-white text-[var(--primary)] hover:bg-indigo-50"
@@ -119,15 +131,6 @@ export function TrialBanner() {
         Passer au Pro
         <ArrowRight className="w-3.5 h-3.5" />
       </Link>
-
-      <button
-        type="button"
-        onClick={dismiss}
-        aria-label="Fermer"
-        className="p-1.5 rounded-full text-white/60 hover:text-white hover:bg-white/15 cursor-pointer transition-colors flex-shrink-0"
-      >
-        <X className="w-4 h-4" />
-      </button>
     </div>
   );
 }

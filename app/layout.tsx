@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Fraunces } from "next/font/google";
 import "./globals.css";
+import { UserStateProvider } from "@/lib/hooks/useUserState";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -44,7 +45,7 @@ export default function RootLayout({
       className={`${inter.variable} ${fraunces.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans">
-        {children}
+        <UserStateProvider>{children}</UserStateProvider>
       </body>
     </html>
   );

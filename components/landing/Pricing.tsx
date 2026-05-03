@@ -3,6 +3,7 @@ import { Section } from "@/components/ui/Section";
 import { Highlight } from "@/components/ui/Highlight";
 import { Button } from "@/components/ui/Button";
 import { Reveal } from "@/components/ui/Reveal";
+import type { UserStateValue } from "@/lib/hooks/useUserState";
 
 const STARTER_FEATURES = [
   "Modèles prêts à l’emploi par métier",
@@ -34,6 +35,49 @@ interface PricingProps {
   proHref?: string;
   showHeading?: boolean;
   unwrapped?: boolean;
+  userState?: UserStateValue;
+}
+
+type CardCta =
+  | { kind: "link"; label: string; href: string }
+  | { kind: "current"; label: string };
+
+function getStarterCta(state: UserStateValue, fallbackHref: string): CardCta {
+  switch (state) {
+    case "trial_active":
+      // TODO Phase 2: replace with /dashboard/abonnement?plan=starter
+      return { kind: "link", label: "Choisir Starter", href: "/paiement?plan=starter" };
+    case "trial_expired":
+      // TODO Phase 2: replace with /dashboard/abonnement?plan=starter
+      return { kind: "link", label: "Reprendre avec Starter", href: "/paiement?plan=starter" };
+    case "subscribed_starter":
+      return { kind: "current", label: "Plan actuel" };
+    case "subscribed_pro":
+      // TODO Phase 2: replace with /dashboard/abonnement?plan=starter
+      return { kind: "link", label: "Repasser à Starter", href: "/paiement?plan=starter" };
+    case "visitor":
+    default:
+      return { kind: "link", label: "Tester gratuitement", href: fallbackHref };
+  }
+}
+
+function getProCta(state: UserStateValue, fallbackHref: string): CardCta {
+  switch (state) {
+    case "trial_active":
+      // TODO Phase 2: replace with /dashboard/abonnement?plan=pro
+      return { kind: "link", label: "Passer au Pro", href: "/paiement?plan=pro" };
+    case "trial_expired":
+      // TODO Phase 2: replace with /dashboard/abonnement?plan=pro
+      return { kind: "link", label: "Reprendre avec Pro", href: "/paiement?plan=pro" };
+    case "subscribed_starter":
+      // TODO Phase 2: replace with /dashboard/abonnement?plan=pro
+      return { kind: "link", label: "Passer au Pro", href: "/paiement?plan=pro" };
+    case "subscribed_pro":
+      return { kind: "current", label: "Plan actuel" };
+    case "visitor":
+    default:
+      return { kind: "link", label: "Démarrer mon essai · 14 jours", href: fallbackHref };
+  }
 }
 
 export function Pricing({
@@ -41,7 +85,11 @@ export function Pricing({
   proHref = "/inscription?plan=pro",
   showHeading = true,
   unwrapped = false,
+  userState = "visitor",
 }: PricingProps = {}) {
+  const starterCta = getStarterCta(userState, starterHref);
+  const proCta = getProCta(userState, proHref);
+
   const inner = (
     <>
       {showHeading && (
@@ -82,9 +130,18 @@ export function Pricing({
             </p>
           </div>
 
-          <Button href={starterHref} variant="secondary" className="w-full mb-8">
-            Tester gratuitement
-          </Button>
+          {starterCta.kind === "link" ? (
+            <Button href={starterCta.href} variant="secondary" className="w-full mb-8">
+              {starterCta.label}
+            </Button>
+          ) : (
+            <span
+              aria-disabled="true"
+              className="inline-flex items-center justify-center gap-2 rounded-full font-semibold px-8 py-4 min-h-[52px] text-base w-full mb-8 text-[var(--text-muted)] bg-white border border-[var(--border)] cursor-not-allowed"
+            >
+              {starterCta.label}
+            </span>
+          )}
 
           <ul className="space-y-3 flex-1">
             {STARTER_FEATURES.map((feature) => (
@@ -143,9 +200,18 @@ export function Pricing({
             </p>
           </div>
 
-          <Button href={proHref} variant="primary" icon className="w-full mb-8">
-            Démarrer mon essai · 14 jours
-          </Button>
+          {proCta.kind === "link" ? (
+            <Button href={proCta.href} variant="primary" icon className="w-full mb-8">
+              {proCta.label}
+            </Button>
+          ) : (
+            <span
+              aria-disabled="true"
+              className="inline-flex items-center justify-center gap-2 rounded-full font-semibold px-8 py-4 min-h-[52px] text-base w-full mb-8 text-white bg-[var(--text-muted)] cursor-not-allowed shadow-md"
+            >
+              {proCta.label}
+            </span>
+          )}
 
           <ul className="space-y-3 flex-1">
             {PRO_FEATURES.map((feature) => (

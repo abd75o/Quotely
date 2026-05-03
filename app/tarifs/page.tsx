@@ -8,6 +8,7 @@ import { PricingCTA } from "@/components/landing/PricingCTA";
 import { Reveal } from "@/components/ui/Reveal";
 import { Highlight } from "@/components/ui/Highlight";
 import { createClient } from "@/lib/supabase/server";
+import type { UserStateValue } from "@/lib/hooks/useUserState";
 
 export const metadata: Metadata = {
   title: "Tarifs — Quotely",
@@ -27,21 +28,36 @@ export default async function TarifsPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  let isTrialExpired = false;
+  let userState: UserStateValue = "visitor";
+  let daysLeft: number | null = null;
+
   if (user) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("plan, trial_ends_at")
       .eq("id", user.id)
       .single();
-    if (
-      profile?.plan === "trial" &&
-      profile.trial_ends_at &&
-      new Date(profile.trial_ends_at) < new Date()
-    ) {
-      isTrialExpired = true;
+
+    if (profile?.plan === "starter") {
+      userState = "subscribed_starter";
+    } else if (profile?.plan === "pro") {
+      userState = "subscribed_pro";
+    } else if (profile?.trial_ends_at) {
+      const remainingMs =
+        new Date(profile.trial_ends_at).getTime() - Date.now();
+      if (remainingMs <= 0) {
+        userState = "trial_expired";
+        daysLeft = 0;
+      } else {
+        userState = "trial_active";
+        daysLeft = Math.max(1, Math.ceil(remainingMs / 86_400_000));
+      }
+    } else {
+      userState = "trial_active";
     }
   }
+
+  const isTrialExpired = userState === "trial_expired";
 
   const starterHref = user
     ? "/paiement?plan=starter"
@@ -69,9 +85,34 @@ export default async function TarifsPage({
                 Un prix simple. Aucun engagement.
               </h1>
               <p className="mt-6 text-lg md:text-xl text-[var(--text-secondary)] leading-relaxed max-w-2xl mx-auto">
-                Choisissez le plan qui correspond à votre activité.{" "}
-                <Highlight variant="warm">14 jours offerts</Highlight> pour
-                tester.
+                {userState === "visitor" && (
+                  <>
+                    Choisissez le plan qui correspond à votre activité.{" "}
+                    <Highlight variant="warm">14 jours offerts</Highlight> pour
+                    tester.
+                  </>
+                )}
+                {userState === "trial_active" && (
+                  <>
+                    Choisissez le plan qui correspond à votre activité. Il vous
+                    reste {daysLeft} jour{daysLeft !== 1 ? "s" : ""} d&apos;essai.
+                  </>
+                )}
+                {userState === "trial_expired" && (
+                  <>Reprenez votre activité avec le plan qui vous correspond.</>
+                )}
+                {userState === "subscribed_starter" && (
+                  <>
+                    Vous êtes actuellement sur le plan Starter. Passez au Pro
+                    pour débloquer plus de fonctionnalités.
+                  </>
+                )}
+                {userState === "subscribed_pro" && (
+                  <>
+                    Vous êtes actuellement sur le plan Pro. Vous bénéficiez de
+                    toutes les fonctionnalités.
+                  </>
+                )}
               </p>
             </Reveal>
           </div>
@@ -112,6 +153,7 @@ export default async function TarifsPage({
           starterHref={starterHref}
           proHref={proHref}
           showHeading={false}
+          userState={userState}
         />
 
         <PricingFAQ />

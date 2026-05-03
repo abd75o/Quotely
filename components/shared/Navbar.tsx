@@ -6,6 +6,7 @@ import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/shared/Logo";
 import { Button } from "@/components/ui/Button";
+import { useUserState } from "@/lib/hooks/useUserState";
 
 const NAV_LINKS = [
   { label: "Fonctionnalités", href: "/#features" },
@@ -17,6 +18,8 @@ const NAV_LINKS = [
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { state, isLoading } = useUserState();
+  const isAuthed = !isLoading && state !== "visitor";
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 16);
@@ -70,15 +73,23 @@ export function Navbar() {
 
             {/* Desktop CTAs */}
             <div className="hidden lg:flex items-center gap-3">
-              <Link
-                href="/connexion"
-                className="px-4 py-2 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors duration-150 cursor-pointer"
-              >
-                Connexion
-              </Link>
-              <Button href="/inscription" variant="primary" size="sm">
-                Démarrer · 14 jours offerts
-              </Button>
+              {!isAuthed && (
+                <Link
+                  href="/connexion"
+                  className="px-4 py-2 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors duration-150 cursor-pointer"
+                >
+                  Connexion
+                </Link>
+              )}
+              {isAuthed ? (
+                <Button href="/dashboard" variant="primary" size="sm">
+                  Mon espace
+                </Button>
+              ) : (
+                <Button href="/inscription" variant="primary" size="sm">
+                  Démarrer · 14 jours offerts
+                </Button>
+              )}
             </div>
 
             {/* Mobile burger */}
@@ -137,19 +148,21 @@ export function Navbar() {
               </Link>
             ))}
             <div className="mt-4 pt-4 border-t border-[var(--border-light)] flex flex-col gap-3">
+              {!isAuthed && (
+                <Link
+                  href="/connexion"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="px-4 py-4 min-h-[48px] text-base font-medium text-center text-[var(--text-primary)] border border-[var(--border)] rounded-full hover:bg-[var(--bg-secondary)] transition-colors duration-150 cursor-pointer"
+                >
+                  Connexion
+                </Link>
+              )}
               <Link
-                href="/connexion"
-                onClick={() => setIsMenuOpen(false)}
-                className="px-4 py-4 min-h-[48px] text-base font-medium text-center text-[var(--text-primary)] border border-[var(--border)] rounded-full hover:bg-[var(--bg-secondary)] transition-colors duration-150 cursor-pointer"
-              >
-                Connexion
-              </Link>
-              <Link
-                href="/inscription"
+                href={isAuthed ? "/dashboard" : "/inscription"}
                 onClick={() => setIsMenuOpen(false)}
                 className="px-4 py-4 min-h-[52px] text-base font-semibold text-center text-white bg-[var(--primary)] rounded-full hover:bg-[var(--primary-dark)] shadow-md transition-colors duration-150 cursor-pointer"
               >
-                Démarrer · 14 jours offerts
+                {isAuthed ? "Mon espace" : "Démarrer · 14 jours offerts"}
               </Link>
             </div>
           </nav>

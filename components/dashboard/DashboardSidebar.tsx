@@ -23,7 +23,7 @@ const NAV = [
   { label: "Devis",        icon: FileText,  href: "/dashboard/quotes" },
   { label: "Clients",      icon: Users,     href: "/dashboard/clients" },
   { label: "Statistiques", icon: BarChart2, href: "/dashboard/stats" },
-  { label: "Paramètres",   icon: Settings,  href: "/dashboard/settings" },
+  { label: "Paramètres",   icon: Settings,  href: "/dashboard/parametres" },
 ];
 
 interface SidebarData {

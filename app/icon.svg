@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="none">
   <!-- Background rounded square -->
-  <rect width="40" height="40" rx="10" fill="#6366F1"/>
+  <rect x="0.5" y="0.5" width="39" height="39" rx="10" fill="#6366F1" stroke="#1f2937" stroke-width="1"/>
   <!-- Subtle top shine -->
-  <rect width="40" height="21" rx="10" fill="white" fill-opacity="0.1"/>
+  <rect x="0.5" y="0.5" width="39" height="20" rx="10" fill="white" fill-opacity="0.1"/>
   <!-- Bold Q, white, centered -->
   <text
     x="20" y="29"

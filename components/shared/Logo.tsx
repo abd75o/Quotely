@@ -14,8 +14,8 @@ function QIcon({ size = 40 }: { size: number }) {
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
     >
-      <rect width="40" height="40" rx="10" fill="#6366F1" />
-      <rect width="40" height="21" rx="10" fill="white" fillOpacity="0.1" />
+      <rect x="0.5" y="0.5" width="39" height="39" rx="10" fill="#6366F1" stroke="#1f2937" strokeWidth="1" />
+      <rect x="0.5" y="0.5" width="39" height="20" rx="10" fill="white" fillOpacity="0.1" />
       <text
         x="20"
         y="29"
@@ -70,7 +70,7 @@ export function Logo({
     return (
       <div
         className={cn("flex flex-col items-center", className)}
-        aria-label="Quovi — Parlez. Signez. Encaissez."
+        aria-label="Quovi — Un devis. Un clic. Une signature."
       >
         <QIcon size={size} />
         <p
@@ -81,9 +81,9 @@ export function Logo({
         </p>
         <p
           className={cn("mt-1.5 font-medium leading-none", sloganColor)}
-          style={{ fontSize: Math.round(size * 0.265) }}
+          style={{ fontSize: Math.round(size * 0.225) }}
         >
-          Parlez. Signez. Encaissez.
+          Un devis. Un clic. Une signature.
         </p>
       </div>
     );

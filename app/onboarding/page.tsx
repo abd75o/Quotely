@@ -418,7 +418,7 @@ function StepCompany({
     <div>
       <StepHeader
         icon={Building2}
-        title="Bienvenue sur Quotely ! 👋"
+        title="Bienvenue sur Quovi ! 👋"
         subtitle="Quelques infos pour personnaliser votre expérience."
       />
       <div className="flex flex-col gap-4">

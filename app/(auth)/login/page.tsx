@@ -55,7 +55,7 @@ export default function LoginPage() {
       <div className="bg-white rounded-3xl border border-[var(--border)] shadow-xl p-8">
         <div className="text-center mb-8">
           <h1 className="text-2xl font-extrabold text-[var(--text-primary)] tracking-tight">
-            Bienvenue sur Quotely
+            Bienvenue sur Quovi
           </h1>
           <p className="text-sm text-[var(--text-secondary)] mt-1.5">
             Pas encore de compte ?{" "}

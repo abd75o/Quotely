@@ -37,10 +37,10 @@ export async function POST(request: NextRequest) {
       if (!email) continue;
 
       const firstName = authUser?.user?.user_metadata?.full_name?.split(" ")[0] ?? "vous";
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://quotely.fr";
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://quovi.fr";
 
       await resend.emails.send({
-        from: "Quotely <bonjour@quotely.fr>",
+        from: "Quovi <bonjour@quovi.fr>",
         to: email,
         subject: "Plus que 2 jours d'essai Pro — choisissez votre plan",
         html: `
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
               Bonjour <strong>${firstName}</strong>,
             </p>
             <p style="color: #374151; font-size: 16px; line-height: 1.7;">
-              Il vous reste <strong>2 jours</strong> sur votre essai gratuit Pro de Quotely.
+              Il vous reste <strong>2 jours</strong> sur votre essai gratuit Pro de Quovi.
               Pour continuer à profiter de la génération IA, des signatures certifiées et des devis illimités,
               choisissez votre plan maintenant.
             </p>
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
 
             <p style="color: #9CA3AF; font-size: 13px; text-align: center;">
               Sans engagement · Résiliable à tout moment<br/>
-              <a href="${appUrl}" style="color: #6366F1;">quotely.fr</a>
+              <a href="${appUrl}" style="color: #6366F1;">quovi.fr</a>
             </p>
           </div>`,
       });

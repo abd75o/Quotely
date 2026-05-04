@@ -42,7 +42,7 @@ export function Hero() {
             </h1>
 
             <p className="mt-6 text-base md:text-xl leading-relaxed text-[var(--text-secondary)] max-w-xl mx-auto lg:mx-0">
-              Quotely, le devis qui part avant que vous passiez à autre chose.
+              Quovi, le devis qui part avant que vous passiez à autre chose.
               Le client signe sur place, sur son téléphone.
             </p>
 
@@ -88,7 +88,7 @@ function PhoneMockup() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-[10px] text-[var(--text-muted)] font-semibold uppercase tracking-wider">
-                    Quotely
+                    Quovi
                   </p>
                   <p className="text-[10px] text-[var(--text-muted)]">maintenant</p>
                 </div>

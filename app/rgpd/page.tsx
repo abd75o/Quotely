@@ -13,9 +13,9 @@ import { Footer } from "@/components/shared/Footer";
 import { LEGAL_INFO } from "@/lib/legal-info";
 
 export const metadata: Metadata = {
-  title: "Vos droits RGPD — Quotely",
+  title: "Vos droits RGPD — Quovi",
   description:
-    "Synthèse de vos droits RGPD chez Quotely : accès, rectification, effacement, portabilité, opposition, limitation. Comment les exercer en 1 email.",
+    "Synthèse de vos droits RGPD chez Quovi : accès, rectification, effacement, portabilité, opposition, limitation. Comment les exercer en 1 email.",
   robots: { index: true, follow: true },
 };
 

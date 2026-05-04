@@ -32,7 +32,7 @@ export function CookieBanner() {
     setVisible(!hasConsented());
 
     function onStorage(e: StorageEvent) {
-      if (e.key === "quotely-cookie-consent") {
+      if (e.key === "quovi-cookie-consent") {
         setVisible(!hasConsented());
       }
     }
@@ -43,10 +43,10 @@ export function CookieBanner() {
     }
 
     window.addEventListener("storage", onStorage);
-    window.addEventListener("quotely:cookie-consent-reset", onCustom);
+    window.addEventListener("quovi:cookie-consent-reset", onCustom);
     return () => {
       window.removeEventListener("storage", onStorage);
-      window.removeEventListener("quotely:cookie-consent-reset", onCustom);
+      window.removeEventListener("quovi:cookie-consent-reset", onCustom);
     };
   }, []);
 
@@ -208,7 +208,7 @@ function CompactView({
             id="cookie-banner-desc"
             className="text-sm text-[var(--text-secondary)] leading-relaxed"
           >
-            Quotely utilise uniquement des cookies essentiels au fonctionnement du site. Si à
+            Quovi utilise uniquement des cookies essentiels au fonctionnement du site. Si à
             l&apos;avenir nous ajoutons des cookies analytiques, vous pourrez les contrôler ici.{" "}
             <Link
               href="/cookies"
@@ -316,7 +316,7 @@ function PreferencesView({
         <ToggleRow
           id="cookie-marketing"
           label="Cookies marketing"
-          description="Permettent d'afficher des publicités pertinentes sur d'autres sites. Quotely n'en utilise pas actuellement."
+          description="Permettent d'afficher des publicités pertinentes sur d'autres sites. Quovi n'en utilise pas actuellement."
           checked={choices.marketing}
           onChange={(v) => onChange({ ...choices, marketing: v })}
         />

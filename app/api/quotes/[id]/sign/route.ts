@@ -166,7 +166,7 @@ async function notifyArtisanIfPossible(quote: {
 }) {
   if (!quote.artisan?.email) return;
 
-  const origin = process.env.NEXT_PUBLIC_APP_URL ?? "https://quotely.fr";
+  const origin = process.env.NEXT_PUBLIC_APP_URL ?? "https://quovi.fr";
   await notifyArtisanSigned({
     artisanEmail: quote.artisan.email,
     artisanName: quote.artisan.company ?? quote.artisan.name ?? "Artisan",
@@ -194,7 +194,7 @@ async function sendConfirmationEmail({
   const code = token.slice(0, 6).toUpperCase();
 
   await resend.emails.send({
-    from: "Quotely <notifications@quotely.fr>",
+    from: "Quovi <notifications@quovi.fr>",
     to,
     subject: `Code de confirmation — Devis ${quoteNumber}`,
     html: `
@@ -215,7 +215,7 @@ async function sendConfirmationEmail({
           Ce code expire dans 30 minutes. Si vous n'avez pas demandé cette signature, ignorez cet email.
         </p>
         <p style="color: #9CA3AF; font-size: 13px; margin-top: 24px;">
-          Quotely · <a href="https://quotely.fr" style="color: #6366F1;">quotely.fr</a>
+          Quovi · <a href="https://quovi.fr" style="color: #6366F1;">quovi.fr</a>
         </p>
       </div>
     `,

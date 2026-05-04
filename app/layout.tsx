@@ -19,9 +19,9 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "Quotely — Le devis signé où que vous soyez",
+  title: "Quovi — Le devis signé où que vous soyez",
   description:
-    "Quotely permet aux artisans, freelances, commerçants et consultants de signer leurs devis sur le terrain. Signature électronique conforme eIDAS, suivi en temps réel, facturation après signature.",
+    "Quovi permet aux artisans, freelances, commerçants et consultants de signer leurs devis sur le terrain. Signature électronique conforme eIDAS, suivi en temps réel, facturation après signature.",
   keywords: "devis, facture, artisan, freelance, signature électronique, devis en ligne",
   icons: {
     icon: [
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     apple: "/icon.svg",
   },
   openGraph: {
-    title: "Quotely — Le devis signé où que vous soyez",
+    title: "Quovi — Le devis signé où que vous soyez",
     description: "Le devis qui part avant que vous passiez à autre chose.",
     type: "website",
   },

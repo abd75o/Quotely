@@ -85,7 +85,7 @@ export default function ConnexionPage() {
           <div className="bg-white rounded-3xl border border-[var(--border)] shadow-xl p-8 md:p-12">
             <div className="text-center mb-8">
               <h1 className="text-2xl font-extrabold text-[var(--text-primary)] tracking-tight">
-                Connexion à Quotely
+                Connexion à Quovi
               </h1>
               <p className="text-sm text-[var(--text-secondary)] mt-1.5">
                 Pas encore de compte ?{" "}

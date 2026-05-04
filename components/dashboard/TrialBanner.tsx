@@ -59,7 +59,7 @@ export function TrialBanner() {
             Votre essai est terminé
           </h2>
           <p className="text-sm text-[var(--text-secondary)] mb-6 leading-relaxed">
-            Choisissez un plan pour continuer à utiliser Quotely et ne pas perdre vos devis.
+            Choisissez un plan pour continuer à utiliser Quovi et ne pas perdre vos devis.
           </p>
           <Link
             href="/tarifs"

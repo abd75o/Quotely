@@ -1,7 +1,7 @@
 import { EntrepriseForm } from "@/components/dashboard/EntrepriseForm";
 
 export const metadata = {
-  title: "Mon entreprise — Quotely",
+  title: "Mon entreprise — Quovi",
   robots: { index: false, follow: false },
 };
 

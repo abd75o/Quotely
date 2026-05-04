@@ -23,7 +23,7 @@ function SuccesContent() {
   return (
     <>
       <h1 className="text-2xl font-extrabold text-[var(--text-primary)] mb-2">
-        Bienvenue sur Quotely {plan} !
+        Bienvenue sur Quovi {plan} !
       </h1>
       <p className="text-sm text-[var(--text-secondary)] mb-2 leading-relaxed">
         Votre paiement a bien été reçu. Votre plan est en cours d'activation — cela prend quelques secondes.

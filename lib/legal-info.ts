@@ -1,18 +1,18 @@
 /**
- * Source unique pour toutes les variables légales / juridiques de Quotely.
+ * Source unique pour toutes les variables légales / juridiques de Quovi.
  *
  * En Phase 4, Abdoulaye n'aura QU'À modifier ce fichier pour mettre à jour
  * les mentions légales, CGU, politique de confidentialité, cookies et RGPD.
  *
  * Toute valeur "[À COMPLÉTER]" est un placeholder à renseigner avant la mise
- * en production (immatriculation Quotely terminée).
+ * en production (immatriculation Quovi terminée).
  */
 
 export const LEGAL_INFO = {
   // ── Identité commerciale ──────────────────────────────────────────────────
-  nomCommercial: "Quotely",
-  domaine: "quotely.fr",
-  emailContact: "hello@quotely.fr",
+  nomCommercial: "Quovi",
+  domaine: "quovi.fr",
+  emailContact: "hello@quovi.fr",
 
   // ── Identité juridique (à compléter une fois la société immatriculée) ────
   raisonSociale: "[À COMPLÉTER]",

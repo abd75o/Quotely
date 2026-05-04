@@ -5,9 +5,9 @@ import { Footer } from "@/components/shared/Footer";
 import { LEGAL_INFO } from "@/lib/legal-info";
 
 export const metadata: Metadata = {
-  title: "Mentions légales — Quotely",
+  title: "Mentions légales — Quovi",
   description:
-    "Mentions légales de Quotely : éditeur du site, hébergement, propriété intellectuelle et responsabilité.",
+    "Mentions légales de Quovi : éditeur du site, hébergement, propriété intellectuelle et responsabilité.",
   robots: { index: true, follow: true },
 };
 

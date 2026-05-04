@@ -57,8 +57,8 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params;
   const quote = await getQuote(id);
-  if (!quote) return { title: "Devis introuvable — Quotely" };
-  return { title: `Devis ${quote.number} — Quotely` };
+  if (!quote) return { title: "Devis introuvable — Quovi" };
+  return { title: `Devis ${quote.number} — Quovi` };
 }
 
 export default async function QuoteDetailPage({

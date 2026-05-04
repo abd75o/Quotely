@@ -10,7 +10,7 @@
  * comparaison de version dans hasConsented() forcera une re-demande.
  */
 
-export const STORAGE_KEY = "quotely-cookie-consent";
+export const STORAGE_KEY = "quovi-cookie-consent";
 export const CONSENT_VERSION = "1.0";
 
 export interface CookieConsent {

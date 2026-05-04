@@ -11,9 +11,9 @@ import { createClient } from "@/lib/supabase/server";
 import type { UserStateValue } from "@/lib/hooks/useUserState";
 
 export const metadata: Metadata = {
-  title: "Tarifs — Quotely",
+  title: "Tarifs — Quovi",
   description:
-    "Choisissez le plan Quotely adapté à votre activité. Starter 25€/mois ou Pro 49€/mois. 14 jours d’essai gratuit, sans carte bancaire.",
+    "Choisissez le plan Quovi adapté à votre activité. Starter 25€/mois ou Pro 49€/mois. 14 jours d’essai gratuit, sans carte bancaire.",
 };
 
 export default async function TarifsPage({
@@ -138,7 +138,7 @@ export default async function TarifsPage({
                   <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0" />
                   <p className="text-sm font-semibold text-amber-800">
                     Votre essai gratuit est terminé — choisissez un plan pour
-                    continuer à utiliser Quotely.
+                    continuer à utiliser Quovi.
                   </p>
                 </div>
               )}

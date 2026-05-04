@@ -1,7 +1,7 @@
 import { FacturationClient } from "@/components/dashboard/FacturationClient";
 
 export const metadata = {
-  title: "Facturation et abonnement — Quotely",
+  title: "Facturation et abonnement — Quovi",
   robots: { index: false, follow: false },
 };
 

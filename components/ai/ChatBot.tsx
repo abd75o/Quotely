@@ -65,7 +65,7 @@ export function ChatBot({ metier }: { metier?: string }) {
           id: "welcome",
           role: "assistant",
           content:
-            "Bonjour ! Je suis votre assistant Quotely. Je peux vous aider à gérer vos devis, analyser vos statistiques et optimiser votre activité. Comment puis-je vous aider ?",
+            "Bonjour ! Je suis votre assistant Quovi. Je peux vous aider à gérer vos devis, analyser vos statistiques et optimiser votre activité. Comment puis-je vous aider ?",
         },
       ]);
     }
@@ -232,7 +232,7 @@ export function ChatBot({ metier }: { metier?: string }) {
               <Bot className="w-4 h-4 text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold leading-none">Quotely Assistant</p>
+              <p className="text-sm font-bold leading-none">Quovi Assistant</p>
               <p className="text-xs text-white/70 mt-0.5">Propulsé par Claude AI</p>
             </div>
             <div className="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0" />

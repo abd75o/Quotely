@@ -6,14 +6,14 @@ import { cn } from "@/lib/utils";
 
 const FAQS = [
   {
-    question: "La signature électronique de Quotely est-elle légalement valide ?",
+    question: "La signature électronique de Quovi est-elle légalement valide ?",
     answer:
       "Oui, totalement. Elle suit le règlement européen eIDAS. Chaque signature est horodatée, liée à l’email du signataire, et accompagnée d’un certificat d’audit. Elle a la même valeur juridique qu’une signature papier en France et en Europe.",
   },
   {
-    question: "Faut-il être à l’aise avec l’informatique pour utiliser Quotely ?",
+    question: "Faut-il être à l’aise avec l’informatique pour utiliser Quovi ?",
     answer:
-      "Non. Si vous savez écrire un SMS, vous savez utiliser Quotely. Tout est pensé pour le terrain, pas pour le bureau.",
+      "Non. Si vous savez écrire un SMS, vous savez utiliser Quovi. Tout est pensé pour le terrain, pas pour le bureau.",
   },
   {
     question: "Puis-je importer mes clients et mes anciens modèles ?",
@@ -21,7 +21,7 @@ const FAQS = [
       "Oui. Import depuis un fichier Excel, CSV, ou directement depuis votre carnet d’adresses. Vos modèles existants, on les recrée avec vous si besoin.",
   },
   {
-    question: "Mon client doit-il créer un compte Quotely pour signer ?",
+    question: "Mon client doit-il créer un compte Quovi pour signer ?",
     answer:
       "Non, jamais. Il reçoit un lien, il clique, il signe. C’est tout.",
   },
@@ -33,7 +33,7 @@ const FAQS = [
   {
     question: "Comment fonctionnent les relances automatiques ?",
     answer:
-      "Quotely relance votre client à J+3, J+7 et J+14 si le devis n’est pas signé. Avec un message courtois, personnalisé. Vous pouvez les désactiver, les modifier, ou en programmer d’autres.",
+      "Quovi relance votre client à J+3, J+7 et J+14 si le devis n’est pas signé. Avec un message courtois, personnalisé. Vous pouvez les désactiver, les modifier, ou en programmer d’autres.",
   },
   {
     question: "Puis-je résilier à tout moment ?",
@@ -41,9 +41,9 @@ const FAQS = [
       "Oui, à n’importe quel moment, sans justification. Un seul clic dans vos paramètres. Aucun engagement, aucun frais caché.",
   },
   {
-    question: "Comment Quotely arrive à rédiger un devis aussi vite ?",
+    question: "Comment Quovi arrive à rédiger un devis aussi vite ?",
     answer:
-      "Quotely s’appuie sur des modèles de langage avancés (intelligence artificielle) pour transformer votre description en devis structuré : prestations détaillées, calcul de TVA, formulations professionnelles. Vous gardez toujours la main : relisez, ajustez, validez avant l’envoi. Vos données ne servent jamais à entraîner les modèles — elles restent privées et hébergées en France.",
+      "Quovi s’appuie sur des modèles de langage avancés (intelligence artificielle) pour transformer votre description en devis structuré : prestations détaillées, calcul de TVA, formulations professionnelles. Vous gardez toujours la main : relisez, ajustez, validez avant l’envoi. Vos données ne servent jamais à entraîner les modèles — elles restent privées et hébergées en France.",
   },
 ];
 
@@ -122,7 +122,7 @@ export function FAQ() {
           <p className="mt-4 text-lg text-[var(--text-secondary)] leading-relaxed">
             Une question manque ?{" "}
             <a
-              href="mailto:support@quotely.fr"
+              href="mailto:support@quovi.fr"
               className="text-[var(--primary)] font-semibold hover:underline cursor-pointer"
             >
               Écrivez-nous

@@ -5,9 +5,9 @@ import { Footer } from "@/components/shared/Footer";
 import { LEGAL_INFO } from "@/lib/legal-info";
 
 export const metadata: Metadata = {
-  title: "Politique de confidentialité — Quotely",
+  title: "Politique de confidentialité — Quovi",
   description:
-    "Politique de confidentialité de Quotely : données collectées, finalités, durées de conservation, sous-traitants RGPD et droits des utilisateurs.",
+    "Politique de confidentialité de Quovi : données collectées, finalités, durées de conservation, sous-traitants RGPD et droits des utilisateurs.",
   robots: { index: true, follow: true },
 };
 
@@ -350,7 +350,7 @@ export default function PolitiqueConfidentialitePage() {
               <Link href="/cookies" className="text-[var(--primary)] hover:underline">
                 politique cookies
               </Link>
-              . Quotely n&apos;utilise que des cookies strictement nécessaires au fonctionnement du Service.
+              . Quovi n&apos;utilise que des cookies strictement nécessaires au fonctionnement du Service.
             </p>
           </section>
         </div>

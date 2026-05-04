@@ -74,10 +74,10 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params;
   const quote = await getQuoteByPublicToken(id);
-  if (!quote) return { title: "Devis introuvable — Quotely" };
+  if (!quote) return { title: "Devis introuvable — Quovi" };
 
   return {
-    title: `Devis ${quote.number} — ${quote.artisan?.company ?? quote.artisan?.name ?? "Quotely"}`,
+    title: `Devis ${quote.number} — ${quote.artisan?.company ?? quote.artisan?.name ?? "Quovi"}`,
     description: `Consultez et signez le devis ${quote.number} d'un montant de ${quote.total.toLocaleString("fr-FR")} €`,
     robots: { index: false, follow: false },
   };

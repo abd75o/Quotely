@@ -5,9 +5,9 @@ import { Footer } from "@/components/shared/Footer";
 import { LEGAL_INFO } from "@/lib/legal-info";
 
 export const metadata: Metadata = {
-  title: "Conditions générales d'utilisation — Quotely",
+  title: "Conditions générales d'utilisation — Quovi",
   description:
-    "Conditions générales d'utilisation de Quotely : abonnement, paiement, résiliation, obligations et responsabilités.",
+    "Conditions générales d'utilisation de Quovi : abonnement, paiement, résiliation, obligations et responsabilités.",
   robots: { index: true, follow: true },
 };
 
@@ -21,7 +21,7 @@ const SECTIONS = [
   { id: "resiliation", label: "7. Renouvellement et résiliation" },
   { id: "retractation", label: "8. Droit de rétractation" },
   { id: "obligations-user", label: "9. Obligations de l'utilisateur" },
-  { id: "obligations-quotely", label: "10. Obligations de Quotely" },
+  { id: "obligations-quovi", label: "10. Obligations de Quovi" },
   { id: "propriete", label: "11. Propriété intellectuelle" },
   { id: "responsabilite", label: "12. Limitation de responsabilité" },
   { id: "force-majeure", label: "13. Force majeure" },
@@ -71,7 +71,7 @@ export default function CGUPage() {
               accessible à l&apos;adresse {LEGAL_INFO.domaine}.
             </p>
             <ul className="space-y-2 pl-5 list-disc marker:text-[var(--text-muted)]">
-              <li><span className="font-semibold text-[var(--text-primary)]">Service&nbsp;:</span> la plateforme SaaS Quotely permettant la création, l&apos;envoi, le suivi et la signature électronique de devis professionnels.</li>
+              <li><span className="font-semibold text-[var(--text-primary)]">Service&nbsp;:</span> la plateforme SaaS Quovi permettant la création, l&apos;envoi, le suivi et la signature électronique de devis professionnels.</li>
               <li><span className="font-semibold text-[var(--text-primary)]">Utilisateur&nbsp;:</span> toute personne morale ou physique agissant dans le cadre de son activité professionnelle qui utilise le Service.</li>
               <li><span className="font-semibold text-[var(--text-primary)]">Compte&nbsp;:</span> espace personnel créé par l&apos;Utilisateur pour accéder au Service.</li>
               <li><span className="font-semibold text-[var(--text-primary)]">Devis&nbsp;:</span> document commercial créé via le Service, comportant les prestations, prix, conditions et signature client.</li>
@@ -202,9 +202,9 @@ export default function CGUPage() {
             </ul>
           </section>
 
-          <section id="obligations-quotely">
+          <section id="obligations-quovi">
             <h2 className="font-display text-2xl font-bold text-[var(--text-primary)] mb-4">
-              10. Obligations de Quotely
+              10. Obligations de Quovi
             </h2>
             <p className="mb-3">{LEGAL_INFO.nomCommercial} s&apos;engage à&nbsp;:</p>
             <ul className="space-y-1.5 pl-5 list-disc marker:text-[var(--text-muted)]">
@@ -290,7 +290,7 @@ export default function CGUPage() {
 
           <section id="manquement">
             <h2 className="font-display text-2xl font-bold text-[var(--text-primary)] mb-4">
-              16. Résiliation par Quotely en cas de manquement
+              16. Résiliation par Quovi en cas de manquement
             </h2>
             <p>
               {LEGAL_INFO.nomCommercial} peut suspendre ou résilier le Compte en cas de manquement grave aux

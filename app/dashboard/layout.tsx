@@ -6,7 +6,7 @@ import { ChatBotWrapper } from "@/components/ai/ChatBotWrapper";
 import { UpgradeModalProvider } from "@/lib/hooks/useUpgradeModal";
 
 export const metadata = {
-  title: "Dashboard — Quotely",
+  title: "Dashboard — Quovi",
   robots: { index: false, follow: false },
 };
 

@@ -141,7 +141,7 @@ export async function notifyArtisanSigned({
   const resend = new Resend(process.env.RESEND_API_KEY);
 
   await resend.emails.send({
-    from: "Quotely <notifications@quotely.fr>",
+    from: "Quovi <notifications@quovi.fr>",
     to: artisanEmail,
     subject: `✅ ${clientName} a signé votre devis ${quoteNumber} — ${totalEuros.toLocaleString("fr-FR")} €`,
     html: `
@@ -157,7 +157,7 @@ export async function notifyArtisanSigned({
           <strong>${quoteNumber}</strong> d'un montant de <strong>${totalEuros.toLocaleString("fr-FR")} €</strong>.
         </p>
         <p style="color: #374151; font-size: 16px; line-height: 1.6;">
-          La facture a été générée automatiquement et est disponible dans votre espace Quotely.
+          La facture a été générée automatiquement et est disponible dans votre espace Quovi.
         </p>
         <div style="text-align: center; margin: 32px 0;">
           <a href="${quoteUrl}" style="background: #6366F1; color: white; text-decoration: none; padding: 14px 28px; border-radius: 10px; font-weight: 600; font-size: 15px;">
@@ -165,7 +165,7 @@ export async function notifyArtisanSigned({
           </a>
         </div>
         <p style="color: #9CA3AF; font-size: 13px; margin-top: 24px;">
-          Quotely · <a href="https://quotely.fr" style="color: #6366F1;">quotely.fr</a>
+          Quovi · <a href="https://quovi.fr" style="color: #6366F1;">quovi.fr</a>
         </p>
       </div>
     `,

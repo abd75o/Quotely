@@ -3,7 +3,7 @@ import { QuotesList } from "@/components/quotes/QuotesList";
 import { WelcomeBanner } from "@/components/dashboard/WelcomeBanner";
 
 export const metadata: Metadata = {
-  title: "Mes devis — Quotely",
+  title: "Mes devis — Quovi",
 };
 
 async function getQuotes() {

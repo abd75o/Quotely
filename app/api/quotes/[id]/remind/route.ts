@@ -56,7 +56,7 @@ export async function POST(
       });
 
       await resend.emails.send({
-        from: "Quotely <devis@quotely.fr>",
+        from: "Quovi <devis@quovi.fr>",
         to: quote.client.email,
         subject: `Rappel : devis ${quote.number} en attente — ${artisanName}`,
         html: `
@@ -89,7 +89,7 @@ export async function POST(
 
             <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 24px 0;" />
             <p style="color: #9CA3AF; font-size: 12px; margin: 0;">
-              Envoyé via <a href="https://quotely.fr" style="color: #6366F1;">Quotely</a>
+              Envoyé via <a href="https://quovi.fr" style="color: #6366F1;">Quovi</a>
             </p>
           </div>`,
       });

@@ -48,12 +48,12 @@ export function Footer() {
               Le devis qui part avant que vous passiez à autre chose.
             </p>
             <a
-              href="mailto:hello@quotely.fr"
+              href="mailto:hello@quovi.fr"
               aria-label="Email"
               className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-sm text-gray-200 transition-colors duration-150 cursor-pointer"
             >
               <Mail className="w-4 h-4" />
-              hello@quotely.fr
+              hello@quovi.fr
             </a>
           </div>
 
@@ -99,7 +99,7 @@ export function Footer() {
         {/* Métiers SEO */}
         <div className="py-6 border-t border-white/10 mb-6">
           <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold mb-3">
-            Quotely pour tous les métiers
+            Quovi pour tous les métiers
           </p>
           <div className="flex flex-wrap gap-x-4 gap-y-2">
             {METIERS.map((metier) => (
@@ -113,10 +113,10 @@ export function Footer() {
         {/* Bottom */}
         <div className="pt-6 border-t border-white/10 space-y-2">
           <p className="text-xs text-gray-600 text-center sm:text-left">
-            Quotely utilise des modèles de langage supervisés. Vos données restent privées.
+            Quovi utilise des modèles de langage supervisés. Vos données restent privées.
           </p>
           <p className="text-xs text-gray-500 text-center sm:text-left">
-            © 2026 Quotely. Fait en France. Paiements sécurisés par Stripe.
+            © 2026 Quovi. Fait en France. Paiements sécurisés par Stripe.
           </p>
         </div>
       </div>

@@ -103,7 +103,7 @@ async function notifyArtisanIfPossible(quote: {
 }) {
   if (!quote.artisan?.email) return;
 
-  const origin = process.env.NEXT_PUBLIC_APP_URL ?? "https://quotely.fr";
+  const origin = process.env.NEXT_PUBLIC_APP_URL ?? "https://quovi.fr";
   await notifyArtisanSigned({
     artisanEmail: quote.artisan.email,
     artisanName: quote.artisan.company ?? quote.artisan.name ?? "Artisan",

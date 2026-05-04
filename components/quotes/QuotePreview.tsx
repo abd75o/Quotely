@@ -195,7 +195,7 @@ export function QuotePreview({ quote }: { quote: Quote }) {
             onClick={() =>
               showUpgradeModal(
                 "Relances automatiques",
-                "Quotely relance automatiquement vos clients à J+3, J+7 et J+14 si le devis n'est pas signé.",
+                "Quovi relance automatiquement vos clients à J+3, J+7 et J+14 si le devis n'est pas signé.",
                 Bell
               )
             }
@@ -348,7 +348,7 @@ export function QuotePreview({ quote }: { quote: Quote }) {
             <div className="text-right text-xs text-[var(--text-muted)] space-y-1">
               <p className="font-semibold text-[var(--text-secondary)]">Bon pour accord</p>
               <p>Lu et approuvé</p>
-              <p className="mt-4 text-[var(--primary)] font-medium">Quotely · quotely.fr</p>
+              <p className="mt-4 text-[var(--primary)] font-medium">Quovi · quovi.fr</p>
             </div>
           </div>
         </div>

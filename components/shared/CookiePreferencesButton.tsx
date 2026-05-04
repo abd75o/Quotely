@@ -13,7 +13,7 @@ export function CookiePreferencesButton() {
     resetConsent();
     // Le storage event ne se déclenche pas dans le même onglet ; on emet
     // un event custom écouté par CookieBanner pour ré-afficher la bannière.
-    window.dispatchEvent(new Event("quotely:cookie-consent-reset"));
+    window.dispatchEvent(new Event("quovi:cookie-consent-reset"));
     // Scroll en bas pour que l'utilisateur voie la bannière apparaître
     window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
   }

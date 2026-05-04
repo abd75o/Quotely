@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { ParametresTabs } from "@/components/dashboard/ParametresTabs";
 
 export const metadata = {
-  title: "Paramètres — Quotely",
+  title: "Paramètres — Quovi",
   robots: { index: false, follow: false },
 };
 

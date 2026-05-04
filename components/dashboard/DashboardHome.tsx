@@ -141,7 +141,7 @@ export function DashboardHome({ stats, recentQuotes, welcome }: DashboardHomePro
               <Sparkles className="w-5 h-5 text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-base font-bold text-white mb-0.5">Bienvenue sur Quotely !</p>
+              <p className="text-base font-bold text-white mb-0.5">Bienvenue sur Quovi !</p>
               <p className="text-sm text-indigo-200">
                 Votre essai Pro de 14 jours est actif. Créez votre premier devis maintenant.
               </p>

@@ -28,7 +28,7 @@ const FAQS = [
   {
     question: "Y a-t-il une réduction pour un paiement annuel ?",
     answer:
-      "Pas pour le moment. Quotely vient de sortir, nous gardons les choses simples : un prix mensuel, sans engagement.",
+      "Pas pour le moment. Quovi vient de sortir, nous gardons les choses simples : un prix mensuel, sans engagement.",
   },
 ];
 

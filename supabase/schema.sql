@@ -1,5 +1,5 @@
 -- ============================================================
--- Quotely — Schema SQL complet (PostgreSQL 15 / Supabase)
+-- Quovi — Schema SQL complet (PostgreSQL 15 / Supabase)
 -- Coller dans : Supabase Dashboard > SQL Editor > Run
 -- ============================================================
 

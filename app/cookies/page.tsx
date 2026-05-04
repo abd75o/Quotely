@@ -6,9 +6,9 @@ import { CookiePreferencesButton } from "@/components/shared/CookiePreferencesBu
 import { LEGAL_INFO } from "@/lib/legal-info";
 
 export const metadata: Metadata = {
-  title: "Politique cookies — Quotely",
+  title: "Politique cookies — Quovi",
   description:
-    "Liste des cookies utilisés par Quotely, leur finalité, leur durée de conservation et comment gérer votre consentement.",
+    "Liste des cookies utilisés par Quovi, leur finalité, leur durée de conservation et comment gérer votre consentement.",
   robots: { index: true, follow: true },
 };
 
@@ -33,7 +33,7 @@ const COOKIES: CookieRow[] = [
     type: "Essentiel",
   },
   {
-    name: "quotely-cookie-consent",
+    name: "quovi-cookie-consent",
     finalite: "Mémorisation de votre choix de consentement aux cookies",
     duree: "6 mois",
     type: "Essentiel",

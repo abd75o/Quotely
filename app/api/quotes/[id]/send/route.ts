@@ -31,7 +31,7 @@ export async function POST(
       const total = Number(quote.total).toLocaleString("fr-FR", { minimumFractionDigits: 2 });
 
       await resend.emails.send({
-        from: "Quotely <devis@quotely.fr>",
+        from: "Quovi <devis@quovi.fr>",
         to: quote.client?.email,
         subject: `Devis ${quote.number} — ${artisanName} (${total} €)`,
         html: `
@@ -65,7 +65,7 @@ export async function POST(
 
             <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 28px 0;" />
             <p style="color: #9CA3AF; font-size: 13px; margin: 0;">
-              Envoyé via <a href="https://quotely.fr" style="color: #6366F1;">Quotely</a> · Plateforme de devis pour professionnels
+              Envoyé via <a href="https://quovi.fr" style="color: #6366F1;">Quovi</a> · Plateforme de devis pour professionnels
             </p>
           </div>`,
       });

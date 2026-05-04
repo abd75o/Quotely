@@ -22,8 +22,8 @@ export const PLAN_AMOUNTS = {
 } as const;
 
 export const PLAN_NAMES = {
-  starter: "Quotely Starter",
-  pro:     "Quotely Pro",
+  starter: "Quovi Starter",
+  pro:     "Quovi Pro",
 } as const;
 
 export async function createCheckoutSession({
@@ -62,8 +62,8 @@ export async function bootstrapStripeProducts() {
   const results: Record<string, string> = {};
 
   const plans = [
-    { key: "starter", name: "Quotely Starter", monthly: 2500 },
-    { key: "pro",     name: "Quotely Pro",     monthly: 4900 },
+    { key: "starter", name: "Quovi Starter", monthly: 2500 },
+    { key: "pro",     name: "Quovi Pro",     monthly: 4900 },
   ];
 
   for (const plan of plans) {

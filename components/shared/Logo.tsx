@@ -35,8 +35,8 @@ function QIcon({ size = 40 }: { size: number }) {
 interface LogoProps {
   /**
    * icon     — Q square only (navbar icon, favicons, small usages)
-   * horizontal — Q + "Quotely" side by side (navbar, footer)
-   * stacked  — Q above "Quotely" above slogan (hero, branding)
+   * horizontal — Q + "Quovi" side by side (navbar, footer)
+   * stacked  — Q above "Quovi" above slogan (hero, branding)
    */
   variant?: "icon" | "horizontal" | "stacked";
   /** Base size in px: icon square side. Text scales proportionally. */
@@ -60,7 +60,7 @@ export function Logo({
 
   if (variant === "icon") {
     return (
-      <span className={cn("inline-flex", className)} aria-label="Quotely">
+      <span className={cn("inline-flex", className)} aria-label="Quovi">
         <QIcon size={size} />
       </span>
     );
@@ -70,14 +70,14 @@ export function Logo({
     return (
       <div
         className={cn("flex flex-col items-center", className)}
-        aria-label="Quotely — Parlez. Signez. Encaissez."
+        aria-label="Quovi — Parlez. Signez. Encaissez."
       >
         <QIcon size={size} />
         <p
           className={cn("mt-3 font-bold tracking-tight leading-none", wordColor)}
           style={{ fontSize: Math.round(size * 0.55) }}
         >
-          Quotely
+          Quovi
         </p>
         <p
           className={cn("mt-1.5 font-medium leading-none", sloganColor)}
@@ -93,14 +93,14 @@ export function Logo({
   return (
     <div
       className={cn("inline-flex items-center", className)}
-      aria-label="Quotely"
+      aria-label="Quovi"
     >
       <QIcon size={size} />
       <span
         className={cn("ml-2.5 font-bold tracking-tight leading-none", wordColor)}
         style={{ fontSize: Math.round(size * 0.625) }}
       >
-        Quotely
+        Quovi
       </span>
     </div>
   );

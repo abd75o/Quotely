@@ -32,7 +32,7 @@ export function Testimonials() {
           Premiers retours, bientôt.
         </h2>
         <p className="relative mt-4 text-lg text-[var(--text-secondary)] leading-relaxed">
-          Quotely vient de sortir. Les premiers professionnels qui le testent
+          Quovi vient de sortir. Les premiers professionnels qui le testent
           partageront leur expérience ici, dès qu’elle sera vécue.
         </p>
       </Reveal>

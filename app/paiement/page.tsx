@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createCheckoutSession, STRIPE_PRICES } from "@/lib/stripe";
 
-export const metadata = { title: "Paiement — Quotely" };
+export const metadata = { title: "Paiement — Quovi" };
 
 export default async function PaiementPage({
   searchParams,

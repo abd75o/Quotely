@@ -148,12 +148,12 @@ export function HowItWorks() {
             <article className="relative h-full p-8 bg-white rounded-2xl border border-[var(--border)] shadow-sm transition-all duration-200 hover:shadow-[var(--shadow-card-hover)] hover:-translate-y-0.5 hover:border-[var(--primary)]/40 overflow-hidden">
               <span
                 aria-hidden
-                className="absolute -top-4 -right-2 font-display text-[100px] md:text-[160px] font-bold leading-none bg-gradient-to-br from-[var(--primary)] via-[#8B5CF6] to-[var(--accent-warm)] bg-clip-text text-transparent opacity-75 select-none pointer-events-none"
+                className="absolute -top-4 -right-2 z-0 font-display text-[100px] md:text-[160px] font-bold leading-none bg-gradient-to-br from-[var(--primary)] via-[#8B5CF6] to-[var(--accent-warm)] bg-clip-text text-transparent opacity-40 select-none pointer-events-none"
               >
                 {step.number}
               </span>
-              <div className="relative flex flex-col h-full gap-4">
-                <h3 className="text-xl font-bold text-[var(--text-primary)] leading-snug">
+              <div className="relative z-10 flex flex-col h-full gap-4">
+                <h3 className="min-h-[64px] text-xl font-bold text-[var(--text-primary)] leading-snug">
                   {step.title}
                 </h3>
                 <p className="text-sm text-[var(--text-secondary)] leading-relaxed">

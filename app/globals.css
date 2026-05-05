@@ -145,6 +145,23 @@ body {
   will-change: transform;
 }
 
+/* Hero audio wave — onde subtile en arrière-plan */
+@keyframes pulse-wave {
+  0%, 100% { transform: scaleY(0.5); }
+  50%      { transform: scaleY(1); }
+}
+
+.audio-wave-bar {
+  animation: pulse-wave 4s ease-in-out infinite;
+  transform-origin: bottom;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .audio-wave-bar {
+    animation: none;
+  }
+}
+
 /* Reduced motion — neutralise toute animation et transition */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

@@ -58,6 +58,22 @@ export default function OnboardingPage() {
   const [metier, setMetier] = useState("autre");
   const [siret, setSiret] = useState("");
 
+  const [userId, setUserId] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    import("@/lib/supabase/client").then(({ createClient }) => {
+      const supabase = createClient();
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        if (!cancelled) setUserId(user?.id ?? null);
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const [client, setClient] = useState<ClientStep>({
     name: "",
     email: "",
@@ -83,18 +99,17 @@ export default function OnboardingPage() {
   }
 
   async function persistCompanyStep() {
-    alert("ÉTAPE 1: début persistCompanyStep — companyName=" + companyName + " metier=" + metier);
+    console.log("[ONBOARDING] début persistCompanyStep", { companyName, metier });
+    setErrorMsg(null);
     setSubmitting(true);
     try {
-      alert("ÉTAPE 2: avant import supabase + getUser");
       const { createClient } = await import("@/lib/supabase/client");
       const supabase = createClient();
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      alert("ÉTAPE 3: après getUser, user=" + (user ? user.id : "NULL"));
+      console.log("[ONBOARDING] user:", user?.id ?? "NULL");
       if (!user) throw new Error("Session expirée");
-      alert("ÉTAPE 4: avant upsert profiles");
       const { error } = await supabase.from("profiles").upsert({
         id: user.id,
         company: companyName.trim(),
@@ -102,16 +117,16 @@ export default function OnboardingPage() {
         metier: metier || null,
         siret: siret.replace(/\s+/g, "") || null,
       });
-      alert("ÉTAPE 5: après upsert, error=" + (error ? error.message : "AUCUNE"));
+      console.log("[ONBOARDING] upsert result:", { error });
       if (error) throw error;
-      alert("ÉTAPE 6: avant next()");
+      console.log("[ONBOARDING] avant next()");
       next();
-      alert("ÉTAPE 7: après next() — devrait être à l'étape 2 maintenant");
     } catch (err) {
-      alert("ÉTAPE CATCH: " + (err instanceof Error ? err.message : String(err)));
-      toastError(err instanceof Error ? err.message : "Erreur de sauvegarde");
+      const message = err instanceof Error ? err.message : String(err);
+      console.error("[ONBOARDING] catch:", message);
+      setErrorMsg(`Erreur Supabase : ${message}`);
+      toastError(message);
     } finally {
-      alert("ÉTAPE FINALLY: setSubmitting(false)");
       setSubmitting(false);
     }
   }
@@ -261,6 +276,8 @@ export default function OnboardingPage() {
               onSiret={setSiret}
               onNext={persistCompanyStep}
               loading={submitting}
+              userId={userId}
+              errorMsg={errorMsg}
             />
           )}
 
@@ -413,6 +430,8 @@ function StepCompany({
   onSiret,
   onNext,
   loading,
+  userId,
+  errorMsg,
 }: {
   companyName: string;
   metier: string;
@@ -422,6 +441,8 @@ function StepCompany({
   onSiret: (v: string) => void;
   onNext: () => void;
   loading: boolean;
+  userId: string | null;
+  errorMsg: string | null;
 }) {
   const valid = companyName.trim().length > 0 && metier.length > 0;
   return (
@@ -431,6 +452,11 @@ function StepCompany({
         title="Bienvenue sur Quovi ! 👋"
         subtitle="Quelques infos pour personnaliser votre expérience."
       />
+      {errorMsg && (
+        <div className="bg-red-50 border border-red-300 text-red-800 px-4 py-3 rounded mb-4">
+          <strong>⚠️ Erreur :</strong> {errorMsg}
+        </div>
+      )}
       <div className="flex flex-col gap-4">
         <TextField
           id="company-name"
@@ -465,6 +491,7 @@ function StepCompany({
         <p>DEBUG metier: &quot;{metier}&quot;</p>
         <p>DEBUG valid: {valid ? "true" : "false"}</p>
         <p>DEBUG loading: {loading ? "true" : "false"}</p>
+        <p>DEBUG userId: {userId || "non chargé"}</p>
       </div>
       {!valid && (
         <p className="text-xs text-gray-500 mt-2 text-center">

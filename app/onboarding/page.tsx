@@ -83,6 +83,7 @@ export default function OnboardingPage() {
   }
 
   async function persistCompanyStep() {
+    alert("onNext appelé ! companyName=" + companyName + " metier=" + metier);
     setSubmitting(true);
     try {
       const { createClient } = await import("@/lib/supabase/client");
@@ -450,6 +451,12 @@ function StepCompany({
           maxLength={17}
           hint="Vous pourrez l'ajouter plus tard."
         />
+      </div>
+      <div className="text-xs bg-yellow-50 border border-yellow-200 p-2 rounded mb-2 font-mono">
+        <p>DEBUG companyName: &quot;{companyName}&quot; (length: {companyName.length})</p>
+        <p>DEBUG metier: &quot;{metier}&quot;</p>
+        <p>DEBUG valid: {valid ? "true" : "false"}</p>
+        <p>DEBUG loading: {loading ? "true" : "false"}</p>
       </div>
       {!valid && (
         <p className="text-xs text-gray-500 mt-2 text-center">

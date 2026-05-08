@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowRight,
@@ -58,21 +58,7 @@ export default function OnboardingPage() {
   const [metier, setMetier] = useState("autre");
   const [siret, setSiret] = useState("");
 
-  const [userId, setUserId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    import("@/lib/supabase/client").then(({ createClient }) => {
-      const supabase = createClient();
-      supabase.auth.getUser().then(({ data: { user } }) => {
-        if (!cancelled) setUserId(user?.id ?? null);
-      });
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const [client, setClient] = useState<ClientStep>({
     name: "",
@@ -99,7 +85,6 @@ export default function OnboardingPage() {
   }
 
   async function persistCompanyStep() {
-    console.log("[ONBOARDING] début persistCompanyStep", { companyName, metier });
     setErrorMsg(null);
     setSubmitting(true);
     try {
@@ -108,7 +93,6 @@ export default function OnboardingPage() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      console.log("[ONBOARDING] user:", user?.id ?? "NULL");
       if (!user) throw new Error("Session expirée");
       const { error } = await supabase.from("profiles").upsert({
         id: user.id,
@@ -117,15 +101,11 @@ export default function OnboardingPage() {
         metier: metier || null,
         siret: siret.replace(/\s+/g, "") || null,
       });
-      console.log("[ONBOARDING] upsert result:", { error });
       if (error) throw error;
-      console.log("[ONBOARDING] avant next()");
       next();
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.error("[ONBOARDING] catch:", err);
-      setErrorMsg(`Erreur Supabase : ${JSON.stringify(err, null, 2)}`);
-      toastError(message);
+      console.error("[onboarding] persistCompanyStep error:", err);
+      setErrorMsg("error");
     } finally {
       setSubmitting(false);
     }
@@ -276,7 +256,6 @@ export default function OnboardingPage() {
               onSiret={setSiret}
               onNext={persistCompanyStep}
               loading={submitting}
-              userId={userId}
               errorMsg={errorMsg}
             />
           )}
@@ -430,7 +409,6 @@ function StepCompany({
   onSiret,
   onNext,
   loading,
-  userId,
   errorMsg,
 }: {
   companyName: string;
@@ -441,7 +419,6 @@ function StepCompany({
   onSiret: (v: string) => void;
   onNext: () => void;
   loading: boolean;
-  userId: string | null;
   errorMsg: string | null;
 }) {
   const valid = companyName.trim().length > 0 && metier.length > 0;
@@ -453,10 +430,9 @@ function StepCompany({
         subtitle="Quelques infos pour personnaliser votre expérience."
       />
       {errorMsg && (
-        <div className="bg-red-50 border border-red-300 text-red-800 px-4 py-3 rounded mb-4 whitespace-pre-wrap text-xs font-mono">
-          <strong>⚠️ Erreur :</strong>
-          {"\n"}
-          {errorMsg}
+        <div className="bg-red-50 border border-red-300 text-red-800 px-4 py-3 rounded mb-4 text-sm">
+          <strong>⚠️ Une erreur est survenue.</strong> Réessaye dans quelques
+          instants ou contacte le support.
         </div>
       )}
       <div className="flex flex-col gap-4">
@@ -487,13 +463,6 @@ function StepCompany({
           maxLength={17}
           hint="Vous pourrez l'ajouter plus tard."
         />
-      </div>
-      <div className="text-xs bg-yellow-50 border border-yellow-200 p-2 rounded mb-2 font-mono">
-        <p>DEBUG companyName: &quot;{companyName}&quot; (length: {companyName.length})</p>
-        <p>DEBUG metier: &quot;{metier}&quot;</p>
-        <p>DEBUG valid: {valid ? "true" : "false"}</p>
-        <p>DEBUG loading: {loading ? "true" : "false"}</p>
-        <p>DEBUG userId: {userId || "non chargé"}</p>
       </div>
       {!valid && (
         <p className="text-xs text-gray-500 mt-2 text-center">

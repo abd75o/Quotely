@@ -20,7 +20,6 @@ import { cn } from "@/lib/utils";
 const TOTAL_STEPS = 4;
 
 const METIER_OPTIONS = [
-  { value: "", label: "— Sélectionner —" },
   { value: "plombier", label: "Plombier" },
   { value: "electricien", label: "Électricien" },
   { value: "peintre", label: "Peintre" },
@@ -56,7 +55,7 @@ export default function OnboardingPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const [companyName, setCompanyName] = useState("");
-  const [metier, setMetier] = useState("");
+  const [metier, setMetier] = useState("autre");
   const [siret, setSiret] = useState("");
 
   const [client, setClient] = useState<ClientStep>({
@@ -349,6 +348,7 @@ function FooterButtons({
   nextLabel = "Continuer",
   loading,
   nextDisabled,
+  nextType = "button",
 }: {
   onBack?: () => void;
   onNext: () => void;
@@ -356,6 +356,7 @@ function FooterButtons({
   nextLabel?: string;
   loading?: boolean;
   nextDisabled?: boolean;
+  nextType?: "button" | "submit";
 }) {
   return (
     <div className="mt-6 flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-3">
@@ -381,7 +382,7 @@ function FooterButtons({
         </button>
       )}
       <button
-        type="button"
+        type={nextType}
         onClick={onNext}
         disabled={loading || nextDisabled}
         className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-bold text-white bg-[var(--primary)] hover:bg-[var(--primary-dark)] disabled:opacity-50 disabled:cursor-not-allowed rounded-xl cursor-pointer transition-colors shadow-sm"
@@ -415,7 +416,7 @@ function StepCompany({
 }) {
   const valid = companyName.trim().length > 0 && metier.length > 0;
   return (
-    <div>
+    <form onSubmit={(e) => e.preventDefault()}>
       <StepHeader
         icon={Building2}
         title="Bienvenue sur Quovi ! 👋"
@@ -450,8 +451,18 @@ function StepCompany({
           hint="Vous pourrez l'ajouter plus tard."
         />
       </div>
-      <FooterButtons onNext={onNext} loading={loading} nextDisabled={!valid} />
-    </div>
+      {!valid && (
+        <p className="text-xs text-gray-500 mt-2 text-center">
+          Renseigne le nom de ton entreprise pour continuer
+        </p>
+      )}
+      <FooterButtons
+        onNext={onNext}
+        loading={loading}
+        nextDisabled={!valid}
+        nextType="submit"
+      />
+    </form>
   );
 }
 

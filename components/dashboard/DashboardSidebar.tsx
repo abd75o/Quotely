@@ -31,6 +31,7 @@ interface NavItemDef {
 }
 
 const NAV: NavItemDef[] = [
+  { label: "Équipe",                 icon: Users,     href: "/dashboard/equipe" },
   { label: "Devis",                  icon: FileText,  href: "/dashboard/quotes" },
   { label: "Clients",                icon: Users,     href: "/dashboard/clients" },
   { label: "Statistiques avancées",  icon: BarChart2, href: "/dashboard/stats", proOnly: true },

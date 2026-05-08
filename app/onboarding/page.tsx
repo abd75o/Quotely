@@ -83,15 +83,18 @@ export default function OnboardingPage() {
   }
 
   async function persistCompanyStep() {
-    alert("onNext appelé ! companyName=" + companyName + " metier=" + metier);
+    alert("ÉTAPE 1: début persistCompanyStep — companyName=" + companyName + " metier=" + metier);
     setSubmitting(true);
     try {
+      alert("ÉTAPE 2: avant import supabase + getUser");
       const { createClient } = await import("@/lib/supabase/client");
       const supabase = createClient();
       const {
         data: { user },
       } = await supabase.auth.getUser();
+      alert("ÉTAPE 3: après getUser, user=" + (user ? user.id : "NULL"));
       if (!user) throw new Error("Session expirée");
+      alert("ÉTAPE 4: avant upsert profiles");
       const { error } = await supabase.from("profiles").upsert({
         id: user.id,
         company: companyName.trim(),
@@ -99,11 +102,16 @@ export default function OnboardingPage() {
         metier: metier || null,
         siret: siret.replace(/\s+/g, "") || null,
       });
+      alert("ÉTAPE 5: après upsert, error=" + (error ? error.message : "AUCUNE"));
       if (error) throw error;
+      alert("ÉTAPE 6: avant next()");
       next();
+      alert("ÉTAPE 7: après next() — devrait être à l'étape 2 maintenant");
     } catch (err) {
+      alert("ÉTAPE CATCH: " + (err instanceof Error ? err.message : String(err)));
       toastError(err instanceof Error ? err.message : "Erreur de sauvegarde");
     } finally {
+      alert("ÉTAPE FINALLY: setSubmitting(false)");
       setSubmitting(false);
     }
   }

@@ -123,8 +123,8 @@ export default function OnboardingPage() {
       next();
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      console.error("[ONBOARDING] catch:", message);
-      setErrorMsg(`Erreur Supabase : ${message}`);
+      console.error("[ONBOARDING] catch:", err);
+      setErrorMsg(`Erreur Supabase : ${JSON.stringify(err, null, 2)}`);
       toastError(message);
     } finally {
       setSubmitting(false);
@@ -453,8 +453,10 @@ function StepCompany({
         subtitle="Quelques infos pour personnaliser votre expérience."
       />
       {errorMsg && (
-        <div className="bg-red-50 border border-red-300 text-red-800 px-4 py-3 rounded mb-4">
-          <strong>⚠️ Erreur :</strong> {errorMsg}
+        <div className="bg-red-50 border border-red-300 text-red-800 px-4 py-3 rounded mb-4 whitespace-pre-wrap text-xs font-mono">
+          <strong>⚠️ Erreur :</strong>
+          {"\n"}
+          {errorMsg}
         </div>
       )}
       <div className="flex flex-col gap-4">

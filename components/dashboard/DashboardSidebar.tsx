@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -11,6 +11,7 @@ import {
   Plus,
   Menu,
   X,
+  ChevronLeft,
   ChevronRight,
   LogOut,
 } from "lucide-react";
@@ -37,6 +38,8 @@ const NAV: NavItemDef[] = [
   { label: "Statistiques avancées",  icon: BarChart2, href: "/dashboard/stats", proOnly: true },
   { label: "Paramètres",             icon: Settings,  href: "/dashboard/parametres" },
 ];
+
+const REDACTEUR_PATH = "/dashboard/equipe/redacteur";
 
 interface SidebarData {
   email: string;
@@ -90,17 +93,22 @@ function NavItem({
   item,
   active,
   locked,
+  collapsed,
   onClick,
   onLockedClick,
 }: {
   item: NavItemDef;
   active: boolean;
   locked: boolean;
+  collapsed: boolean;
   onClick?: () => void;
   onLockedClick?: () => void;
 }) {
   const baseCls = cn(
-    "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 cursor-pointer group",
+    "group relative flex items-center rounded-xl text-sm font-medium transition-all duration-150 cursor-pointer",
+    collapsed
+      ? "h-10 w-10 justify-center mx-auto"
+      : "gap-3 px-3 py-2.5",
     active
       ? "bg-[var(--primary-bg)] text-[var(--primary)]"
       : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-gray-100"
@@ -112,6 +120,13 @@ function NavItem({
       : "text-[var(--text-muted)] group-hover:text-[var(--text-secondary)]"
   );
 
+  const tooltip = collapsed ? (
+    <span className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-[11px] font-medium text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
+      {item.label}
+      {locked && " (Pro)"}
+    </span>
+  ) : null;
+
   if (locked) {
     return (
       <button
@@ -120,11 +135,15 @@ function NavItem({
           onClick?.();
           onLockedClick?.();
         }}
-        className={cn(baseCls, "w-full text-left")}
+        className={cn(baseCls, !collapsed && "w-full text-left")}
+        aria-label={item.label}
       >
         <item.icon className={iconCls} />
-        <span className="truncate">{item.label}</span>
-        <ProBadge size="sm" withIcon={false} className="ml-auto" />
+        {!collapsed && <span className="truncate">{item.label}</span>}
+        {!collapsed && (
+          <ProBadge size="sm" withIcon={false} className="ml-auto" />
+        )}
+        {tooltip}
       </button>
     );
   }
@@ -134,15 +153,27 @@ function NavItem({
       href={item.href}
       onClick={onClick}
       className={baseCls}
+      aria-label={item.label}
     >
       <item.icon className={iconCls} />
-      {item.label}
-      {active && <ChevronRight className="w-3 h-3 ml-auto text-[var(--primary)]" />}
+      {!collapsed && item.label}
+      {!collapsed && active && (
+        <ChevronRight className="w-3 h-3 ml-auto text-[var(--primary)]" />
+      )}
+      {tooltip}
     </Link>
   );
 }
 
-function SidebarContent({ onClose }: { onClose?: () => void }) {
+function SidebarContent({
+  collapsed,
+  onToggle,
+  onClose,
+}: {
+  collapsed: boolean;
+  onToggle?: () => void;
+  onClose?: () => void;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const { email, initials, company, plan, trialEndsAt } = useSidebarData();
@@ -159,12 +190,28 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Logo */}
-      <div className="flex items-center justify-between px-4 py-5 border-b border-[var(--border)]">
-        <Link href="/dashboard" onClick={onClose} className="cursor-pointer">
-          <Logo variant="horizontal" size={28} id="sidebar" />
+      {/* Logo + bouton fermer (mobile) ou toggle (desktop) */}
+      <div
+        className={cn(
+          "flex border-b border-[var(--border)] py-5",
+          collapsed
+            ? "flex-col items-center gap-3 px-2"
+            : "items-center justify-between px-4"
+        )}
+      >
+        <Link
+          href="/dashboard"
+          onClick={onClose}
+          className="cursor-pointer"
+          aria-label="Quovi"
+        >
+          <Logo
+            variant={collapsed ? "icon" : "horizontal"}
+            size={28}
+            id="sidebar"
+          />
         </Link>
-        {onClose && (
+        {onClose ? (
           <button
             onClick={onClose}
             className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-gray-100 cursor-pointer transition-colors"
@@ -172,22 +219,47 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
           >
             <X className="w-5 h-5" />
           </button>
-        )}
+        ) : onToggle ? (
+          <button
+            type="button"
+            onClick={onToggle}
+            className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-gray-100 cursor-pointer transition-colors"
+            aria-label={collapsed ? "Agrandir le menu" : "Réduire le menu"}
+            title={collapsed ? "Agrandir le menu" : "Réduire le menu"}
+          >
+            {collapsed ? (
+              <ChevronRight className="w-4 h-4" />
+            ) : (
+              <ChevronLeft className="w-4 h-4" />
+            )}
+          </button>
+        ) : null}
       </div>
 
       {/* New quote CTA */}
-      <div className="px-4 pt-4 pb-2">
+      <div className={cn("pt-4 pb-2", collapsed ? "px-2" : "px-4")}>
         <NewQuoteButton
           onClick={onClose}
-          className="flex items-center justify-center gap-2 w-full py-2.5 bg-[var(--primary)] hover:bg-[var(--primary-dark)] text-white text-sm font-semibold rounded-xl transition-colors duration-150 cursor-pointer shadow-sm"
+          ariaLabel="Nouveau devis"
+          className={cn(
+            "flex items-center justify-center bg-[var(--primary)] hover:bg-[var(--primary-dark)] text-white text-sm font-semibold rounded-xl transition-colors duration-150 cursor-pointer shadow-sm",
+            collapsed
+              ? "h-10 w-10 mx-auto"
+              : "gap-2 w-full py-2.5"
+          )}
         >
           <Plus className="w-4 h-4" />
-          Nouveau devis
+          {!collapsed && "Nouveau devis"}
         </NewQuoteButton>
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
+      <nav
+        className={cn(
+          "flex-1 py-2 space-y-0.5 overflow-y-auto overflow-x-hidden",
+          collapsed ? "px-2" : "px-3"
+        )}
+      >
         {NAV.map((item) => {
           const locked = !!item.proOnly && isStarter;
           return (
@@ -196,6 +268,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
               item={item}
               active={!locked && pathname.startsWith(item.href)}
               locked={locked}
+              collapsed={collapsed}
               onClick={onClose}
               onLockedClick={() =>
                 showUpgradeModal(
@@ -209,28 +282,53 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
         })}
       </nav>
 
-      {/* Trial badge (données réelles) */}
-      <TrialBadge trialEndsAt={trialEndsAt} plan={plan} />
+      {/* Trial badge — masqué en mode réduit */}
+      {!collapsed && <TrialBadge trialEndsAt={trialEndsAt} plan={plan} />}
 
       {/* User info + logout */}
-      <div className="px-4 py-4 border-t border-[var(--border)]">
+      <div
+        className={cn(
+          "border-t border-[var(--border)] py-4",
+          collapsed ? "px-2" : "px-4"
+        )}
+      >
         <button
           type="button"
           onClick={handleLogout}
-          className="flex items-center gap-3 w-full p-2.5 rounded-xl hover:bg-gray-50 cursor-pointer transition-colors group text-left"
+          className={cn(
+            "group flex items-center rounded-xl hover:bg-gray-50 cursor-pointer transition-colors text-left",
+            collapsed
+              ? "h-10 w-10 mx-auto justify-center p-0 relative"
+              : "w-full gap-3 p-2.5"
+          )}
+          aria-label="Se déconnecter"
+          title={collapsed ? "Se déconnecter" : undefined}
         >
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--primary)] to-purple-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
             {initials}
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-[var(--text-primary)] truncate">
-              {company || email || "Mon compte"}
-            </p>
-            <p className="text-xs text-[var(--text-muted)] truncate">
-              {plan === "trial" ? "Essai Pro" : plan === "starter" ? "Starter" : "Pro"}
-            </p>
-          </div>
-          <LogOut className="w-3.5 h-3.5 text-[var(--text-muted)] group-hover:text-red-500 flex-shrink-0 transition-colors" />
+          {!collapsed && (
+            <>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-[var(--text-primary)] truncate">
+                  {company || email || "Mon compte"}
+                </p>
+                <p className="text-xs text-[var(--text-muted)] truncate">
+                  {plan === "trial"
+                    ? "Essai Pro"
+                    : plan === "starter"
+                      ? "Starter"
+                      : "Pro"}
+                </p>
+              </div>
+              <LogOut className="w-3.5 h-3.5 text-[var(--text-muted)] group-hover:text-red-500 flex-shrink-0 transition-colors" />
+            </>
+          )}
+          {collapsed && (
+            <span className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-[11px] font-medium text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
+              Se déconnecter
+            </span>
+          )}
         </button>
       </div>
     </div>
@@ -238,13 +336,30 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
 }
 
 export function DashboardSidebar() {
+  const pathname = usePathname();
+  const isRedacteur = pathname.startsWith(REDACTEUR_PATH);
+  const [collapsed, setCollapsed] = useState<boolean>(isRedacteur);
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Auto-collapse en entrant sur Le Rédacteur, auto-expand en sortant.
+  // L'utilisateur peut toggle librement tant qu'il reste sur la même section.
+  useEffect(() => {
+    setCollapsed(isRedacteur);
+  }, [isRedacteur]);
 
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex flex-col w-60 bg-white border-r border-[var(--border)] h-screen sticky top-0 flex-shrink-0">
-        <SidebarContent />
+      <aside
+        className={cn(
+          "hidden lg:flex flex-col bg-white border-r border-[var(--border)] h-screen sticky top-0 flex-shrink-0 transition-[width] duration-300 ease-in-out",
+          collapsed ? "w-16" : "w-60"
+        )}
+      >
+        <SidebarContent
+          collapsed={collapsed}
+          onToggle={() => setCollapsed((c) => !c)}
+        />
       </aside>
 
       {/* Mobile top bar — burger | logo centré | + */}
@@ -270,7 +385,7 @@ export function DashboardSidebar() {
         </NewQuoteButton>
       </header>
 
-      {/* Mobile drawer */}
+      {/* Mobile drawer — toujours en mode étendu (le drawer a sa propre largeur) */}
       {mobileOpen && (
         <div className="lg:hidden fixed inset-0 z-50 flex">
           <div
@@ -278,7 +393,10 @@ export function DashboardSidebar() {
             onClick={() => setMobileOpen(false)}
           />
           <aside className="relative w-[280px] max-w-[85vw] bg-white h-full flex flex-col shadow-2xl">
-            <SidebarContent onClose={() => setMobileOpen(false)} />
+            <SidebarContent
+              collapsed={false}
+              onClose={() => setMobileOpen(false)}
+            />
           </aside>
         </div>
       )}

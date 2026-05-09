@@ -120,7 +120,7 @@ export default async function RedacteurPage() {
   const { conversationId, messages, recent, all } = await loadEverything();
 
   return (
-    <div className="mx-auto flex h-[calc(100vh-7rem)] max-w-6xl flex-col">
+    <div className="flex h-[calc(100vh-7rem)] w-full flex-col">
       <header className="mb-3 flex-shrink-0">
         <Link
           href="/dashboard/equipe"
@@ -131,7 +131,7 @@ export default async function RedacteurPage() {
         </Link>
       </header>
 
-      <div className="min-h-0 flex-1">
+      <div className="min-h-0 w-full flex-1">
         <ChatLayout
           initialMessages={messages}
           recentClients={recent}

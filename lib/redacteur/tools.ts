@@ -177,16 +177,14 @@ interface MarketPrice {
 }
 
 const MARKET_PRICES: MarketPrice[] = [
-  { prestation: "carrelage",        unit: "€/m²",         min: 40,  max: 90 },
-  { prestation: "peinture",         unit: "€/m²",         min: 15,  max: 35 },
-  { prestation: "lavabo (pose)",    unit: "€",            min: 200, max: 350 },
-  { prestation: "wc (pose)",        unit: "€",            min: 150, max: 280 },
-  { prestation: "placo BA13",       unit: "€/m² posé",    min: 25,  max: 50 },
-  { prestation: "isolation laine",  unit: "€/m²",         min: 30,  max: 50 },
-  { prestation: "charpente bois",   unit: "€/m²",         min: 80,  max: 150 },
-  { prestation: "chape liquide",    unit: "€/m²",         min: 25,  max: 40 },
-  { prestation: "enduit façade",    unit: "€/m²",         min: 30,  max: 60 },
-  { prestation: "toiture tuile",    unit: "€/m²",         min: 80,  max: 130 },
+  { prestation: "carrelage",                unit: "€/m²",     min: 40,  max: 90 },
+  { prestation: "peinture",                 unit: "€/m²",     min: 15,  max: 35 },
+  { prestation: "plomberie pose lavabo",    unit: "€",        min: 200, max: 350 },
+  { prestation: "électricité",              unit: "€/point",  min: 50,  max: 100 },
+  { prestation: "placo",                    unit: "€/m²",     min: 25,  max: 45 },
+  { prestation: "isolation",                unit: "€/m²",     min: 40,  max: 80 },
+  { prestation: "toiture",                  unit: "€/m²",     min: 80,  max: 150 },
+  { prestation: "maçonnerie",               unit: "€/m²",     min: 60,  max: 120 },
 ];
 
 function findMarketPrice(keyword: string): MarketPrice | null {

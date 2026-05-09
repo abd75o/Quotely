@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { Pencil } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, Pencil } from "lucide-react";
 import { ClientSelector } from "./ClientSelector";
 import { ClientFullList } from "./ClientFullList";
 import { NewClientForm } from "./NewClientForm";
@@ -9,6 +10,7 @@ import type {
   AgentAction,
   ChoiceButton,
   Message,
+  QuickChoice,
   RedacteurClient,
 } from "./types";
 
@@ -177,7 +179,81 @@ function Embed({
           </button>
         </div>
       );
+    case "quick_choices":
+      return (
+        <QuickChoicesEmbed
+          question={embed.question}
+          choices={embed.choices}
+          onAction={onAction}
+        />
+      );
+    case "redirect":
+      return (
+        <RedirectEmbed
+          label={embed.label}
+          reason={embed.reason}
+          href={embed.href}
+        />
+      );
   }
+}
+
+function QuickChoicesEmbed({
+  question,
+  choices,
+  onAction,
+}: {
+  question?: string;
+  choices: QuickChoice[];
+  onAction: (action: AgentAction) => void;
+}) {
+  const limited = choices.slice(0, 4);
+  return (
+    <div className="space-y-1.5">
+      {question && (
+        <p className="text-[12px] text-[var(--text-secondary)]">{question}</p>
+      )}
+      <div className="flex flex-wrap gap-2">
+        {limited.map((choice) => (
+          <button
+            key={choice.value}
+            type="button"
+            onClick={() =>
+              onAction({ type: "quick_choice", value: choice.value })
+            }
+            className="rounded-lg border border-[var(--border)] bg-white px-2.5 py-1.5 text-[12px] font-medium text-[var(--text-secondary)] transition-colors hover:border-[#534AB7] hover:bg-[#EEEDFE] hover:text-[#3C3489]"
+          >
+            {choice.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function RedirectEmbed({
+  label,
+  reason,
+  href,
+}: {
+  label: string;
+  reason: string;
+  href: string;
+}) {
+  return (
+    <div className="space-y-1.5">
+      {reason && (
+        <p className="text-[12px] text-[var(--text-secondary)]">{reason}</p>
+      )}
+      <Link
+        href={href}
+        className="inline-flex items-center gap-1.5 rounded-lg bg-[#534AB7] px-3 py-1.5 text-[12px] font-medium text-white transition-colors hover:bg-[#3C3489]"
+      >
+        {label}
+        <ArrowRight className="h-3.5 w-3.5" />
+      </Link>
+    </div>
+  );
 }
 
 function ChoiceButtonsEmbed({

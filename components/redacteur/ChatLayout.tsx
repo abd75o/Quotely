@@ -235,8 +235,7 @@ export function ChatLayout({
       append({
         id: newId("a"),
         role: "assistant",
-        content:
-          "(L'IA arrive au prochain sprint — pour l'instant utilise les boutons.)",
+        content: "Reçu, on continue le mock en attendant l'IA.",
       });
     },
     [append],

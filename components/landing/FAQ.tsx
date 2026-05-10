@@ -1,49 +1,34 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { IconChevronDown } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 
 const FAQS = [
   {
-    question: "La signature électronique de Quovi est-elle légalement valide ?",
+    question: "Qui sont Émile et Iris ?",
+    answer:
+      "Ce sont les deux agents qui tournent dans Quovi. Émile rédige vos devis à partir d’une simple description (voix, texte ou photo). Iris surveille les devis envoyés et relance au bon moment. Ils bossent en coulisse pendant que vous êtes sur le chantier.",
+  },
+  {
+    question: "La signature électronique de Quovi est-elle légalement valide ?",
     answer:
       "Oui, totalement. Elle suit le règlement européen eIDAS. Chaque signature est horodatée, liée à l’email du signataire, et accompagnée d’un certificat d’audit. Elle a la même valeur juridique qu’une signature papier en France et en Europe.",
   },
   {
-    question: "Faut-il être à l’aise avec l’informatique pour utiliser Quovi ?",
+    question: "Faut-il être à l’aise avec l’informatique ?",
     answer:
-      "Non. Si vous savez écrire un SMS, vous savez utiliser Quovi. Tout est pensé pour le terrain, pas pour le bureau.",
+      "Non. Vous parlez à Émile, il fait le reste. Si vous savez envoyer un message vocal sur WhatsApp, vous savez utiliser Quovi.",
   },
   {
-    question: "Puis-je importer mes clients et mes anciens modèles ?",
+    question: "Mon client doit-il créer un compte pour signer ?",
     answer:
-      "Oui. Import depuis un fichier Excel, CSV, ou directement depuis votre carnet d’adresses. Vos modèles existants, on les recrée avec vous si besoin.",
+      "Non. Il reçoit un lien, il clique, il signe. Pas de compte, pas de mot de passe. Tout depuis son téléphone.",
   },
   {
-    question: "Mon client doit-il créer un compte Quovi pour signer ?",
+    question: "Puis-je résilier à tout moment ?",
     answer:
-      "Non, jamais. Il reçoit un lien, il clique, il signe. C’est tout.",
-  },
-  {
-    question: "Puis-je personnaliser les devis avec mon logo et mes couleurs ?",
-    answer:
-      "Oui. Logo, couleurs, mentions légales, conditions de paiement. Tout est ajustable en quelques minutes.",
-  },
-  {
-    question: "Comment fonctionnent les relances automatiques ?",
-    answer:
-      "Quovi relance votre client à J+3, J+7 et J+14 si le devis n’est pas signé. Avec un message courtois, personnalisé. Vous pouvez les désactiver, les modifier, ou en programmer d’autres.",
-  },
-  {
-    question: "Puis-je résilier à tout moment ?",
-    answer:
-      "Oui, à n’importe quel moment, sans justification. Un seul clic dans vos paramètres. Aucun engagement, aucun frais caché.",
-  },
-  {
-    question: "Comment Quovi arrive à rédiger un devis aussi vite ?",
-    answer:
-      "Quovi s’appuie sur des modèles de langage avancés (intelligence artificielle) pour transformer votre description en devis structuré : prestations détaillées, calcul de TVA, formulations professionnelles. Vous gardez toujours la main : relisez, ajustez, validez avant l’envoi. Vos données ne servent jamais à entraîner les modèles — elles restent privées et hébergées en France.",
+      "Oui, aucun engagement. Vous résiliez en un clic depuis votre tableau de bord. Et le plan Free reste disponible gratuitement, sans limite de durée.",
   },
 ];
 
@@ -75,9 +60,10 @@ function FAQItem({
         <span className="text-base font-bold text-[var(--text-primary)] leading-snug">
           {question}
         </span>
-        <ChevronDown
+        <IconChevronDown
+          size={20}
           className={cn(
-            "w-5 h-5 text-[var(--primary)] flex-shrink-0 transition-transform duration-300",
+            "text-[var(--primary)] flex-shrink-0 transition-transform duration-300",
             isOpen && "rotate-180"
           )}
         />
@@ -102,27 +88,26 @@ export function FAQ() {
   return (
     <section
       id="faq"
-      className="relative isolate overflow-hidden py-16 md:py-24 bg-gradient-to-br from-[#F8FAFC] via-[#EEF2FF] to-[#FEF9F0]"
+      className="relative isolate overflow-hidden py-16 md:py-24 bg-[#F6F4EE]"
     >
-      {/* Decorative blobs — hidden on mobile */}
+      {/* Decorative blob — hidden on mobile */}
       <div
         aria-hidden
         className="hidden md:block absolute -top-32 -right-32 w-[28rem] h-[28rem] rounded-full bg-[var(--primary-bg)] opacity-20 blur-3xl pointer-events-none -z-10"
       />
-      <div
-        aria-hidden
-        className="hidden md:block absolute -bottom-32 -left-32 w-[24rem] h-[24rem] rounded-3xl bg-[var(--accent-warm-bg)] opacity-20 blur-3xl pointer-events-none -z-10"
-      />
 
       <div className="relative max-w-3xl mx-auto px-6 lg:px-8">
         <div className="text-center mb-12">
-          <h2 className="font-display text-[32px] md:text-[40px] font-bold leading-[1.15] tracking-tight text-[var(--text-primary)]">
+          <p className="font-mono text-[0.78rem] uppercase tracking-[0.05em] text-[var(--text-muted)] mb-4">
+            6.0 · Questions
+          </p>
+          <h2 className="font-display text-[32px] md:text-[40px] font-medium leading-[1.15] tracking-[-0.025em] text-[var(--text-primary)]">
             Vos questions, nos réponses.
           </h2>
           <p className="mt-4 text-lg text-[var(--text-secondary)] leading-relaxed">
             Une question manque ?{" "}
             <a
-              href="mailto:support@quovi.fr"
+              href="mailto:hello@quovi.fr"
               className="text-[var(--primary)] font-semibold hover:underline cursor-pointer"
             >
               Écrivez-nous

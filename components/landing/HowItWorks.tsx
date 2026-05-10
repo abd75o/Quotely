@@ -1,170 +1,193 @@
-import { Mic, FileText, Send, CheckCircle2 } from "lucide-react";
-import { Section } from "@/components/ui/Section";
-import { Highlight } from "@/components/ui/Highlight";
-import { Reveal, RevealStagger, RevealItem } from "@/components/ui/Reveal";
+"use client";
 
-type Step = {
-  number: string;
-  title: React.ReactNode;
-  phrase: string;
-  visual: React.ReactNode;
-};
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { IconArrowRight, IconCheck } from "@tabler/icons-react";
+
+interface Step {
+  toiTitle: string;
+  toiDesc: string;
+  quoviActions: string[];
+}
 
 const STEPS: Step[] = [
   {
-    number: "01",
-    title: "Décrivez votre intervention",
-    phrase: "Vous parlez ou vous tapez. Quelques mots suffisent.",
-    visual: (
-      <div className="p-4 bg-[var(--bg-secondary)] rounded-xl border border-[var(--border-light)]">
-        <div className="flex items-center gap-2 mb-3">
-          <div className="w-8 h-8 rounded-lg bg-[var(--primary-bg)] flex items-center justify-center">
-            <Mic className="w-4 h-4 text-[var(--primary)]" />
-          </div>
-          <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">
-            En écoute
-          </p>
-        </div>
-        <p className="text-sm text-[var(--text-primary)] font-medium leading-relaxed">
-          « Pose carrelage 40 m² cuisine, joints compris, dépose de l’ancienne dalle. »
-        </p>
-      </div>
-    ),
+    toiTitle: "Décrivez votre chantier",
+    toiDesc: "30 secondes. Voix, texte, photo — comme vous voulez.",
+    quoviActions: [
+      "Émile rédige le devis",
+      "Émile calcule la TVA juste",
+      "Émile injecte les mentions légales",
+    ],
   },
   {
-    number: "02",
-    title: (
-      <>
-        Votre devis <Highlight variant="warm">se construit tout seul</Highlight>
-      </>
-    ),
-    phrase: "Prestations détaillées, TVA calculée, total prêt.",
-    visual: (
-      <div className="p-4 bg-[var(--bg-secondary)] rounded-xl border border-[var(--border-light)] space-y-2">
-        {[
-          { label: "Dépose de la dalle", price: "320 €" },
-          { label: "Carrelage 40 m²", price: "1 200 €" },
-          { label: "Pose et joints", price: "880 €" },
-        ].map((row) => (
-          <div
-            key={row.label}
-            className="flex justify-between items-center py-1 border-b border-[var(--border-light)] last:border-0"
-          >
-            <span className="text-xs text-[var(--text-secondary)]">{row.label}</span>
-            <span className="text-xs font-semibold text-[var(--text-primary)]">
-              {row.price}
-            </span>
-          </div>
-        ))}
-        <div className="pt-2 flex justify-between items-center">
-          <span className="text-xs font-semibold text-[var(--text-primary)]">Total TTC</span>
-          <span className="text-sm font-bold text-[var(--primary)]">2 880 €</span>
-        </div>
-      </div>
-    ),
+    toiTitle: "Validez en 1 clic",
+    toiDesc: "Vous jetez un œil, vous envoyez.",
+    quoviActions: [
+      "Quovi envoie le devis au client",
+      "Quovi notifie le client par email",
+      "Quovi génère le PDF prêt à signer",
+    ],
   },
   {
-    number: "03",
-    title: "Envoyez d’un geste",
-    phrase: "Le client reçoit un lien. Il ouvre depuis n’importe où.",
-    visual: (
-      <div className="p-4 bg-[var(--bg-secondary)] rounded-xl border border-[var(--border-light)]">
-        <div className="flex items-center gap-2.5 mb-2">
-          <div className="w-8 h-8 rounded-lg bg-[var(--primary)] flex items-center justify-center">
-            <Send className="w-4 h-4 text-white" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold text-[var(--text-primary)] truncate">
-              À : m.dupont@email.fr
-            </p>
-            <p className="text-[10px] text-[var(--text-muted)]">Devis #042 · 2 880 €</p>
-          </div>
-        </div>
-        <p className="text-xs text-[var(--text-secondary)] bg-white rounded-lg p-2 leading-relaxed border border-[var(--border-light)]">
-          Bonjour, vous trouverez le devis ci-joint. Bonne réception.
-        </p>
-      </div>
-    ),
-  },
-  {
-    number: "04",
-    title: "Signature reçue, facture créée",
-    phrase: "Le client signe. Vous êtes notifié. La facture suit.",
-    visual: (
-      <div className="p-4 bg-[var(--bg-secondary)] rounded-xl border border-[var(--border-light)]">
-        <div className="flex items-center gap-2.5 mb-3">
-          <div className="w-8 h-8 rounded-full bg-[var(--emerald-bg)] flex items-center justify-center">
-            <CheckCircle2 className="w-4 h-4 text-[var(--emerald-dark)]" />
-          </div>
-          <div>
-            <p className="text-xs font-bold text-[var(--text-primary)]">Devis signé</p>
-            <p className="text-[10px] text-[var(--text-muted)]">14:32 · M. Dupont</p>
-          </div>
-        </div>
-        <div className="px-3 py-2 bg-white rounded-lg border border-[var(--border-light)]">
-          <div className="flex items-center gap-2">
-            <FileText className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-            <p className="text-[11px] font-medium text-[var(--text-primary)]">
-              Facture #042 émise
-            </p>
-          </div>
-        </div>
-      </div>
-    ),
+    toiTitle: "Retournez sur le chantier",
+    toiDesc: "C’est tout ce qu’on vous demande.",
+    quoviActions: [
+      "Iris surveille les réponses",
+      "Iris relance à J+3, J+7, J+14",
+      "Iris s’arrête si le client répond",
+      "Quovi crée la facture après signature",
+      "Quovi numérote et archive",
+    ],
   },
 ];
 
 export function HowItWorks() {
-  return (
-    <Section
-      variant="alt"
-      id="comment-ca-marche"
-      className="bg-gradient-to-br from-[#FAFBFF] via-white to-[#FEF9F0]"
-      decoration={
-        <>
-          <div
-            aria-hidden
-            className="hidden md:block absolute top-0 right-0 w-[400px] h-[400px] -translate-y-1/4 translate-x-1/4 rounded-full bg-[var(--primary)] opacity-25 blur-3xl pointer-events-none -z-10"
-          />
-          <div
-            aria-hidden
-            className="hidden md:block absolute bottom-0 left-0 w-[350px] h-[350px] translate-y-1/4 -translate-x-1/4 rounded-3xl bg-[var(--accent-warm)] opacity-20 blur-3xl pointer-events-none -z-10"
-          />
-        </>
-      }
-    >
-      <Reveal className="text-center max-w-2xl mx-auto mb-16">
-        <h2 className="font-display text-[32px] md:text-[40px] font-bold leading-[1.15] tracking-tight text-[var(--text-primary)]">
-          En 4 étapes, votre devis est signé.
-        </h2>
-        <p className="mt-4 text-lg text-[var(--text-secondary)] leading-relaxed">
-          Pas de formation. Pas de logiciel compliqué. Juste votre voix.
-        </p>
-      </Reveal>
+  const [progress, setProgress] = useState(0); // 0..1
+  const sectionRef = useRef<HTMLDivElement | null>(null);
+  const timelineRef = useRef<HTMLDivElement | null>(null);
 
-      <RevealStagger className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 xl:gap-12">
-        {STEPS.map((step) => (
-          <RevealItem key={step.number}>
-            <article className="relative h-full p-8 bg-white rounded-2xl border border-[var(--border)] shadow-sm transition-all duration-200 hover:shadow-[var(--shadow-card-hover)] hover:-translate-y-0.5 hover:border-[var(--primary)]/40 overflow-hidden">
-              <span
-                aria-hidden
-                className="absolute -top-4 -right-2 z-0 font-display text-[100px] md:text-[160px] font-bold leading-none bg-gradient-to-br from-[var(--primary)] via-[#8B5CF6] to-[var(--accent-warm)] bg-clip-text text-transparent opacity-40 select-none pointer-events-none"
+  useEffect(() => {
+    function onScroll() {
+      const node = timelineRef.current;
+      if (!node) return;
+      const rect = node.getBoundingClientRect();
+      const viewportH = window.innerHeight || 0;
+      // Start when the top of the timeline reaches 80% of the viewport,
+      // finish when its bottom crosses 20% of the viewport.
+      const start = viewportH * 0.8;
+      const end = viewportH * 0.2;
+      const total = rect.height + (start - end);
+      const traveled = start - rect.top;
+      const p = Math.max(0, Math.min(1, traveled / total));
+      setProgress(p);
+    }
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
+  }, []);
+
+  // Dot activation thresholds
+  const ACTIVATE_AT = [0, 0.33, 0.66];
+
+  return (
+    <section
+      id="comment-ca-marche"
+      ref={sectionRef}
+      className="bg-[#FBFAF7] py-20 md:py-24 lg:py-[100px]"
+    >
+      <div className="max-w-[1100px] mx-auto px-6">
+        {/* Header */}
+        <div className="text-center mb-16 md:mb-20">
+          <p className="font-mono text-[13px] uppercase tracking-[0.06em] text-[#8A857F] mb-5">
+            2.0 · Comment ça marche
+          </p>
+          <h2 className="font-display font-medium text-[clamp(2rem,4vw,3rem)] leading-[1.15] tracking-[-0.02em] text-[#0F0F14] mb-4">
+            Vous bossez. Quovi gère vos devis.
+          </h2>
+          <p className="text-[18px] text-[#4B4B55] max-w-[560px] mx-auto leading-[1.55]">
+            3 actions pour vous, tout le reste pour nous.
+          </p>
+        </div>
+
+        {/* Timeline */}
+        <div
+          ref={timelineRef}
+          className="relative max-w-[920px] mx-auto"
+        >
+          {/* Vertical line — desktop centered, mobile left */}
+          <div
+            aria-hidden
+            className="absolute top-0 bottom-0 w-[2px] bg-[var(--border)] left-3 md:left-1/2 md:-translate-x-1/2"
+          />
+          <div
+            aria-hidden
+            className="absolute top-0 w-[2px] bg-[#5B5BD6] left-3 md:left-1/2 md:-translate-x-1/2"
+            style={{
+              height: `${progress * 100}%`,
+              transition: "height 120ms linear",
+            }}
+          />
+
+          {STEPS.map((step, i) => {
+            const isLit = progress >= ACTIVATE_AT[i];
+            return (
+              <div
+                key={step.toiTitle}
+                className="relative grid grid-cols-1 md:grid-cols-[1fr_60px_1fr] gap-6 md:gap-8 items-start mb-14 last:mb-0 pl-9 md:pl-0"
               >
-                {step.number}
-              </span>
-              <div className="relative z-10 flex flex-col h-full gap-4">
-                <h3 className="min-h-[64px] text-xl font-bold text-[var(--text-primary)] leading-snug">
-                  {step.title}
-                </h3>
-                <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
-                  {step.phrase}
-                </p>
-                <div className="mt-auto pt-2">{step.visual}</div>
+                {/* Dot — positioned over the line */}
+                <span
+                  aria-hidden
+                  className="absolute top-[6px] left-3 md:left-1/2 md:-translate-x-1/2 w-[14px] h-[14px] rounded-full z-10 transition-all duration-[400ms]"
+                  style={{
+                    background: isLit ? "#5B5BD6" : "#FBFAF7",
+                    border: `2px solid ${isLit ? "#5B5BD6" : "#8A857F"}`,
+                    boxShadow: isLit
+                      ? "0 0 0 4px rgba(91, 91, 214, 0.15)"
+                      : "none",
+                  }}
+                />
+
+                {/* TOI */}
+                <div className="md:text-right md:pr-2">
+                  <p className="font-mono text-[11px] uppercase tracking-[0.05em] text-[#8A857F] mb-2">
+                    Vous
+                  </p>
+                  <h3 className="font-semibold text-[17px] text-[#0F0F14] mb-1.5 leading-snug">
+                    {step.toiTitle}
+                  </h3>
+                  <p className="text-[14px] text-[#4B4B55] leading-[1.5]">
+                    {step.toiDesc}
+                  </p>
+                </div>
+
+                {/* Spacer for the line column on desktop */}
+                <div className="hidden md:block" />
+
+                {/* QUOVI */}
+                <div className="md:text-left md:pl-2">
+                  <p className="font-mono text-[11px] uppercase tracking-[0.05em] text-[#5B5BD6] mb-2">
+                    Quovi
+                  </p>
+                  <ul className="space-y-2">
+                    {step.quoviActions.map((action) => (
+                      <li
+                        key={action}
+                        className="flex items-start gap-2 text-[14px] text-[#0F0F14] leading-[1.5]"
+                      >
+                        <IconCheck
+                          size={16}
+                          className="text-[#5B5BD6] flex-shrink-0 mt-0.5"
+                        />
+                        <span>{action}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
-            </article>
-          </RevealItem>
-        ))}
-      </RevealStagger>
-    </Section>
+            );
+          })}
+        </div>
+
+        {/* Footer */}
+        <div className="mt-20 text-center">
+          <p className="font-display italic font-medium text-[clamp(1.2rem,2vw,1.5rem)] text-[#0F0F14] max-w-[600px] mx-auto mb-8 leading-[1.4]">
+            3 actions de votre côté. 12 actions du côté Quovi.
+          </p>
+          <Link
+            href="/inscription"
+            className="inline-flex items-center gap-2 py-3.5 px-7 rounded-full bg-[#5B5BD6] text-white text-[15px] font-semibold hover:bg-[#4747C2] transition-colors shadow-md"
+          >
+            Démarrer gratuitement
+            <IconArrowRight size={18} />
+          </Link>
+        </div>
+      </div>
+    </section>
   );
 }

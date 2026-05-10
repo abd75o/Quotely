@@ -1,13 +1,23 @@
 "use client";
 
+import { IconCheck, IconFlag, IconLock, IconShield } from "@tabler/icons-react";
 import { Section } from "@/components/ui/Section";
 import { Button } from "@/components/ui/Button";
 import { Highlight } from "@/components/ui/Highlight";
 import { Reveal } from "@/components/ui/Reveal";
-import { CheckCircle2 } from "lucide-react";
 import { useUserState } from "@/lib/hooks/useUserState";
 
-const REASSURANCES = ["14 jours offerts", "Sans carte bancaire", "Résiliable en un clic"];
+const REASSURANCES = [
+  "Plan gratuit disponible",
+  "Sans carte bancaire",
+  "Résiliable en un clic",
+];
+
+const TRUST = [
+  { Icon: IconShield, label: "Conforme RGPD" },
+  { Icon: IconFlag, label: "Hébergé en France" },
+  { Icon: IconLock, label: "Paiement sécurisé Stripe" },
+];
 
 export function CTA() {
   const { state, isLoading } = useUserState();
@@ -18,7 +28,7 @@ export function CTA() {
     <Section
       variant="primary"
       size="wide"
-      className="bg-gradient-to-br from-[var(--primary)] via-[var(--primary)] to-[var(--primary-dark)]"
+      className="bg-[var(--primary)]"
       decoration={
         <div
           aria-hidden
@@ -27,7 +37,10 @@ export function CTA() {
       }
     >
       <Reveal className="text-center max-w-3xl mx-auto">
-        <h2 className="font-display text-[32px] md:text-[48px] font-bold leading-[1.1] tracking-tight text-white">
+        <p className="font-mono text-[0.78rem] uppercase tracking-[0.05em] text-white/60 mb-4">
+          7.0 · Démarrer
+        </p>
+        <h2 className="font-display text-[32px] md:text-[48px] font-medium leading-[1.1] tracking-[-0.025em] text-white">
           {isVisitor ? (
             <>
               Votre prochain devis pourrait être signé{" "}
@@ -48,9 +61,9 @@ export function CTA() {
           {isVisitor ? (
             <>
               <Button href="/inscription" variant="primary-inverted" icon>
-                Démarrer · 14 jours gratuits
+                Démarrer gratuitement
               </Button>
-              <Button href="/tarifs" variant="secondary-outline-light">
+              <Button href="#tarifs" variant="secondary-outline-light">
                 Voir les tarifs
               </Button>
             </>
@@ -62,19 +75,36 @@ export function CTA() {
         </div>
 
         {isVisitor && (
-          <div className="mt-10 flex flex-wrap justify-center gap-x-6 gap-y-3">
-            {REASSURANCES.map((item) => (
-              <div key={item} className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-300 flex-shrink-0" />
-                <span className="text-sm font-medium text-white/85">{item}</span>
-              </div>
-            ))}
-          </div>
-        )}
+          <>
+            <div className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-3">
+              {REASSURANCES.map((item) => (
+                <div key={item} className="flex items-center gap-2">
+                  <IconCheck size={16} className="text-white/85 flex-shrink-0" />
+                  <span className="text-sm font-medium text-white/85">
+                    {item}
+                  </span>
+                </div>
+              ))}
+            </div>
 
-        <p className="mt-10 text-xs text-white/60">
-          Données hébergées en France · RGPD · Paiement sécurisé par Stripe
-        </p>
+            <div className="mt-6 flex flex-wrap justify-center gap-x-4 gap-y-2 text-[13px] text-white/70">
+              {TRUST.map(({ Icon, label }, i) => (
+                <span
+                  key={label}
+                  className="inline-flex items-center gap-1.5"
+                >
+                  <Icon size={14} />
+                  {label}
+                  {i < TRUST.length - 1 && (
+                    <span aria-hidden className="text-white/40 ml-2">
+                      ·
+                    </span>
+                  )}
+                </span>
+              ))}
+            </div>
+          </>
+        )}
       </Reveal>
     </Section>
   );

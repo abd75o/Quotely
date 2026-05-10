@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quovi — Le devis qui part avant que vous passiez à autre chose.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.5.0/dist/tabler-icons.min.css">
+<style>
+  :root {
+    --bg: #FAF7F0;
+    --bg-2: #F4F0E6;
+    --bg-card: #FFFFFF;
+    --ink: #0F0F14;
+    --ink-2: #4B4B55;
+    --ink-3: #8A857F;
+    --ink-4: #B8B1A8;
+    --line: rgba(15, 15, 20, 0.08);
+    --line-2: rgba(15, 15, 20, 0.14);
+    --primary: #5B5BD6;
+    --primary-soft: #EEEDFE;
+    --primary-strong: #3C3489;
+    --accent-yellow: #FCE96A;
+    --accent-yellow-soft: #FFF4B0;
+    --emile: #5B5BD6;
+    --emile-soft: #EEEDFE;
+    --emile-strong: #3C3489;
+    --iris: #1D9E75;
+    --iris-soft: #E1F5EE;
+    --iris-strong: #085041;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  .serif { font-family: 'Fraunces', Georgia, serif; font-weight: 500; letter-spacing: -0.015em; }
+  .mono { font-family: 'JetBrains Mono', 'SF Mono', Menlo, monospace; }
+
+  .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+  .container-narrow { max-width: 880px; margin: 0 auto; padding: 0 24px; }
+
+  .display-xl { font-size: clamp(2.5rem, 6.5vw, 5.25rem); line-height: 1.02; letter-spacing: -0.035em; font-weight: 500; }
+  .display-l { font-size: clamp(2rem, 4.5vw, 3.75rem); line-height: 1.05; letter-spacing: -0.03em; font-weight: 500; }
+  .display-m { font-size: clamp(1.5rem, 3vw, 2.25rem); line-height: 1.15; letter-spacing: -0.02em; font-weight: 500; }
+  .body-l { font-size: 1.15rem; line-height: 1.55; color: var(--ink-2); }
+  .body-m { font-size: 1rem; line-height: 1.6; color: var(--ink-2); }
+  .label-mono { font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; color: var(--ink-3); letter-spacing: 0.05em; text-transform: uppercase; }
+
+  .highlight { background: var(--accent-yellow); padding: 0 6px; border-radius: 3px; }
+  .highlight-purple { background: var(--primary-soft); color: var(--primary-strong); padding: 0 6px; border-radius: 3px; }
+
+  /* ========== NAV ========== */
+  .nav {
+    position: sticky; top: 0; z-index: 100;
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    background: rgba(250, 247, 240, 0.85);
+    border-bottom: 0.5px solid var(--line);
+  }
+  .nav-inner { display: flex; align-items: center; justify-content: space-between; padding: 16px 0; }
+  .logo { display: flex; align-items: center; gap: 8px; font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.35rem; letter-spacing: -0.01em; color: var(--ink); }
+  .logo-mark { width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid var(--ink); display: flex; align-items: center; justify-content: center; font-size: 0.95rem; }
+  .nav-links { display: flex; gap: 32px; align-items: center; }
+  .nav-links a { color: var(--ink-2); text-decoration: none; font-size: 0.94rem; transition: color 150ms; }
+  .nav-links a:hover { color: var(--ink); }
+  .nav-cta { display: flex; gap: 12px; align-items: center; }
+  .nav-cta a { color: var(--ink-2); text-decoration: none; font-size: 0.94rem; }
+  .nav-cta .btn { font-size: 0.9rem; }
+  @media (max-width: 800px) { .nav-links { display: none; } }
+
+  /* ========== BUTTONS ========== */
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 11px 22px; border-radius: 999px;
+    font-size: 0.95rem; font-weight: 500;
+    text-decoration: none; cursor: pointer;
+    transition: all 200ms ease;
+    border: none; font-family: inherit;
+  }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-primary:hover { background: #4747C2; transform: translateY(-1px); }
+  .btn-outline { background: transparent; color: var(--ink); border: 1px solid var(--line-2); }
+  .btn-outline:hover { background: rgba(15,15,20,0.04); }
+  .btn-ghost { background: transparent; color: var(--ink-2); padding: 8px 14px; }
+  .btn-ghost:hover { color: var(--ink); }
+  .btn-lg { padding: 14px 28px; font-size: 1rem; }
+
+  /* ========== HERO ========== */
+  .hero { padding: 100px 0 80px; position: relative; overflow: hidden; }
+  .hero-grid { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 60px; align-items: center; }
+  @media (max-width: 900px) { .hero-grid { grid-template-columns: 1fr; gap: 40px; } }
+
+  .hero-eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--primary-soft); color: var(--primary-strong);
+    padding: 6px 14px; border-radius: 999px;
+    font-size: 0.82rem; font-weight: 500;
+    margin-bottom: 28px;
+  }
+  .hero-eyebrow::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--primary); }
+
+  .hero h1 { margin-bottom: 24px; }
+  .hero p.lead { max-width: 480px; margin-bottom: 36px; }
+  .hero-ctas { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 32px; }
+  .hero-trust { display: flex; gap: 18px; flex-wrap: wrap; font-size: 0.84rem; color: var(--ink-3); }
+  .hero-trust span { display: inline-flex; align-items: center; gap: 6px; }
+
+  /* Voice mock */
+  .voice-mock {
+    background: var(--bg-card);
+    border-radius: 24px;
+    padding: 32px 28px;
+    border: 0.5px solid var(--line);
+    box-shadow: 0 1px 0 rgba(0,0,0,0.02);
+    position: relative;
+    aspect-ratio: 1.1 / 1;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .voice-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--primary-soft); color: var(--primary-strong);
+    padding: 5px 12px; border-radius: 999px;
+    font-size: 0.78rem; font-weight: 500;
+    margin-bottom: 28px;
+  }
+  .voice-mic {
+    width: 88px; height: 88px; border-radius: 50%;
+    background: var(--primary); color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 32px;
+    box-shadow: 0 0 0 0 rgba(91, 91, 214, 0.4);
+    animation: pulse 2.4s infinite;
+    margin-bottom: 28px;
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(91, 91, 214, 0.4); }
+    70% { box-shadow: 0 0 0 28px rgba(91, 91, 214, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(91, 91, 214, 0); }
+  }
+  .voice-text {
+    font-style: italic; color: var(--ink-2); font-size: 0.95rem;
+    text-align: center;
+  }
+  .voice-cursor { display: inline-block; width: 2px; height: 14px; background: var(--ink-3); vertical-align: -2px; margin-left: 1px; animation: blink 1s infinite; }
+  @keyframes blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+  .voice-dots { position: absolute; bottom: 22px; display: flex; gap: 6px; }
+  .voice-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--line-2); }
+  .voice-dots span.active { background: var(--primary); }
+
+  /* ========== TEAM (LINEAR-STYLE) ========== */
+  .team-section { padding: 80px 0; background: var(--bg-2); }
+  .team-header { text-align: center; max-width: 640px; margin: 0 auto 48px; }
+  .team-header .label-mono { display: block; margin-bottom: 16px; }
+  .team-header h2 { margin-bottom: 16px; }
+
+  .team-card {
+    background: var(--bg-card);
+    border: 0.5px solid var(--line);
+    border-radius: 20px;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 1.55fr 0.85fr;
+    min-height: 440px;
+  }
+  @media (max-width: 800px) { .team-card { grid-template-columns: 1fr; } }
+
+  .team-conv {
+    padding: 36px 40px;
+    display: flex; flex-direction: column;
+    border-right: 0.5px solid var(--line);
+  }
+  @media (max-width: 800px) { .team-conv { border-right: none; border-bottom: 0.5px solid var(--line); } }
+
+  .team-agent-head {
+    display: flex; align-items: center; gap: 14px;
+    padding-bottom: 22px; border-bottom: 0.5px solid var(--line);
+    margin-bottom: 24px;
+  }
+  .team-avatar-lg {
+    width: 52px; height: 52px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: 600;
+    flex-shrink: 0;
+  }
+  .team-agent-name { font-size: 1.1rem; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+  .team-status { display: inline-flex; align-items: center; gap: 5px; font-size: 0.78rem; color: var(--iris-strong); font-weight: 500; }
+  .team-status::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--iris); }
+  .team-agent-role { font-size: 0.85rem; color: var(--ink-3); margin-top: 2px; }
+
+  .team-says-label { font-size: 0.74rem; color: var(--ink-3); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 12px; font-family: 'JetBrains Mono', monospace; }
+  .team-message {
+    font-family: 'Fraunces', serif;
+    font-size: 1.2rem;
+    line-height: 1.5;
+    color: var(--ink);
+    min-height: 140px;
+    margin-bottom: 24px;
+    flex: 1;
+  }
+  .team-cursor { display: inline-block; width: 2px; height: 18px; background: var(--primary); vertical-align: -3px; margin-left: 1px; animation: blink 1s infinite; }
+  .team-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; }
+  .team-tag {
+    font-size: 0.78rem;
+    padding: 4px 10px;
+    background: var(--bg-2);
+    color: var(--ink-2);
+    border-radius: 999px;
+    border: 0.5px solid var(--line);
+  }
+
+  .team-list { padding: 24px; background: var(--bg-2); }
+  .team-list-label { font-size: 0.74rem; color: var(--ink-3); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 14px; padding: 0 8px; font-family: 'JetBrains Mono', monospace; }
+  .team-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 120ms;
+    background: transparent;
+    border: 0.5px solid transparent;
+    width: 100%;
+    text-align: left;
+    font-family: inherit;
+    margin-bottom: 4px;
+  }
+  .team-item:hover { background: rgba(15,15,20,0.03); }
+  .team-item.active { background: var(--bg-card); border-color: var(--line); }
+  .team-avatar-sm {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 600; flex-shrink: 0;
+  }
+  .team-item-content { flex: 1; min-width: 0; }
+  .team-item-name { font-size: 0.94rem; font-weight: 500; display: flex; align-items: center; gap: 6px; }
+  .team-item-tag { font-size: 0.68rem; padding: 1px 6px; background: rgba(15,15,20,0.05); color: var(--ink-3); border-radius: 999px; }
+  .team-item-role { font-size: 0.8rem; color: var(--ink-3); margin-top: 1px; }
+  .team-check { color: var(--ink-3); font-size: 14px; }
+  .team-item:not(.active) .team-check { visibility: hidden; }
+
+  .team-coming {
+    padding: 14px 8px;
+    border-top: 0.5px solid var(--line);
+    margin-top: 12px;
+    font-size: 0.82rem;
+    color: var(--ink-3);
+    line-height: 1.5;
+  }
+
+  /* ========== AGENT SECTIONS ========== */
+  .section { padding: 100px 0; }
+  .section-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; margin-bottom: 64px; }
+  @media (max-width: 900px) { .section-grid { grid-template-columns: 1fr; gap: 40px; } }
+  .section-num-link { color: var(--ink-3); font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; text-decoration: none; margin-bottom: 16px; display: inline-block; }
+  .section-num-link strong { color: var(--ink); font-weight: 500; margin-right: 4px; }
+  .section h2 { margin-bottom: 24px; }
+  .section .body-l { max-width: 480px; margin-bottom: 32px; }
+
+  .agent-mock {
+    background: var(--bg-card);
+    border: 0.5px solid var(--line);
+    border-radius: 20px;
+    padding: 28px;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.02);
+  }
+  .agent-mock-head { display: flex; align-items: center; gap: 10px; padding-bottom: 16px; border-bottom: 0.5px solid var(--line); margin-bottom: 16px; }
+  .bubble {
+    padding: 12px 16px;
+    border-radius: 16px;
+    margin-bottom: 8px;
+    font-size: 0.92rem;
+    line-height: 1.5;
+    max-width: 88%;
+  }
+  .bubble-bot { background: var(--bg-2); color: var(--ink); border-bottom-left-radius: 4px; }
+  .bubble-user { background: var(--primary); color: white; margin-left: auto; border-bottom-right-radius: 4px; }
+  .bubble-bot.iris-bg { background: var(--iris-soft); }
+  .bubble-user.iris-bg { background: var(--iris); }
+  .typing-dots { display: inline-flex; gap: 4px; }
+  .typing-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--ink-3); animation: typing 1.2s infinite; }
+  .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes typing { 0%, 60%, 100% { opacity: 0.3; } 30% { opacity: 1; } }
+
+  .features-mini-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 32px; }
+  @media (max-width: 700px) { .features-mini-grid { grid-template-columns: 1fr; } }
+  .feature-mini {
+    padding: 20px;
+    border-radius: 14px;
+    background: var(--bg-2);
+    border: 0.5px solid var(--line);
+  }
+  .feature-mini-icon { font-size: 24px; margin-bottom: 10px; }
+  .feature-mini-title { font-weight: 500; font-size: 0.95rem; margin-bottom: 6px; }
+  .feature-mini-desc { font-size: 0.85rem; color: var(--ink-2); line-height: 1.55; }
+
+  /* Iris alternance: image à gauche */
+  .section-grid.reverse { direction: rtl; }
+  .section-grid.reverse > * { direction: ltr; }
+
+  /* ========== HOW IT WORKS (4 ÉTAPES) ========== */
+  .how { padding: 100px 0; background: var(--bg-2); }
+  .how-header { text-align: center; max-width: 640px; margin: 0 auto 64px; }
+  .how-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  @media (max-width: 900px) { .how-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 540px) { .how-grid { grid-template-columns: 1fr; } }
+  .how-card {
+    background: var(--bg-card);
+    border: 0.5px solid var(--line);
+    border-radius: 18px;
+    padding: 28px 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .how-num {
+    position: absolute; top: 16px; right: 20px;
+    font-family: 'Fraunces', serif; font-size: 4rem; font-weight: 400;
+    color: var(--primary-soft); line-height: 1;
+  }
+  .how-title { font-size: 1.05rem; font-weight: 600; margin-bottom: 10px; line-height: 1.3; }
+  .how-desc { font-size: 0.9rem; color: var(--ink-2); line-height: 1.55; margin-bottom: 18px; }
+  .how-mock {
+    background: var(--bg-2);
+    border-radius: 12px;
+    padding: 14px;
+    font-size: 0.82rem;
+    border: 0.5px solid var(--line);
+  }
+
+  /* ========== MANIFESTO ========== */
+  .manifesto { padding: 120px 0; }
+  .manifesto-inner { max-width: 720px; margin: 0 auto; text-align: center; }
+  .manifesto h2 { font-size: clamp(2rem, 4.5vw, 3.5rem); line-height: 1.1; margin-bottom: 40px; }
+  .manifesto p { font-size: 1.15rem; line-height: 1.7; color: var(--ink-2); margin-bottom: 24px; }
+  .manifesto p.punch { font-style: italic; color: var(--ink); font-weight: 500; margin-top: 32px; font-size: 1.2rem; }
+  .manifesto p.punch strong { display: block; font-style: normal; margin-top: 8px; font-weight: 600; }
+  .manifesto-other {
+    margin-top: 60px;
+    padding-top: 32px;
+    border-top: 0.5px solid var(--line);
+    font-size: 0.92rem;
+    color: var(--ink-3);
+  }
+  .manifesto-other a { color: var(--ink-3); text-decoration: none; transition: color 150ms; }
+  .manifesto-other a:hover { color: var(--primary); }
+
+  /* ========== FUNDAMENTALS ========== */
+  .fundamentals { padding: 100px 0; background: var(--bg-2); }
+  .fundamentals-header { text-align: center; max-width: 640px; margin: 0 auto 56px; }
+  .fundamentals-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  @media (max-width: 900px) { .fundamentals-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 540px) { .fundamentals-grid { grid-template-columns: 1fr; } }
+  .fund-card {
+    background: var(--bg-card);
+    border: 0.5px solid var(--line);
+    border-radius: 18px;
+    padding: 28px 24px;
+    position: relative;
+  }
+  .fund-included {
+    position: absolute; top: 18px; right: 22px;
+    font-size: 0.7rem; color: var(--ink-3); letter-spacing: 0.05em; text-transform: uppercase;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .fund-icon {
+    width: 40px; height: 40px; border-radius: 10px;
+    background: var(--primary-soft); color: var(--primary);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    margin-bottom: 18px;
+  }
+  .fund-title { font-size: 1rem; font-weight: 600; margin-bottom: 8px; }
+  .fund-desc { font-size: 0.9rem; color: var(--ink-2); line-height: 1.55; }
+
+  /* ========== PRICING ========== */
+  .pricing { padding: 100px 0; }
+  .pricing-header { text-align: center; max-width: 640px; margin: 0 auto 56px; }
+  .pricing-header h2 { margin-bottom: 16px; }
+  .pricing-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 880px; margin: 0 auto; }
+  @media (max-width: 700px) { .pricing-grid { grid-template-columns: 1fr; } }
+  .price-card {
+    background: var(--bg-card);
+    border: 0.5px solid var(--line);
+    border-radius: 20px;
+    padding: 36px 32px;
+    position: relative;
+  }
+  .price-card.featured { border: 2px solid var(--primary); }
+  .price-pop {
+    position: absolute; top: -12px; right: 24px;
+    background: var(--primary); color: white;
+    font-size: 0.74rem; font-weight: 500;
+    padding: 5px 12px; border-radius: 999px;
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .price-pop i { font-size: 12px; }
+  .price-tag {
+    display: inline-block;
+    background: var(--primary-soft); color: var(--primary-strong);
+    padding: 4px 12px; border-radius: 999px;
+    font-size: 0.78rem; font-weight: 600; letter-spacing: 0.05em;
+    margin-bottom: 20px;
+  }
+  .price-amount { font-family: 'Fraunces', serif; font-size: 3rem; font-weight: 500; line-height: 1; margin-bottom: 8px; }
+  .price-amount span { font-size: 1rem; font-weight: 400; color: var(--ink-3); }
+  .price-desc { color: var(--ink-2); font-size: 0.92rem; margin-bottom: 24px; }
+  .price-features { list-style: none; padding: 0; margin: 0 0 28px; }
+  .price-features li { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; font-size: 0.92rem; color: var(--ink-2); }
+  .price-features li i { flex-shrink: 0; margin-top: 2px; font-size: 16px; }
+  .price-features li.agent-line { font-weight: 500; color: var(--ink); }
+  .price-features li.agent-line strong { color: var(--primary); }
+  .pricing-cta { text-align: center; margin-top: 36px; }
+
+  /* ========== FINAL CTA ========== */
+  .final-cta {
+    background: var(--primary);
+    color: white;
+    padding: 100px 0;
+    text-align: center;
+  }
+  .final-cta h2 { color: white; margin-bottom: 24px; }
+  .final-cta h2 .highlight-soft { background: rgba(255,255,255,0.2); padding: 0 8px; border-radius: 4px; }
+  .final-cta p { color: rgba(255,255,255,0.85); margin-bottom: 32px; font-size: 1.1rem; }
+  .final-cta .btn { background: white; color: var(--primary); }
+  .final-cta .btn-outline { background: transparent; color: white; border-color: rgba(255,255,255,0.3); }
+  .final-cta .btn-outline:hover { background: rgba(255,255,255,0.1); }
+  .final-cta-trust { display: flex; gap: 24px; justify-content: center; flex-wrap: wrap; margin-top: 28px; font-size: 0.88rem; color: rgba(255,255,255,0.85); }
+  .final-cta-trust span { display: inline-flex; align-items: center; gap: 6px; }
+  .final-cta-trust span i { font-size: 14px; }
+  .final-cta-bottom { margin-top: 24px; font-size: 0.82rem; color: rgba(255,255,255,0.6); }
+
+  /* ========== FAQ ========== */
+  .faq { padding: 100px 0; background: var(--bg-2); }
+  .faq-header { text-align: center; max-width: 640px; margin: 0 auto 48px; }
+  .faq-list { max-width: 720px; margin: 0 auto; }
+  .faq-item {
+    background: var(--bg-card);
+    border: 0.5px solid var(--line);
+    border-radius: 14px;
+    margin-bottom: 12px;
+    overflow: hidden;
+    transition: border-color 150ms;
+  }
+  .faq-item.open { border-color: var(--primary); }
+  .faq-q {
+    width: 100%;
+    text-align: left;
+    background: transparent; border: none;
+    padding: 20px 24px;
+    font-size: 1rem; font-weight: 500;
+    color: var(--ink);
+    display: flex; justify-content: space-between; align-items: center;
+    cursor: pointer; font-family: inherit;
+  }
+  .faq-icon { transition: transform 200ms; color: var(--ink-3); display: inline-flex; align-items: center; }
+  .faq-icon i { font-size: 18px; }
+  .faq-item.open .faq-icon { transform: rotate(180deg); }
+  .faq-a {
+    max-height: 0; overflow: hidden;
+    transition: max-height 250ms ease;
+    color: var(--ink-2); font-size: 0.94rem; line-height: 1.65;
+  }
+  .faq-a-inner { padding: 0 24px 22px; }
+  .faq-item.open .faq-a { max-height: 300px; }
+
+  /* ========== FOOTER ========== */
+  .footer { background: #0F0F14; color: rgba(255,255,255,0.7); padding: 64px 0 32px; }
+  .footer-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 48px; margin-bottom: 48px; }
+  @media (max-width: 800px) { .footer-grid { grid-template-columns: 1fr 1fr; gap: 32px; } }
+  .footer-logo { display: flex; align-items: center; gap: 8px; font-family: 'Fraunces', serif; font-size: 1.4rem; color: white; font-weight: 600; margin-bottom: 16px; }
+  .footer-logo .logo-mark { border-color: white; }
+  .footer-tag { font-size: 0.92rem; line-height: 1.6; max-width: 280px; }
+  .footer-col-title { color: white; font-weight: 500; font-size: 0.78rem; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 16px; font-family: 'JetBrains Mono', monospace; }
+  .footer-link { display: block; color: rgba(255,255,255,0.6); text-decoration: none; font-size: 0.92rem; padding: 4px 0; transition: color 150ms; }
+  .footer-link:hover { color: white; }
+  .footer-mail { display: inline-flex; align-items: center; gap: 8px; color: rgba(255,255,255,0.8); text-decoration: none; padding: 8px 14px; background: rgba(255,255,255,0.06); border-radius: 8px; font-size: 0.9rem; margin-top: 16px; }
+  .footer-bottom {
+    border-top: 0.5px solid rgba(255,255,255,0.1);
+    padding-top: 24px;
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 16px;
+    font-size: 0.82rem; color: rgba(255,255,255,0.5);
+  }
+  .footer-metiers { padding: 24px 0; border-top: 0.5px solid rgba(255,255,255,0.1); margin-top: 0; }
+  .footer-metiers-title { font-size: 0.74rem; color: rgba(255,255,255,0.5); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 12px; font-family: 'JetBrains Mono', monospace; }
+  .footer-metiers-list { display: flex; flex-wrap: wrap; gap: 16px; font-size: 0.86rem; }
+  .footer-metiers-list a { color: rgba(255,255,255,0.6); text-decoration: none; }
+  .footer-metiers-list a:hover { color: white; }
+
+  /* Reveal on scroll */
+  .reveal { opacity: 0; transform: translateY(20px); transition: opacity 600ms ease, transform 600ms ease; }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+
+  /* Tabler icons polish */
+  .ti { display: inline-flex; align-items: center; justify-content: center; line-height: 1; color: var(--primary); }
+  .feature-mini-icon .ti { font-size: 22px; }
+  .fund-icon .ti { font-size: 18px; }
+  .voice-mic .ti { font-size: 36px; color: white; }
+  .voice-pill .ti { font-size: 12px; }
+  .team-check .ti { font-size: 14px; }
+  .footer-mail .ti { font-size: 14px; color: inherit; }
+  .hero-trust .ti { font-size: 14px; }
+  .final-cta-trust .ti { font-size: 14px; color: white; }
+</style>
+</head>
+<body>
+
+<!-- ========== NAV ========== -->
+<nav class="nav">
+  <div class="container">
+    <div class="nav-inner">
+      <a href="#" class="logo">
+        <span class="logo-mark">Q</span>
+        Quovi
+      </a>
+      <div class="nav-links">
+        <a href="#equipe">L'équipe</a>
+        <a href="#fonctionnalites">Fonctionnalités</a>
+        <a href="#tarifs">Tarifs</a>
+        <a href="#faq">FAQ</a>
+      </div>
+      <div class="nav-cta">
+        <a href="#" class="btn btn-ghost">Connexion</a>
+        <a href="#" class="btn btn-primary">Démarrer · 14 jours offerts</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- ========== HERO ========== -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-grid">
+      <div>
+        <h1 class="serif display-xl">
+          Pendant que vous écrivez,<br>
+          <span class="highlight-purple">ils signent ailleurs</span>.
+        </h1>
+        <p class="lead body-l">
+          Quovi, le devis qui part avant que vous passiez à autre chose. Le client signe sur place, sur son téléphone.
+        </p>
+        <div class="hero-ctas">
+          <a href="https://quotelyhome.netlify.app/inscription" class="btn btn-primary btn-lg">Créer mon premier devis →</a>
+          <a href="https://quotelyhome.netlify.app/#comment-ca-marche" class="btn btn-outline btn-lg">Voir comment ça marche</a>
+        </div>
+        <div class="hero-trust">
+          <span><i class="ti ti-check"></i>14 jours offerts</span>
+          <span><i class="ti ti-check"></i>Sans carte bancaire</span>
+          <span><i class="ti ti-check"></i>Résiliable en un clic</span>
+        </div>
+      </div>
+
+      <div class="voice-mock">
+        <div class="voice-pill"><i class="ti ti-microphone"></i> EN ÉCOUTE</div>
+        <div class="voice-mic"><i class="ti ti-microphone"></i></div>
+        <div class="voice-text">« Pose carrelage 40 m² cuisine,<span class="voice-cursor"></span> »</div>
+        <div class="voice-dots">
+          <span class="active"></span>
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== TEAM (LINEAR-STYLE) ========== -->
+<section class="team-section" id="equipe">
+  <div class="container">
+    <div class="team-header reveal">
+      <span class="label-mono">2.0 · Coulisses</span>
+      <h2 class="serif display-l">Pendant que vous bossez, ils <span class="highlight">tournent</span>.</h2>
+      <p class="body-l">Cliquez sur un nom. Il vous parle.</p>
+    </div>
+
+    <div class="team-card reveal">
+      <div class="team-conv">
+        <div class="team-agent-head">
+          <div class="team-avatar-lg" id="team-avatar" style="background: var(--emile-soft); color: var(--emile-strong);">É</div>
+          <div style="flex: 1;">
+            <div class="team-agent-name">
+              <span id="team-name">Émile</span>
+              <span class="team-status">En ligne</span>
+            </div>
+            <div class="team-agent-role" id="team-role">Le Rédacteur · Crée tes devis à la voix</div>
+          </div>
+        </div>
+
+        <div class="team-says-label">Il vous parle</div>
+        <div class="team-message">
+          <span id="team-text"></span><span class="team-cursor"></span>
+        </div>
+
+        <div class="team-tags" id="team-tags"></div>
+      </div>
+
+      <div class="team-list">
+        <div class="team-list-label">L'équipe</div>
+
+        <button class="team-item active" data-agent="emile">
+          <div class="team-avatar-sm" style="background: var(--emile-soft); color: var(--emile-strong);">É</div>
+          <div class="team-item-content">
+            <div class="team-item-name">Émile <span class="team-item-tag">Agent</span></div>
+            <div class="team-item-role">Devis</div>
+          </div>
+          <span class="team-check"><i class="ti ti-check"></i></span>
+        </button>
+
+        <button class="team-item" data-agent="iris">
+          <div class="team-avatar-sm" style="background: var(--iris-soft); color: var(--iris-strong);">I</div>
+          <div class="team-item-content">
+            <div class="team-item-name">Iris <span class="team-item-tag">Agent</span></div>
+            <div class="team-item-role">Relances</div>
+          </div>
+          <span class="team-check"><i class="ti ti-check"></i></span>
+        </button>
+
+        <div class="team-coming">
+          <strong style="color: var(--ink-2); font-weight: 500;">Bientôt :</strong> on en forge d'autres, un par un. Pas de bloat, pas de fonctionnalités inutiles.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== SECTION 3.0 - ÉMILE ========== -->
+<section class="section" id="fonctionnalites">
+  <div class="container">
+    <div class="section-grid reveal">
+      <div>
+        <span class="section-num-link"><strong>3.0</strong> Émile</span>
+        <h2 class="serif display-l">Le devis qui se fait<br>tout seul.</h2>
+        <p class="body-l">
+          Vous décrivez votre chantier à la voix ou au clavier. Émile sort un devis pro en 30 secondes — tarifs marché 2026, TVA juste, mentions légales injectées automatiquement.
+        </p>
+        <a href="#" class="btn btn-outline">Voir Émile en action →</a>
+      </div>
+
+      <div class="agent-mock">
+        <div class="agent-mock-head">
+          <div class="team-avatar-sm" style="background: var(--emile-soft); color: var(--emile-strong); width: 32px; height: 32px;">É</div>
+          <div>
+            <div style="font-weight: 500; font-size: 0.92rem;">Émile</div>
+            <div style="font-size: 0.75rem; color: var(--ink-3);">Le Rédacteur</div>
+          </div>
+        </div>
+        <div class="bubble bubble-bot">Salut ! Pour quel client ?</div>
+        <div class="bubble bubble-user">Mr Dupont</div>
+        <div class="bubble bubble-bot">Allez, décris-moi le chantier.</div>
+        <div class="bubble bubble-user">Salle de bain 6m², carrelage + peinture, lavabo et WC</div>
+        <div class="bubble bubble-bot"><span class="typing-dots"><span></span><span></span><span></span></span></div>
+      </div>
+    </div>
+
+    <div class="features-mini-grid reveal">
+      <div class="feature-mini">
+        <div class="feature-mini-icon"><i class="ti ti-microphone"></i></div>
+        <div class="feature-mini-title">Dictée vocale BTP</div>
+        <div class="feature-mini-desc">Parlez les mains sales. Whisper transcrit avec le vocabulaire du chantier.</div>
+      </div>
+      <div class="feature-mini">
+        <div class="feature-mini-icon"><i class="ti ti-coin-euro"></i></div>
+        <div class="feature-mini-title">Tarifs marché 2026</div>
+        <div class="feature-mini-desc">Émile connaît les fourchettes par métier et région. Plus de devis sous-évalués.</div>
+      </div>
+      <div class="feature-mini">
+        <div class="feature-mini-icon"><i class="ti ti-scale"></i></div>
+        <div class="feature-mini-title">TVA & mentions légales</div>
+        <div class="feature-mini-desc">5,5 / 10 / 20 % selon contexte. Mentions obligatoires en automatique.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== SECTION 4.0 - IRIS ========== -->
+<section class="section" style="background: var(--bg-2);">
+  <div class="container">
+    <div class="section-grid reverse reveal">
+      <div>
+        <span class="section-num-link"><strong>4.0</strong> Iris</span>
+        <h2 class="serif display-l">Plus jamais un client<br>oublié.</h2>
+        <p class="body-l">
+          80 % des chantiers perdus, c'est juste parce qu'on a oublié de relancer. Iris surveille vos devis envoyés et envoie un message au bon moment, avec le bon ton. Sans vous y faire penser.
+        </p>
+        <a href="#" class="btn btn-outline">Voir Iris en action →</a>
+      </div>
+
+      <div class="agent-mock">
+        <div class="agent-mock-head">
+          <div class="team-avatar-sm" style="background: var(--iris-soft); color: var(--iris-strong); width: 32px; height: 32px;">I</div>
+          <div>
+            <div style="font-weight: 500; font-size: 0.92rem;">Iris</div>
+            <div style="font-size: 0.75rem; color: var(--ink-3);">La Sentinelle</div>
+          </div>
+        </div>
+        <div class="bubble bubble-bot iris-bg">Devis #042 envoyé à M. Dupont. Pas de réponse depuis 3 jours.</div>
+        <div class="bubble bubble-bot iris-bg">Je prépare une relance ?</div>
+        <div class="bubble bubble-user iris-bg">Vas-y</div>
+        <div class="bubble bubble-bot iris-bg"><i class="ti ti-check" style="vertical-align: -2px;"></i> Relance envoyée. Je surveille la réponse.</div>
+      </div>
+    </div>
+
+    <div class="features-mini-grid reveal">
+      <div class="feature-mini">
+        <div class="feature-mini-icon"><i class="ti ti-clock-hour-3"></i></div>
+        <div class="feature-mini-title">Relances J+3, J+7, J+14</div>
+        <div class="feature-mini-desc">Iris attend pile le bon moment, ni trop tôt ni trop tard.</div>
+      </div>
+      <div class="feature-mini">
+        <div class="feature-mini-icon"><i class="ti ti-message-2"></i></div>
+        <div class="feature-mini-title">Ton adapté au client</div>
+        <div class="feature-mini-desc">Pro, chaleureux, ou plus direct. Iris ajuste selon l'historique.</div>
+      </div>
+      <div class="feature-mini">
+        <div class="feature-mini-icon"><i class="ti ti-hand-stop"></i></div>
+        <div class="feature-mini-title">Stop si client répond</div>
+        <div class="feature-mini-desc">Dès qu'une réponse arrive, Iris arrête tout. Pas de spam.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== HOW IT WORKS ========== -->
+<section class="how">
+  <div class="container">
+    <div class="how-header reveal">
+      <span class="label-mono">5.0 · Comment ça marche</span>
+      <h2 class="serif display-l" style="margin-top: 16px;">En 4 étapes, votre devis est <span class="highlight">signé</span>.</h2>
+      <p class="body-l" style="margin-top: 16px;">Pas de formation. Pas de logiciel compliqué. Juste votre voix.</p>
+    </div>
+
+    <div class="how-grid reveal">
+      <div class="how-card">
+        <div class="how-num">01</div>
+        <div class="how-title">Décrivez votre intervention</div>
+        <div class="how-desc">Vous parlez ou vous tapez. Quelques mots suffisent.</div>
+        <div class="how-mock">
+          <div style="font-size: 0.7rem; color: var(--ink-3); margin-bottom: 6px; display: inline-flex; align-items: center; gap: 4px;"><i class="ti ti-microphone" style="font-size: 12px;"></i>EN ÉCOUTE</div>
+          <div style="font-style: italic; color: var(--ink-2);">« Pose carrelage 40 m² cuisine, joints compris, dépose de l'ancienne dalle. »</div>
+        </div>
+      </div>
+      <div class="how-card">
+        <div class="how-num">02</div>
+        <div class="how-title">Émile construit le devis</div>
+        <div class="how-desc">Prestations, TVA, total. Tout prêt.</div>
+        <div class="how-mock">
+          <div style="display: flex; justify-content: space-between; padding: 4px 0; font-size: 0.78rem;"><span>Dépose dalle</span><span>320 €</span></div>
+          <div style="display: flex; justify-content: space-between; padding: 4px 0; font-size: 0.78rem;"><span>Carrelage 40 m²</span><span>1 200 €</span></div>
+          <div style="display: flex; justify-content: space-between; padding: 4px 0; font-size: 0.78rem;"><span>Pose et joints</span><span>880 €</span></div>
+          <div style="display: flex; justify-content: space-between; padding: 8px 0 0; border-top: 0.5px solid var(--line); font-weight: 600;"><span>Total TTC</span><span style="color: var(--primary);">2 880 €</span></div>
+        </div>
+      </div>
+      <div class="how-card">
+        <div class="how-num">03</div>
+        <div class="how-title">Envoyez d'un geste</div>
+        <div class="how-desc">Le client reçoit un lien. Il ouvre depuis n'importe où.</div>
+        <div class="how-mock">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+            <div style="width: 24px; height: 24px; border-radius: 6px; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-size: 13px;"><i class="ti ti-send"></i></div>
+            <div style="font-size: 0.8rem;"><div style="font-weight: 500;">À : m.dupont@email.fr</div><div style="color: var(--ink-3); font-size: 0.72rem;">Devis #042 · 2 880 €</div></div>
+          </div>
+          <div style="font-size: 0.78rem; color: var(--ink-2);">Bonjour, vous trouverez le devis ci-joint. Bonne réception.</div>
+        </div>
+      </div>
+      <div class="how-card">
+        <div class="how-num">04</div>
+        <div class="how-title">Signature reçue, facture créée</div>
+        <div class="how-desc">Iris vous notifie. La facture suit.</div>
+        <div class="how-mock">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+            <div style="width: 24px; height: 24px; border-radius: 50%; background: var(--primary-soft); display: flex; align-items: center; justify-content: center; font-size: 13px;"><i class="ti ti-check"></i></div>
+            <div style="font-size: 0.8rem;"><div style="font-weight: 500;">Devis signé</div><div style="color: var(--ink-3); font-size: 0.72rem;">14:32 · M. Dupont</div></div>
+          </div>
+          <div style="display: inline-flex; align-items: center; gap: 6px; background: var(--bg-2); padding: 6px 10px; border-radius: 8px; font-size: 0.78rem;"><i class="ti ti-file-invoice" style="font-size: 13px;"></i>Facture #042 émise</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== MANIFESTO ========== -->
+<section class="manifesto">
+  <div class="container-narrow">
+    <div class="manifesto-inner reveal">
+      <span class="label-mono" style="display: block; margin-bottom: 24px;">Le manifeste</span>
+      <h2 class="serif">Chaque devis pas envoyé est un chantier <span class="highlight">perdu</span>.</h2>
+      <p>Vos clients ne vous attendent pas. Pendant que vous rédigez le devis le soir à 22 h, ils en ont déjà reçu deux autres. Et signé chez le premier qui a répondu.</p>
+      <p>Quovi est né de ce constat simple : un artisan qui réagit en 10 minutes signe 3 fois plus qu'un artisan qui répond le lendemain. Pas grâce à des prix plus bas. Juste grâce à la rapidité.</p>
+      <p class="punch">
+        Vous parlez. Le devis part. Votre client signe.
+        <strong>Avant qu'il ait le temps de douter.</strong>
+      </p>
+      <div class="manifesto-other">
+        <a href="#"><i class="ti ti-corner-down-right" style="vertical-align: -3px; margin-right: 4px;"></i>Freelance, consultant, commerçant ? Quovi marche aussi pour vous →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== FUNDAMENTALS ========== -->
+<section class="fundamentals">
+  <div class="container">
+    <div class="fundamentals-header reveal">
+      <span class="label-mono">6.0 · Les fondamentaux</span>
+      <h2 class="serif display-l" style="margin-top: 16px;">Solides.</h2>
+      <p class="body-l" style="margin-top: 16px;">Tout ce qu'il faut pour gérer vos devis comme un pro.</p>
+    </div>
+
+    <div class="fundamentals-grid reveal">
+      <div class="fund-card">
+        <div class="fund-included">Inclus</div>
+        <div class="fund-icon"><i class="ti ti-file-text"></i></div>
+        <div class="fund-title">Modèles par métier</div>
+        <div class="fund-desc">Plombier, électricien, peintre, freelance, commerce. Démarrez en 30 secondes.</div>
+      </div>
+      <div class="fund-card">
+        <div class="fund-included">Inclus</div>
+        <div class="fund-icon"><i class="ti ti-calculator"></i></div>
+        <div class="fund-title">TVA calculée</div>
+        <div class="fund-desc">Le calcul est exact, à chaque fois. 5,5 / 10 / 20 % selon le contexte.</div>
+      </div>
+      <div class="fund-card">
+        <div class="fund-included">Inclus</div>
+        <div class="fund-icon"><i class="ti ti-send"></i></div>
+        <div class="fund-title">Envoi en un clic</div>
+        <div class="fund-desc">Lien propre, sécurisé, direct dans la boîte client.</div>
+      </div>
+      <div class="fund-card">
+        <div class="fund-included">Inclus</div>
+        <div class="fund-icon"><i class="ti ti-signature"></i></div>
+        <div class="fund-title">Signature électronique</div>
+        <div class="fund-desc">Conforme eIDAS. Le client signe sur son téléphone.</div>
+      </div>
+      <div class="fund-card">
+        <div class="fund-included">Inclus</div>
+        <div class="fund-icon"><i class="ti ti-clock-play"></i></div>
+        <div class="fund-title">Suivi temps réel</div>
+        <div class="fund-desc">Signé, en attente, refusé. Vous savez toujours où vous en êtes.</div>
+      </div>
+      <div class="fund-card">
+        <div class="fund-included">Inclus</div>
+        <div class="fund-icon"><i class="ti ti-file-invoice"></i></div>
+        <div class="fund-title">Facture après signature</div>
+        <div class="fund-desc">Le devis accepté devient facture. Numérotation automatique.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== PRICING ========== -->
+<section class="pricing" id="tarifs">
+  <div class="container">
+    <div class="pricing-header reveal">
+      <span class="label-mono">7.0 · Tarifs</span>
+      <h2 class="serif display-l" style="margin-top: 16px;">Un prix simple.<br>Aucun engagement.</h2>
+      <p class="body-l" style="margin-top: 16px;">14 jours offerts. Sans carte bancaire. Résiliable en un clic.</p>
+    </div>
+
+    <div class="pricing-grid reveal">
+      <div class="price-card">
+        <span class="price-tag">STARTER</span>
+        <div class="price-amount">25 €<span> /mois</span></div>
+        <div class="price-desc">Pour démarrer et gérer votre activité.</div>
+        <ul class="price-features">
+          <li class="agent-line"><i class="ti ti-check"></i><span><strong>Émile inclus</strong> — devis vocaux illimités</span></li>
+          <li><i class="ti ti-check"></i>TVA calculée automatiquement</li>
+          <li><i class="ti ti-check"></i>Signature électronique légale</li>
+          <li><i class="ti ti-check"></i>30 devis par mois</li>
+          <li><i class="ti ti-check"></i>Modèles par métier</li>
+        </ul>
+        <a href="#" class="btn btn-outline" style="width: 100%; justify-content: center;">Démarrer · 14 jours offerts</a>
+      </div>
+
+      <div class="price-card featured">
+        <span class="price-pop"><i class="ti ti-star-filled"></i>Populaire</span>
+        <span class="price-tag">PRO</span>
+        <div class="price-amount">49 €<span> /mois</span></div>
+        <div class="price-desc">Signez plus de clients sans y passer vos soirées.</div>
+        <ul class="price-features">
+          <li class="agent-line"><i class="ti ti-check"></i><span><strong>Émile + Iris inclus</strong> — l'équipe complète</span></li>
+          <li><i class="ti ti-check"></i>Devis illimités</li>
+          <li><i class="ti ti-check"></i>Relances automatiques (J+3, J+7, J+14)</li>
+          <li><i class="ti ti-check"></i>Tableau de bord</li>
+          <li><i class="ti ti-check"></i>Support prioritaire</li>
+        </ul>
+        <a href="#" class="btn btn-primary" style="width: 100%; justify-content: center;">Démarrer · 14 jours offerts</a>
+      </div>
+    </div>
+
+    <div class="pricing-cta">
+      <a href="#" class="btn btn-ghost">Voir tous les détails et choisir mon plan →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ========== FINAL CTA ========== -->
+<section class="final-cta">
+  <div class="container-narrow">
+    <h2 class="serif display-l">
+      Votre prochain devis pourrait<br>être signé <span class="highlight-soft">ce soir</span>.
+    </h2>
+    <p>Créez votre compte. Testez sur un cas réel. Décidez ensuite.</p>
+    <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+      <a href="#" class="btn btn-lg">Démarrer · 14 jours offerts →</a>
+      <a href="#tarifs" class="btn btn-outline btn-lg">Voir les tarifs</a>
+    </div>
+    <div class="final-cta-trust">
+      <span><i class="ti ti-check"></i>14 jours offerts</span>
+      <span><i class="ti ti-check"></i>Sans carte bancaire</span>
+      <span><i class="ti ti-check"></i>Résiliable en un clic</span>
+    </div>
+    <div class="final-cta-bottom">Données hébergées en France · RGPD · Paiement sécurisé par Stripe</div>
+  </div>
+</section>
+
+<!-- ========== FAQ ========== -->
+<section class="faq" id="faq">
+  <div class="container">
+    <div class="faq-header reveal">
+      <span class="label-mono">8.0 · FAQ</span>
+      <h2 class="serif display-l" style="margin-top: 16px;">Vos questions, nos <span class="highlight">réponses</span>.</h2>
+      <p class="body-m" style="margin-top: 12px; color: var(--ink-3);">Une question manque ? <a href="mailto:hello@quovi.fr" style="color: var(--primary); text-decoration: underline;">Écrivez-nous</a>, on répond vite.</p>
+    </div>
+
+    <div class="faq-list reveal">
+      <div class="faq-item open">
+        <button class="faq-q">Qui sont Émile et Iris ? <span class="faq-icon"><i class="ti ti-chevron-down"></i></span></button>
+        <div class="faq-a"><div class="faq-a-inner">Ce sont les deux agents qui tournent dans Quovi. Émile rédige vos devis à partir d'une dictée vocale ou d'un texte. Iris surveille les devis envoyés et relance au bon moment. Ils bossent en coulisse pendant que vous êtes sur le chantier.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">La signature électronique est-elle légalement valide ? <span class="faq-icon"><i class="ti ti-chevron-down"></i></span></button>
+        <div class="faq-a"><div class="faq-a-inner">Oui, totalement. Elle suit le règlement européen eIDAS. Chaque signature est horodatée, liée à l'email du signataire, et accompagnée d'un certificat d'audit. Même valeur juridique qu'une signature papier en France et en Europe.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">Faut-il être à l'aise avec l'informatique ? <span class="faq-icon"><i class="ti ti-chevron-down"></i></span></button>
+        <div class="faq-a"><div class="faq-a-inner">Non. Vous parlez à Émile, il fait le reste. Si vous savez envoyer un message vocal sur WhatsApp, vous savez utiliser Quovi.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">Pourquoi seulement 2 agents ? <span class="faq-icon"><i class="ti ti-chevron-down"></i></span></button>
+        <div class="faq-a"><div class="faq-a-inner">Parce qu'on les a forgés un par un, avec soin. Pas de fonctionnalités gadget. D'autres arriveront, mais seulement quand ils seront vraiment utiles sur le terrain.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">Puis-je importer mes clients et anciens modèles ? <span class="faq-icon"><i class="ti ti-chevron-down"></i></span></button>
+        <div class="faq-a"><div class="faq-a-inner">Oui. Import CSV pour les clients, et Émile peut s'inspirer de vos anciens devis pour caler son style sur le vôtre.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">Mon client doit-il créer un compte pour signer ? <span class="faq-icon"><i class="ti ti-chevron-down"></i></span></button>
+        <div class="faq-a"><div class="faq-a-inner">Non. Il reçoit un lien, il clique, il signe. Pas de compte, pas de mot de passe. Tout depuis son téléphone.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">Puis-je résilier à tout moment ? <span class="faq-icon"><i class="ti ti-chevron-down"></i></span></button>
+        <div class="faq-a"><div class="faq-a-inner">Oui. Aucun engagement. Vous résiliez en un clic depuis votre tableau de bord.</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== FOOTER ========== -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <div class="footer-logo"><div class="logo-mark">Q</div>Quovi</div>
+        <div class="footer-tag">Le devis qui part avant que vous passiez à autre chose. Le client signe sur place, sur son téléphone.</div>
+        <a href="mailto:hello@quovi.fr" class="footer-mail"><i class="ti ti-mail"></i>hello@quovi.fr</a>
+      </div>
+      <div>
+        <div class="footer-col-title">Produit</div>
+        <a href="#" class="footer-link">Émile</a>
+        <a href="#" class="footer-link">Iris</a>
+        <a href="#tarifs" class="footer-link">Tarifs</a>
+        <a href="#" class="footer-link">Connexion</a>
+      </div>
+      <div>
+        <div class="footer-col-title">Entreprise</div>
+        <a href="#faq" class="footer-link">FAQ</a>
+        <a href="#" class="footer-link">Contact</a>
+        <a href="#" class="footer-link">À propos</a>
+      </div>
+      <div>
+        <div class="footer-col-title">Légal</div>
+        <a href="#" class="footer-link">Mentions légales</a>
+        <a href="#" class="footer-link">CGU</a>
+        <a href="#" class="footer-link">Confidentialité</a>
+        <a href="#" class="footer-link">Cookies</a>
+        <a href="#" class="footer-link">RGPD</a>
+      </div>
+    </div>
+
+    <div class="footer-metiers">
+      <div class="footer-metiers-title">Quovi pour tous les métiers</div>
+      <div class="footer-metiers-list">
+        <a href="#">Devis Plombier</a>
+        <a href="#">Devis Électricien</a>
+        <a href="#">Devis Peintre</a>
+        <a href="#">Devis Carreleur</a>
+        <a href="#">Devis Menuisier</a>
+        <a href="#">Devis Maçon</a>
+        <a href="#">Devis Freelance</a>
+        <a href="#">Devis Consultant</a>
+        <a href="#">Devis Photographe</a>
+        <a href="#">Devis Architecte</a>
+        <a href="#">Devis Commerçant</a>
+        <a href="#">Devis Artisan</a>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <div>© 2026 Quovi. Fait en France. Paiements sécurisés par Stripe.</div>
+      <div>Quovi utilise des modèles de langage supervisés. Vos données restent privées.</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // ============ TEAM INTERACTIVE TYPING ============
+  const TEAM = {
+    emile: {
+      letter: 'É',
+      name: 'Émile',
+      role: 'Le Rédacteur · Crée tes devis à la voix',
+      bg: 'var(--emile-soft)',
+      color: 'var(--emile-strong)',
+      message: "Salut, moi c'est Émile. Tu me parles, je rédige. Tu dictes \"pose carrelage 40 m² cuisine\" en rentrant du chantier, je te sors un devis chiffré, propre, avec la TVA juste. T'as plus à galérer le soir à 22 h.",
+      tags: ['Dictée vocale BTP', 'Tarifs marché 2026', 'Calcul TVA auto', 'Mentions légales', 'Envoi en 1 clic']
+    },
+    iris: {
+      letter: 'I',
+      name: 'Iris',
+      role: 'La Sentinelle · Relance tes clients sans toi',
+      bg: 'var(--iris-soft)',
+      color: 'var(--iris-strong)',
+      message: "Moi c'est Iris. Pendant que tu bosses sur le chantier, je surveille tes devis envoyés. À J+3 je relance gentiment, à J+7 je rappelle, à J+14 je conclus. Et dès que le client répond, j'arrête tout. Tu signes plus, sans y penser.",
+      tags: ['Relances J+3 / J+7 / J+14', 'Ton adapté au client', 'Suivi en temps réel', 'Stop si client répond']
+    }
+  };
+
+  let typingTimer = null;
+  let currentAgent = 'emile';
+
+  function typeMessage(text) {
+    const target = document.getElementById('team-text');
+    if (!target) return;
+    if (typingTimer) clearInterval(typingTimer);
+    target.textContent = '';
+    let i = 0;
+    typingTimer = setInterval(() => {
+      if (i < text.length) {
+        target.textContent += text[i];
+        i++;
+      } else {
+        clearInterval(typingTimer);
+      }
+    }, 20);
+  }
+
+  function selectAgent(key) {
+    const a = TEAM[key];
+    if (!a) return;
+    currentAgent = key;
+
+    document.querySelectorAll('.team-item').forEach(b => {
+      b.classList.toggle('active', b.dataset.agent === key);
+    });
+
+    const avatar = document.getElementById('team-avatar');
+    avatar.style.background = a.bg;
+    avatar.style.color = a.color;
+    avatar.textContent = a.letter;
+    document.getElementById('team-name').textContent = a.name;
+    document.getElementById('team-role').textContent = a.role;
+
+    const tagsEl = document.getElementById('team-tags');
+    tagsEl.innerHTML = '';
+    a.tags.forEach(t => {
+      const el = document.createElement('span');
+      el.className = 'team-tag';
+      el.textContent = t;
+      tagsEl.appendChild(el);
+    });
+
+    typeMessage(a.message);
+  }
+
+  document.querySelectorAll('.team-item').forEach(item => {
+    item.addEventListener('click', () => selectAgent(item.dataset.agent));
+  });
+
+  // ============ FAQ TOGGLE ============
+  document.querySelectorAll('.faq-q').forEach(q => {
+    q.addEventListener('click', () => {
+      q.parentElement.classList.toggle('open');
+    });
+  });
+
+  // ============ REVEAL ON SCROLL ============
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) e.target.classList.add('visible');
+    });
+  }, { threshold: 0.08 });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+  // Init
+  selectAgent('emile');
+</script>
+
+</body>
+</html>

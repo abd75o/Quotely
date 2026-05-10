@@ -9,9 +9,9 @@ import { Button } from "@/components/ui/Button";
 import { useUserState } from "@/lib/hooks/useUserState";
 
 const NAV_LINKS = [
-  { label: "Fonctionnalités", href: "/#features" },
-  { label: "Tarifs", href: "/tarifs" },
-  { label: "Témoignages", href: "/#testimonials" },
+  { label: "Comment ça marche", href: "/#comment-ca-marche" },
+  { label: "Tarifs", href: "/#tarifs" },
+  { label: "Nouveautés", href: "/nouveautes" },
   { label: "FAQ", href: "/#faq" },
 ];
 
@@ -87,7 +87,7 @@ export function Navbar() {
                 </Button>
               ) : (
                 <Button href="/inscription" variant="primary" size="sm">
-                  Démarrer · 14 jours offerts
+                  Démarrer gratuitement
                 </Button>
               )}
             </div>
@@ -162,7 +162,7 @@ export function Navbar() {
                 onClick={() => setIsMenuOpen(false)}
                 className="px-4 py-4 min-h-[52px] text-base font-semibold text-center text-white bg-[var(--primary)] rounded-full hover:bg-[var(--primary-dark)] shadow-md transition-colors duration-150 cursor-pointer"
               >
-                {isAuthed ? "Mon espace" : "Démarrer · 14 jours offerts"}
+                {isAuthed ? "Mon espace" : "Démarrer gratuitement"}
               </Link>
             </div>
           </nav>

@@ -145,6 +145,23 @@ body {
   will-change: transform;
 }
 
+/* Curseur clignotant (TeamSection, etc.) */
+@keyframes blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+/* Typing dots (chat mockups) */
+@keyframes typing-dot {
+  0%, 60%, 100% { opacity: 0.3; }
+  30%           { opacity: 1; }
+}
+.typing-dot {
+  animation: typing-dot 1.2s infinite;
+}
+.typing-dot-2 { animation-delay: 0.2s; }
+.typing-dot-3 { animation-delay: 0.4s; }
+
 /* Hero audio wave — onde subtile en arrière-plan */
 @keyframes pulse-wave {
   0%, 100% { transform: scaleY(0.5); }

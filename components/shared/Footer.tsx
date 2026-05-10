@@ -3,9 +3,12 @@ import { Mail } from "lucide-react";
 import { Logo } from "@/components/shared/Logo";
 
 const PRODUCT_LINKS = [
+  { label: "Émile", href: "/#emile" },
+  { label: "Iris", href: "/#iris" },
   { label: "Fonctionnalités", href: "/#features" },
   { label: "Tarifs", href: "/tarifs" },
   { label: "Connexion", href: "/connexion" },
+  { label: "Nouveautés", href: "/nouveautes" },
 ];
 
 const LEGAL_LINKS = [
@@ -45,7 +48,7 @@ export function Footer() {
               <Logo variant="horizontal" size={36} inverted />
             </Link>
             <p className="text-sm text-gray-300 leading-relaxed mb-6 max-w-xs">
-              Le devis qui part avant que vous passiez à autre chose.
+              Le devis qui signe pour vous.
             </p>
             <a
               href="mailto:hello@quovi.fr"
@@ -113,7 +116,7 @@ export function Footer() {
         {/* Bottom */}
         <div className="pt-6 border-t border-white/10 space-y-2">
           <p className="text-xs text-gray-600 text-center sm:text-left">
-            Quovi utilise des modèles de langage supervisés. Vos données restent privées.
+            Quovi utilise l’intelligence artificielle. Vos données restent en France et ne sortent jamais.
           </p>
           <p className="text-xs text-gray-500 text-center sm:text-left">
             © 2026 Quovi. Fait en France. Paiements sécurisés par Stripe.

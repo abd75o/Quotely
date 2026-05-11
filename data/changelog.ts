@@ -6,7 +6,7 @@ export type ChangelogItem = {
   title: string;
   description: string;
   date?: string;
-  category?: "Émile" | "Iris" | "Plateforme" | "Intégrations";
+  category?: "Émile" | "Iris" | "Plateforme" | "Intégrations" | "Théo" | "Léa";
 };
 
 export type ChangelogGroup = {
@@ -23,7 +23,7 @@ export const changelog: ChangelogGroup[] = [
         status: "in-progress",
         title: "Lancement public de Quovi",
         description:
-          "Quovi est officiellement lancé. 2 plans (Starter 25€ et Pro 49€). Émile et Iris sont prêts à bosser pour artisans, freelances, consultants, commerçants et au-delà.",
+          "Quovi est officiellement lancé. 3 plans disponibles : Gratuit (5 devis/mois), Starter (25€/mois), Pro (49€/mois). Émile et Iris sont prêts à bosser pour vous.",
         date: "Mai 2026",
         category: "Plateforme",
       },
@@ -131,30 +131,22 @@ export const changelog: ChangelogGroup[] = [
         category: "Émile",
       },
       {
-        id: "iris-negociation",
+        id: "theo-compta",
         status: "soon",
-        title: "Iris qui négocie",
+        title: "Théo · L’Assistant Compta",
         description:
-          "Si un client tarde à répondre, Iris pourra proposer un échelonnement ou un geste commercial à votre approbation.",
-        category: "Iris",
+          "Centralise vos devis, factures et paiements. Catégorise vos dépenses. Prépare votre déclaration URSSAF. Théo travaille avec votre expert-comptable, ne le remplace pas.",
+        date: "À venir",
+        category: "Théo",
       },
       {
-        id: "integration-pennylane",
+        id: "lea-tresorerie",
         status: "soon",
-        title: "Connexion Pennylane",
+        title: "Léa · La Gestionnaire de Trésorerie",
         description:
-          "Quovi exporte automatiquement vos devis signés et factures dans Pennylane. Plus de double saisie, votre comptable a tout en temps réel.",
+          "Anticipe vos encaissements et vos sorties (URSSAF, TVA, charges). Alerte si votre solde futur passe en négatif. Suggère combien provisionner pour les impôts.",
         date: "À venir",
-        category: "Intégrations",
-      },
-      {
-        id: "integration-indy",
-        status: "soon",
-        title: "Connexion Indy",
-        description:
-          "Pour les indépendants qui font leur compta sur Indy. Vos devis et factures Quovi remontent automatiquement, prêts pour vos déclarations.",
-        date: "À venir",
-        category: "Intégrations",
+        category: "Léa",
       },
     ],
   },

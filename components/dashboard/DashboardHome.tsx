@@ -143,7 +143,7 @@ export function DashboardHome({ stats, recentQuotes, welcome }: DashboardHomePro
             <div className="flex-1 min-w-0">
               <p className="text-base font-bold text-white mb-0.5">Bienvenue sur Quovi !</p>
               <p className="text-sm text-indigo-200">
-                Votre essai Pro de 14 jours est actif. Créez votre premier devis maintenant.
+                Vous êtes sur le plan Gratuit (5 devis/mois). Créez votre premier devis maintenant.
               </p>
             </div>
             <NewQuoteButton className="flex items-center gap-2 px-5 py-2.5 bg-white text-[var(--primary)] text-sm font-bold rounded-xl hover:bg-gray-50 cursor-pointer transition-colors shadow-md flex-shrink-0">

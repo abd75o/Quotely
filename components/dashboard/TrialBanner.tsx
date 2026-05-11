@@ -115,7 +115,7 @@ export function TrialBanner() {
         <p className="flex-1 text-sm font-semibold text-white min-w-0">
           {urgent
             ? `⚠️ Plus que ${daysLeft} jour${daysLeft > 1 ? "s" : ""} ! Passez au Pro pour ne pas perdre vos devis.`
-            : `Il vous reste ${daysLeft} jour${daysLeft > 1 ? "s" : ""} d'essai gratuit.`}
+            : `Il vous reste ${daysLeft} jour${daysLeft > 1 ? "s" : ""}.`}
         </p>
       </div>
 

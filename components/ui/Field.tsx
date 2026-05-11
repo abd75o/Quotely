@@ -34,7 +34,7 @@ export function FieldShell({ label, htmlFor, hint, error, children, className }:
 }
 
 const inputBase =
-  "w-full h-11 px-3.5 text-sm bg-white border border-[var(--border)] rounded-xl outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 placeholder:text-[var(--text-muted)] transition-all disabled:bg-gray-50 disabled:text-[var(--text-muted)]";
+  "w-full h-11 px-3.5 text-base sm:text-sm bg-white border border-[var(--border)] rounded-xl outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 placeholder:text-[var(--text-muted)] transition-all disabled:bg-gray-50 disabled:text-[var(--text-muted)]";
 
 interface TextFieldProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;

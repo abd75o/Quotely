@@ -3,6 +3,7 @@ import { Inter, Fraunces } from "next/font/google";
 import "./globals.css";
 import { UserStateProvider } from "@/lib/hooks/useUserState";
 import { CookieBanner } from "@/components/shared/CookieBanner";
+import { SessionManager } from "@/components/SessionManager";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -46,7 +47,10 @@ export default function RootLayout({
       className={`${inter.variable} ${fraunces.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans">
-        <UserStateProvider>{children}</UserStateProvider>
+        <UserStateProvider>
+          {children}
+          <SessionManager />
+        </UserStateProvider>
         <CookieBanner />
       </body>
     </html>

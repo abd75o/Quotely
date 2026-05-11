@@ -7,6 +7,7 @@ import { IconArrowRight, IconCheck } from "@tabler/icons-react";
 interface Step {
   toiTitle: string;
   toiDesc: string;
+  agentLabel: string;
   quoviActions: string[];
 }
 
@@ -14,6 +15,7 @@ const STEPS: Step[] = [
   {
     toiTitle: "Décrivez votre chantier",
     toiDesc: "30 secondes. Voix, texte, photo — comme vous voulez.",
+    agentLabel: "Émile",
     quoviActions: [
       "Émile rédige le devis",
       "Émile calcule la TVA juste",
@@ -23,21 +25,23 @@ const STEPS: Step[] = [
   {
     toiTitle: "Validez en 1 clic",
     toiDesc: "Vous jetez un œil, vous envoyez.",
+    agentLabel: "Émile",
     quoviActions: [
-      "Quovi envoie le devis au client",
-      "Quovi notifie le client par email",
-      "Quovi génère le PDF prêt à signer",
+      "Émile prépare le mail au client",
+      "Émile envoie le devis au client",
+      "Émile génère le PDF prêt à signer",
     ],
   },
   {
     toiTitle: "Retournez sur le chantier",
     toiDesc: "C’est tout ce qu’on vous demande.",
+    agentLabel: "Iris",
     quoviActions: [
       "Iris surveille les réponses",
       "Iris relance à J+3, J+7, J+14",
       "Iris s’arrête si le client répond",
-      "Quovi crée la facture après signature",
-      "Quovi numérote et archive",
+      "Iris crée la facture après signature",
+      "Iris numérote et archive",
     ],
   },
 ];
@@ -149,10 +153,10 @@ export function HowItWorks() {
                 {/* Spacer for the line column on desktop */}
                 <div className="hidden md:block" />
 
-                {/* QUOVI */}
+                {/* AGENT */}
                 <div className="md:text-left md:pl-2">
                   <p className="font-mono text-[11px] uppercase tracking-[0.05em] text-[#5B5BD6] mb-2">
-                    Quovi
+                    {step.agentLabel}
                   </p>
                   <ul className="space-y-2">
                     {step.quoviActions.map((action) => (

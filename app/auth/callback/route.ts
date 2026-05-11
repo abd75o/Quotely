@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
   // Ensure profile exists (upsert — DB trigger also handles this for new users)
   const { data: profile } = await supabase
     .from("profiles")
-    .upsert({ id: user.id, plan: "trial", trial_ends_at: new Date(Date.now() + 14 * 86400_000).toISOString() }, { onConflict: "id", ignoreDuplicates: true })
+    .upsert({ id: user.id, plan: "free" }, { onConflict: "id", ignoreDuplicates: true })
     .select("id, onboarded_at")
     .single();
 
@@ -48,12 +48,10 @@ export async function GET(request: NextRequest) {
     : "/onboarding";
 
   if (!profile) {
-    // New user — create profile with trial
-    const trialEndsAt = new Date(Date.now() + 14 * 86400_000).toISOString();
+    // New user — create profile on Free plan
     await supabase.from("profiles").insert({
       id: user.id,
-      plan: "trial",
-      trial_ends_at: trialEndsAt,
+      plan: "free",
     });
     return NextResponse.redirect(new URL(onboardingDest, origin), { headers: response.headers });
   }

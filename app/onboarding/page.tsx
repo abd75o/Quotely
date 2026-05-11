@@ -1,23 +1,44 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import {
   ArrowRight,
   ArrowLeft,
   CheckCircle2,
   Loader2,
   PartyPopper,
-  User,
-  FileText,
+  User as UserIcon,
   Building2,
+  Upload,
+  Trash2,
 } from "lucide-react";
 import { Logo } from "@/components/shared/Logo";
 import { TextField, SelectField } from "@/components/ui/Field";
-import { toastError } from "@/lib/toast";
+import { WelcomePopup } from "@/components/onboarding/WelcomePopup";
+import { toastError, toastSuccess } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 3;
+const LOGO_BUCKET = "company-logos";
+const LOGO_MAX_BYTES = 2 * 1024 * 1024;
+const LOGO_ACCEPT = "image/png,image/jpeg,image/webp";
+const LOGO_EXT_FROM_TYPE: Record<string, string> = {
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/jpg": "jpg",
+  "image/webp": "webp",
+};
+
+const LEGAL_STATUS_OPTIONS = [
+  { value: "auto-entrepreneur", label: "Auto-entrepreneur (micro-entreprise)" },
+  { value: "ei", label: "EI (Entreprise Individuelle)" },
+  { value: "eurl", label: "EURL" },
+  { value: "sarl", label: "SARL" },
+  { value: "sas", label: "SAS / SASU" },
+  { value: "autre", label: "Autre" },
+];
 
 const METIER_OPTIONS = [
   { value: "plombier", label: "Plombier" },
@@ -35,47 +56,59 @@ const METIER_OPTIONS = [
   { value: "autre", label: "Autre" },
 ];
 
-interface ClientStep {
-  name: string;
+interface IdentityStep {
+  firstName: string;
+  lastName: string;
   email: string;
   phone: string;
-  skipped: boolean;
-}
-
-interface QuoteStep {
-  title: string;
-  amount: string;
-  description: string;
-  skipped: boolean;
+  address: string;
+  postalCode: string;
+  city: string;
+  logoUrl: string;
 }
 
 export default function OnboardingPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const [companyName, setCompanyName] = useState("");
+  const [legalStatus, setLegalStatus] = useState("");
   const [metier, setMetier] = useState("autre");
   const [siret, setSiret] = useState("");
 
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  const [client, setClient] = useState<ClientStep>({
-    name: "",
+  const [userId, setUserId] = useState<string | null>(null);
+  const [identity, setIdentity] = useState<IdentityStep>({
+    firstName: "",
+    lastName: "",
     email: "",
     phone: "",
-    skipped: false,
+    address: "",
+    postalCode: "",
+    city: "",
+    logoUrl: "",
   });
 
-  const [quote, setQuote] = useState<QuoteStep>({
-    title: "",
-    amount: "",
-    description: "",
-    skipped: false,
-  });
-
-  const [createdClientId, setCreatedClientId] = useState<string | null>(null);
-  const [createdQuoteId, setCreatedQuoteId] = useState<string | null>(null);
+  // Prefill email with the signed-in user's address.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (cancelled || !user) return;
+      setUserId(user.id);
+      setIdentity((prev) =>
+        prev.email ? prev : { ...prev, email: user.email ?? "" }
+      );
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function next() {
     setStep((s) => Math.min(TOTAL_STEPS, s + 1));
@@ -98,6 +131,7 @@ export default function OnboardingPage() {
         id: user.id,
         company: companyName.trim(),
         company_name: companyName.trim(),
+        legal_status: legalStatus || null,
         metier: metier || null,
         siret: siret.replace(/\s+/g, "") || null,
       });
@@ -111,84 +145,39 @@ export default function OnboardingPage() {
     }
   }
 
-  async function persistClientStep(skip: boolean) {
-    if (skip) {
-      setClient((c) => ({ ...c, skipped: true }));
-      next();
-      return;
-    }
+  async function persistIdentityStep() {
+    setErrorMsg(null);
     setSubmitting(true);
     try {
-      const res = await fetch("/api/clients", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: client.name.trim(),
-          email: client.email.trim(),
-          phone: client.phone.trim() || undefined,
-        }),
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error("Session expirée");
+
+      const { error } = await supabase.from("profiles").upsert({
+        id: user.id,
+        first_name: identity.firstName.trim() || null,
+        last_name: identity.lastName.trim() || null,
+        telephone: identity.phone.trim() || null,
+        address: identity.address.trim() || null,
+        postal_code: identity.postalCode.trim() || null,
+        city: identity.city.trim() || null,
+        logo_url: identity.logoUrl || null,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Création client impossible");
-      setCreatedClientId(data.client?.id ?? null);
+      if (error) throw error;
+
+      // If user changed the email, propagate to auth (silent best-effort).
+      if (identity.email && identity.email !== user.email) {
+        await supabase.auth
+          .updateUser({ email: identity.email.trim() })
+          .catch(() => {});
+      }
       next();
     } catch (err) {
-      toastError(err instanceof Error ? err.message : "Erreur création client");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  async function persistQuoteStep(skip: boolean) {
-    if (skip) {
-      setQuote((q) => ({ ...q, skipped: true }));
-      next();
-      return;
-    }
-    if (!createdClientId) {
-      // Pas de client → on ne peut pas créer le devis. On skip silencieusement.
-      setQuote((q) => ({ ...q, skipped: true }));
-      next();
-      return;
-    }
-    setSubmitting(true);
-    try {
-      const amountTtc = Number(quote.amount.replace(",", "."));
-      const taxRate = 20;
-      const subtotal = amountTtc / (1 + taxRate / 100);
-      const taxAmount = amountTtc - subtotal;
-      const number = `QTL-${new Date().getFullYear()}-${Math.floor(Math.random() * 9000) + 1000}`;
-      const validUntil = new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10);
-
-      const res = await fetch("/api/quotes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          number,
-          taxRate,
-          validUntil,
-          notes: quote.description.trim() || undefined,
-          clientId: createdClientId,
-          items: [
-            {
-              id: "item-1",
-              description: quote.title.trim() || "Prestation",
-              quantity: 1,
-              unitPrice: Number(subtotal.toFixed(2)),
-              total: Number(subtotal.toFixed(2)),
-            },
-          ],
-          subtotal: Number(subtotal.toFixed(2)),
-          taxAmount: Number(taxAmount.toFixed(2)),
-          total: amountTtc,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Création devis impossible");
-      setCreatedQuoteId(data.quote?.id ?? null);
-      next();
-    } catch (err) {
-      toastError(err instanceof Error ? err.message : "Erreur création devis");
+      console.error("[onboarding] persistIdentityStep error:", err);
+      setErrorMsg("error");
     } finally {
       setSubmitting(false);
     }
@@ -206,7 +195,9 @@ export default function OnboardingPage() {
       if (user) {
         await Promise.race([
           supabase.auth.updateUser({ data: { onboarded: true } }),
-          new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), 2000)),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("timeout")), 2000)
+          ),
         ]).catch(() => {});
 
         void supabase.from("profiles").upsert({
@@ -215,7 +206,7 @@ export default function OnboardingPage() {
         });
       }
     } catch {
-      // best-effort, on laisse le cookie + middleware faire le filet
+      // best-effort
     }
 
     document.cookie = "onboarded=1; path=/; max-age=31536000; SameSite=Lax";
@@ -225,19 +216,14 @@ export default function OnboardingPage() {
       window.location.href = `/paiement?plan=${p}`;
       return;
     }
-    if (createdQuoteId) {
-      router.push(`/dashboard/quotes/${createdQuoteId}`);
-    } else {
-      router.push("/dashboard?welcome=1");
-    }
+    router.push("/dashboard?welcome=1");
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#FAFBFF] via-white to-[#FEF9F0] flex flex-col">
-      <div className="fixed inset-0 pointer-events-none overflow-hidden" aria-hidden>
-        <div className="absolute -top-32 -right-32 w-[500px] h-[500px] bg-gradient-to-br from-indigo-100 to-purple-100 rounded-full blur-3xl opacity-50" />
-      </div>
-
+    <div className="min-h-screen bg-[#FBFAF7] flex flex-col">
+      <Suspense fallback={null}>
+        <WelcomePopup />
+      </Suspense>
       <header className="relative z-10 flex justify-center pt-8 pb-4">
         <Logo variant="horizontal" size={30} id="onboarding" />
       </header>
@@ -249,9 +235,11 @@ export default function OnboardingPage() {
           {step === 1 && (
             <StepCompany
               companyName={companyName}
+              legalStatus={legalStatus}
               metier={metier}
               siret={siret}
               onCompany={setCompanyName}
+              onLegalStatus={setLegalStatus}
               onMetier={setMetier}
               onSiret={setSiret}
               onNext={persistCompanyStep}
@@ -261,33 +249,20 @@ export default function OnboardingPage() {
           )}
 
           {step === 2 && (
-            <StepClient
-              value={client}
-              onChange={setClient}
-              onNext={() => persistClientStep(false)}
-              onSkip={() => persistClientStep(true)}
+            <StepIdentity
+              value={identity}
+              userId={userId}
+              onChange={setIdentity}
               onBack={back}
+              onNext={persistIdentityStep}
               loading={submitting}
+              errorMsg={errorMsg}
             />
           )}
 
           {step === 3 && (
-            <StepQuote
-              value={quote}
-              onChange={setQuote}
-              hasClient={!!createdClientId || !client.skipped}
-              onNext={() => persistQuoteStep(false)}
-              onSkip={() => persistQuoteStep(true)}
-              onBack={back}
-              loading={submitting}
-            />
-          )}
-
-          {step === 4 && (
             <StepDone
               companyName={companyName}
-              clientCreated={!client.skipped && !!createdClientId}
-              quoteCreated={!quote.skipped && !!createdQuoteId}
               onFinish={finalize}
               loading={submitting}
             />
@@ -349,7 +324,6 @@ function StepHeader({
 function FooterButtons({
   onBack,
   onNext,
-  onSkip,
   nextLabel = "Continuer",
   loading,
   nextDisabled,
@@ -357,7 +331,6 @@ function FooterButtons({
 }: {
   onBack?: () => void;
   onNext: () => void;
-  onSkip?: () => void;
   nextLabel?: string;
   loading?: boolean;
   nextDisabled?: boolean;
@@ -376,16 +349,6 @@ function FooterButtons({
           Retour
         </button>
       )}
-      {onSkip && (
-        <button
-          type="button"
-          onClick={onSkip}
-          disabled={loading}
-          className="inline-flex items-center justify-center px-3 py-3 text-sm font-semibold text-[var(--text-muted)] hover:text-[var(--text-secondary)] cursor-pointer transition-colors disabled:opacity-60"
-        >
-          Passer cette étape
-        </button>
-      )}
       <button
         type={nextType}
         onClick={onNext}
@@ -402,9 +365,11 @@ function FooterButtons({
 
 function StepCompany({
   companyName,
+  legalStatus,
   metier,
   siret,
   onCompany,
+  onLegalStatus,
   onMetier,
   onSiret,
   onNext,
@@ -412,37 +377,53 @@ function StepCompany({
   errorMsg,
 }: {
   companyName: string;
+  legalStatus: string;
   metier: string;
   siret: string;
   onCompany: (v: string) => void;
+  onLegalStatus: (v: string) => void;
   onMetier: (v: string) => void;
   onSiret: (v: string) => void;
   onNext: () => void;
   loading: boolean;
   errorMsg: string | null;
 }) {
-  const valid = companyName.trim().length > 0 && metier.length > 0;
+  const valid =
+    companyName.trim().length > 0 &&
+    legalStatus.length > 0 &&
+    metier.length > 0;
   return (
     <form onSubmit={(e) => e.preventDefault()}>
       <StepHeader
         icon={Building2}
-        title="Bienvenue sur Quovi ! 👋"
-        subtitle="Quelques infos pour personnaliser votre expérience."
+        title="Votre entreprise"
+        subtitle="Configurons votre profil pour créer vos premiers devis."
       />
       {errorMsg && (
         <div className="bg-red-50 border border-red-300 text-red-800 px-4 py-3 rounded mb-4 text-sm">
-          <strong>⚠️ Une erreur est survenue.</strong> Réessaye dans quelques
-          instants ou contacte le support.
+          <strong>⚠️ Une erreur est survenue.</strong> Réessayez dans quelques
+          instants ou contactez le support.
         </div>
       )}
       <div className="flex flex-col gap-4">
         <TextField
           id="company-name"
-          label="Nom de l'entreprise *"
+          label="Nom de l’entreprise *"
           value={companyName}
           onChange={(e) => onCompany(e.target.value)}
           placeholder="Ex : TR Électricité"
           autoFocus
+          required
+        />
+        <SelectField
+          id="legal-status"
+          label="Statut juridique *"
+          value={legalStatus}
+          onChange={(e) => onLegalStatus(e.target.value)}
+          options={[
+            { value: "", label: "Sélectionner…" },
+            ...LEGAL_STATUS_OPTIONS,
+          ]}
           required
         />
         <SelectField
@@ -461,12 +442,12 @@ function StepCompany({
           placeholder="14 chiffres (optionnel)"
           inputMode="numeric"
           maxLength={17}
-          hint="Vous pourrez l'ajouter plus tard."
+          hint="Vous pourrez l’ajouter plus tard."
         />
       </div>
       {!valid && (
         <p className="text-xs text-gray-500 mt-2 text-center">
-          Renseigne le nom de ton entreprise pour continuer
+          Renseignez le nom, le statut juridique et le métier pour continuer
         </p>
       )}
       <FooterButtons
@@ -479,61 +460,237 @@ function StepCompany({
   );
 }
 
-function StepClient({
+function StepIdentity({
   value,
+  userId,
   onChange,
   onNext,
-  onSkip,
   onBack,
   loading,
+  errorMsg,
 }: {
-  value: ClientStep;
-  onChange: (v: ClientStep) => void;
+  value: IdentityStep;
+  userId: string | null;
+  onChange: (v: IdentityStep) => void;
   onNext: () => void;
-  onSkip: () => void;
   onBack: () => void;
   loading: boolean;
+  errorMsg: string | null;
 }) {
-  const valid = value.name.trim().length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.email.trim());
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement | null>(null);
+
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.email.trim());
+  const postalValid = /^\d{5}$/.test(value.postalCode.trim());
+  const valid =
+    value.firstName.trim().length > 0 &&
+    value.lastName.trim().length > 0 &&
+    emailValid &&
+    value.phone.trim().length > 0 &&
+    value.address.trim().length > 0 &&
+    postalValid &&
+    value.city.trim().length > 0;
+
+  async function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!userId) {
+      toastError("Session non disponible — réessayez.");
+      return;
+    }
+    if (file.size > LOGO_MAX_BYTES) {
+      toastError("Logo trop volumineux (max 2 Mo).");
+      return;
+    }
+    const ext = LOGO_EXT_FROM_TYPE[file.type];
+    if (!ext) {
+      toastError("Format non supporté (PNG, JPG ou WebP).");
+      return;
+    }
+    setUploadingLogo(true);
+    try {
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      const path = `${userId}/logo.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from(LOGO_BUCKET)
+        .upload(path, file, {
+          upsert: true,
+          contentType: file.type,
+          cacheControl: "0",
+        });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage
+        .from(LOGO_BUCKET)
+        .getPublicUrl(path);
+      onChange({ ...value, logoUrl: `${pub.publicUrl}?v=${Date.now()}` });
+      toastSuccess("Logo téléversé");
+    } catch (err) {
+      toastError(
+        err instanceof Error ? err.message : "Échec du téléversement"
+      );
+    } finally {
+      setUploadingLogo(false);
+      if (logoInputRef.current) logoInputRef.current.value = "";
+    }
+  }
+
+  function removeLogo() {
+    onChange({ ...value, logoUrl: "" });
+  }
+
   return (
     <div>
       <StepHeader
-        icon={User}
-        title="Ajoutez votre premier client"
-        subtitle="Pour créer votre premier devis, on a besoin d'un client."
+        icon={UserIcon}
+        title="Vos informations"
+        subtitle="Ces infos apparaîtront sur vos devis et factures."
       />
-      <div className="flex flex-col gap-4">
+      {errorMsg && (
+        <div className="bg-red-50 border border-red-300 text-red-800 px-4 py-3 rounded mb-4 text-sm">
+          <strong>⚠️ Une erreur est survenue.</strong> Réessayez dans quelques
+          instants.
+        </div>
+      )}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <TextField
-          id="client-name"
-          label="Nom du client *"
-          value={value.name}
-          onChange={(e) => onChange({ ...value, name: e.target.value })}
-          placeholder="M. Dupont"
+          id="first-name"
+          label="Prénom *"
+          value={value.firstName}
+          onChange={(e) => onChange({ ...value, firstName: e.target.value })}
+          placeholder="Pierre"
           autoFocus
+          required
         />
         <TextField
-          id="client-email"
-          label="Email *"
+          id="last-name"
+          label="Nom *"
+          value={value.lastName}
+          onChange={(e) => onChange({ ...value, lastName: e.target.value })}
+          placeholder="Martin"
+          required
+        />
+      </div>
+      <div className="mt-4 flex flex-col gap-4">
+        <TextField
+          id="email"
+          label="Email professionnel *"
           type="email"
           value={value.email}
           onChange={(e) => onChange({ ...value, email: e.target.value })}
-          placeholder="client@exemple.fr"
+          placeholder="vous@example.fr"
           autoComplete="email"
+          required
         />
         <TextField
-          id="client-phone"
-          label="Téléphone"
+          id="phone"
+          label="Téléphone *"
           type="tel"
           value={value.phone}
           onChange={(e) => onChange({ ...value, phone: e.target.value })}
           placeholder="06 12 34 56 78"
           autoComplete="tel"
-          hint="Optionnel"
+          required
         />
+        <TextField
+          id="address"
+          label="Adresse *"
+          value={value.address}
+          onChange={(e) => onChange({ ...value, address: e.target.value })}
+          placeholder="12 rue de la République"
+          autoComplete="street-address"
+          required
+        />
+        <div className="grid grid-cols-3 gap-4">
+          <TextField
+            id="postal-code"
+            label="Code postal *"
+            value={value.postalCode}
+            onChange={(e) =>
+              onChange({
+                ...value,
+                postalCode: e.target.value.replace(/\D/g, "").slice(0, 5),
+              })
+            }
+            placeholder="75001"
+            inputMode="numeric"
+            maxLength={5}
+            required
+            className="col-span-1"
+          />
+          <TextField
+            id="city"
+            label="Ville *"
+            value={value.city}
+            onChange={(e) => onChange({ ...value, city: e.target.value })}
+            placeholder="Paris"
+            autoComplete="address-level2"
+            required
+            className="col-span-2"
+          />
+        </div>
+
+        {/* Logo */}
+        <div className="flex flex-col gap-1.5">
+          <span className="text-sm font-semibold text-[var(--text-primary)]">
+            Logo
+          </span>
+          <div className="flex items-center gap-3">
+            <div className="w-14 h-14 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex items-center justify-center flex-shrink-0 overflow-hidden">
+              {value.logoUrl ? (
+                <Image
+                  src={value.logoUrl}
+                  alt="Logo"
+                  width={56}
+                  height={56}
+                  className="object-contain"
+                  unoptimized
+                />
+              ) : (
+                <Upload className="w-5 h-5 text-[var(--text-muted)]" />
+              )}
+            </div>
+            <div className="flex flex-col gap-1 flex-1">
+              <input
+                ref={logoInputRef}
+                type="file"
+                accept={LOGO_ACCEPT}
+                onChange={handleLogoChange}
+                className="hidden"
+                id="logo-upload"
+              />
+              <div className="flex gap-2">
+                <label
+                  htmlFor="logo-upload"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-[var(--text-primary)] bg-white border border-[var(--border)] hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
+                >
+                  {uploadingLogo ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Upload className="w-3.5 h-3.5" />
+                  )}
+                  {value.logoUrl ? "Remplacer" : "Téléverser"}
+                </label>
+                {value.logoUrl && (
+                  <button
+                    type="button"
+                    onClick={removeLogo}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-lg cursor-pointer transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Retirer
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+          <p className="text-xs text-[var(--text-muted)]">
+            Recommandé pour personnaliser vos devis. PNG, JPG ou WebP, max 2 Mo.
+          </p>
+        </div>
       </div>
       <FooterButtons
         onBack={onBack}
-        onSkip={onSkip}
         onNext={onNext}
         loading={loading}
         nextDisabled={!valid}
@@ -542,106 +699,39 @@ function StepClient({
   );
 }
 
-function StepQuote({
-  value,
-  onChange,
-  hasClient,
-  onNext,
-  onSkip,
-  onBack,
-  loading,
-}: {
-  value: QuoteStep;
-  onChange: (v: QuoteStep) => void;
-  hasClient: boolean;
-  onNext: () => void;
-  onSkip: () => void;
-  onBack: () => void;
-  loading: boolean;
-}) {
-  const amountValid = !isNaN(Number(value.amount.replace(",", "."))) && Number(value.amount.replace(",", ".")) > 0;
-  const valid = hasClient && value.title.trim().length > 0 && amountValid;
-  return (
-    <div>
-      <StepHeader
-        icon={FileText}
-        title="Créez votre premier devis"
-        subtitle="C'est l'occasion de tester en conditions réelles."
-      />
-      {!hasClient ? (
-        <p className="text-sm text-[var(--text-muted)] bg-[var(--surface)] rounded-xl p-4 mb-4">
-          Vous avez sauté l&apos;étape précédente — pas de souci, vous créerez votre premier devis depuis le
-          dashboard.
-        </p>
-      ) : (
-        <div className="flex flex-col gap-4">
-          <TextField
-            id="quote-title"
-            label="Titre / prestation *"
-            value={value.title}
-            onChange={(e) => onChange({ ...value, title: e.target.value })}
-            placeholder="Ex : Pose carrelage salle de bain"
-            autoFocus
-          />
-          <TextField
-            id="quote-amount"
-            label="Montant TTC (€) *"
-            type="text"
-            inputMode="decimal"
-            value={value.amount}
-            onChange={(e) => onChange({ ...value, amount: e.target.value })}
-            placeholder="1200"
-          />
-          <TextField
-            id="quote-description"
-            label="Description"
-            value={value.description}
-            onChange={(e) => onChange({ ...value, description: e.target.value })}
-            placeholder="Détails complémentaires (optionnel)"
-            hint="Vous pourrez modifier le devis ensuite."
-          />
-        </div>
-      )}
-      <FooterButtons
-        onBack={onBack}
-        onSkip={onSkip}
-        onNext={onNext}
-        loading={loading}
-        nextLabel={hasClient ? "Continuer" : "Continuer"}
-        nextDisabled={hasClient && !valid}
-      />
-    </div>
-  );
-}
-
 function StepDone({
   companyName,
-  clientCreated,
-  quoteCreated,
   onFinish,
   loading,
 }: {
   companyName: string;
-  clientCreated: boolean;
-  quoteCreated: boolean;
   onFinish: () => void;
   loading: boolean;
 }) {
+  const displayName = companyName.trim() || "votre entreprise";
   return (
     <div className="text-center">
-      <div className="w-14 h-14 mx-auto rounded-2xl bg-emerald-100 flex items-center justify-center mb-5">
-        <PartyPopper className="w-7 h-7 text-emerald-600" />
+      <div className="w-16 h-16 mx-auto rounded-full bg-emerald-100 flex items-center justify-center mb-5">
+        <PartyPopper className="w-8 h-8 text-emerald-600" />
       </div>
-      <h2 className="text-2xl font-extrabold text-[var(--text-primary)] mb-2">Tout est prêt ! 🎉</h2>
+      <h2 className="text-2xl font-extrabold text-[var(--text-primary)] mb-2">
+        Tout est prêt ! 🎉
+      </h2>
       <p className="text-sm text-[var(--text-secondary)] mb-6">
-        Vous êtes en plan Pro pendant 14 jours. Toutes les fonctionnalités sont débloquées.
+        Votre profil « {displayName} » est configuré. Vous pouvez maintenant
+        créer votre premier devis.
       </p>
 
-      <ul className="text-left bg-[var(--surface)] rounded-2xl border border-[var(--border)] p-4 sm:p-5 mb-6 flex flex-col gap-2.5">
-        <RecapItem ok label={`Profil ${companyName ? `« ${companyName} »` : "entreprise"} complété`} />
-        <RecapItem ok={clientCreated} label={clientCreated ? "Premier client ajouté" : "Premier client : à faire plus tard"} />
-        <RecapItem ok={quoteCreated} label={quoteCreated ? "Premier devis créé" : "Premier devis : à faire plus tard"} />
+      <ul className="text-left bg-[var(--surface)] rounded-2xl border border-[var(--border)] p-4 sm:p-5 mb-5 flex flex-col gap-2.5">
+        <RecapItem ok label={`Profil « ${displayName} » complété`} />
+        <RecapItem ok label="Informations personnelles renseignées" />
+        <RecapItem ok={false} label="Premier devis : à créer dans votre dashboard" />
       </ul>
+
+      <p className="text-xs text-[var(--text-muted)] mb-6 leading-relaxed">
+        Vous êtes sur le plan Gratuit (5 devis/mois). Passez à Starter ou Pro
+        à tout moment depuis votre tableau de bord.
+      </p>
 
       <button
         type="button"
@@ -663,12 +753,20 @@ function RecapItem({ ok, label }: { ok: boolean; label: string }) {
       <span
         className={cn(
           "mt-0.5 w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0",
-          ok ? "bg-emerald-100 text-emerald-700" : "bg-[var(--border)] text-[var(--text-muted)]"
+          ok
+            ? "bg-emerald-100 text-emerald-700"
+            : "bg-[var(--border)] text-[var(--text-muted)]"
         )}
       >
         <CheckCircle2 className="w-3 h-3" strokeWidth={3} />
       </span>
-      <span className={ok ? "text-[var(--text-primary)] font-semibold" : "text-[var(--text-muted)]"}>
+      <span
+        className={
+          ok
+            ? "text-[var(--text-primary)] font-semibold"
+            : "text-[var(--text-muted)]"
+        }
+      >
         {label}
       </span>
     </li>

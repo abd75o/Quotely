@@ -119,7 +119,7 @@ export default function ConnexionPage() {
                       placeholder="vous@example.fr"
                       autoComplete="email"
                       autoFocus
-                      className="w-full h-12 pl-10 pr-4 text-sm bg-white border border-[var(--border)] rounded-xl outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 placeholder:text-[var(--text-muted)] transition-all"
+                      className="w-full h-12 pl-10 pr-4 text-base sm:text-sm bg-white border border-[var(--border)] rounded-xl outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 placeholder:text-[var(--text-muted)] transition-all"
                     />
                   </div>
                 </div>
@@ -145,7 +145,7 @@ export default function ConnexionPage() {
                       onChange={(e) => { setPassword(e.target.value); setError(""); }}
                       placeholder="Votre mot de passe"
                       autoComplete="current-password"
-                      className="w-full h-12 pl-10 pr-11 text-sm bg-white border border-[var(--border)] rounded-xl outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 placeholder:text-[var(--text-muted)] transition-all"
+                      className="w-full h-12 pl-10 pr-11 text-base sm:text-sm bg-white border border-[var(--border)] rounded-xl outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 placeholder:text-[var(--text-muted)] transition-all"
                     />
                     <button
                       type="button"

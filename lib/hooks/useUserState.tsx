@@ -12,15 +12,19 @@ import { createClient } from "@/lib/supabase/client";
 
 export type UserStateValue =
   | "visitor"
-  | "trial_active"
-  | "trial_expired"
+  | "subscribed_free"
   | "subscribed_starter"
-  | "subscribed_pro";
+  | "subscribed_pro"
+  // Deprecated — kept for backward compat with components that still
+  // reference these. They are never returned for new users.
+  | "trial_active"
+  | "trial_expired";
 
 export interface UserProfile {
   id: string;
-  plan: "trial" | "starter" | "pro" | null;
+  plan: "free" | "trial" | "starter" | "pro" | null;
   trial_ends_at: string | null;
+  onboarded_at: string | null;
   subscription_cancel_at: string | null;
   subscription_current_period_end: string | null;
 }
@@ -31,6 +35,7 @@ export interface UserStateContextValue {
   daysLeft: number | null;
   user: User | null;
   profile: UserProfile | null;
+  onboardingCompleted: boolean;
 }
 
 const DEFAULT_VALUE: UserStateContextValue = {
@@ -39,6 +44,7 @@ const DEFAULT_VALUE: UserStateContextValue = {
   daysLeft: null,
   user: null,
   profile: null,
+  onboardingCompleted: false,
 };
 
 const UserStateContext = createContext<UserStateContextValue>(DEFAULT_VALUE);
@@ -48,14 +54,10 @@ function computeState(
   profile: UserProfile | null
 ): UserStateContextValue {
   if (!user) {
-    return {
-      isLoading: false,
-      state: "visitor",
-      daysLeft: null,
-      user: null,
-      profile: null,
-    };
+    return { ...DEFAULT_VALUE, isLoading: false };
   }
+
+  const onboardingCompleted = !!profile?.onboarded_at;
 
   if (profile?.plan === "starter") {
     return {
@@ -64,6 +66,7 @@ function computeState(
       daysLeft: null,
       user,
       profile,
+      onboardingCompleted,
     };
   }
 
@@ -74,39 +77,18 @@ function computeState(
       daysLeft: null,
       user,
       profile,
+      onboardingCompleted,
     };
   }
 
-  // plan === "trial" or unknown — treat as trial
-  if (profile?.trial_ends_at) {
-    const remainingMs =
-      new Date(profile.trial_ends_at).getTime() - Date.now();
-    if (remainingMs <= 0) {
-      return {
-        isLoading: false,
-        state: "trial_expired",
-        daysLeft: 0,
-        user,
-        profile,
-      };
-    }
-    const days = Math.max(1, Math.ceil(remainingMs / 86_400_000));
-    return {
-      isLoading: false,
-      state: "trial_active",
-      daysLeft: days,
-      user,
-      profile,
-    };
-  }
-
-  // Logged in, no profile yet (handle_new_user trigger may not have run)
+  // 'free', legacy 'trial', null, or missing profile → Free plan.
   return {
     isLoading: false,
-    state: "trial_active",
+    state: "subscribed_free",
     daysLeft: null,
     user,
     profile,
+    onboardingCompleted,
   };
 }
 
@@ -132,7 +114,7 @@ export function UserStateProvider({ children }: { children: ReactNode }) {
       const { data: profile } = await supabase
         .from("profiles")
         .select(
-          "id, plan, trial_ends_at, subscription_cancel_at, subscription_current_period_end"
+          "id, plan, trial_ends_at, onboarded_at, subscription_cancel_at, subscription_current_period_end"
         )
         .eq("id", user.id)
         .single();
@@ -166,37 +148,31 @@ export function useUserState() {
   return useContext(UserStateContext);
 }
 
-// ─── Plan-aware helpers (foundation pour la différenciation Starter / Pro) ──
+// ─── Plan-aware helpers ──────────────────────────────────────────────────────
 
-export type EffectivePlan = "starter" | "pro" | null;
+export type EffectivePlan = "free" | "starter" | "pro" | null;
 
 export interface UserPlanValue {
   isLoading: boolean;
-  /** Plan effectif appliqué aux features. Pendant l'essai = "pro" (générosité). */
   plan: EffectivePlan;
+  isFree: boolean;
   isStarter: boolean;
   isPro: boolean;
+  /** @deprecated trial concept removed; always false. */
   isTrialing: boolean;
 }
 
-/**
- * Vue plan-aware du UserStateContext.
- * - Starter abonné → isStarter = true (limites Starter appliquées)
- * - Pro abonné OU en essai → isPro = true (toutes features débloquées)
- * - isTrialing dérivé de l'état trial_active
- */
 export function useUserPlan(): UserPlanValue {
   const { isLoading, state } = useUserState();
 
-  const isTrialing = state === "trial_active" || state === "trial_expired";
+  const isFree = state === "subscribed_free";
   const isStarter = state === "subscribed_starter";
-  // Pendant l'essai, on traite l'utilisateur comme Pro pour ne pas brider
-  // l'expérience découverte (sauf si l'essai a expiré).
-  const isPro = state === "subscribed_pro" || state === "trial_active";
+  const isPro = state === "subscribed_pro";
 
   let plan: EffectivePlan = null;
   if (isStarter) plan = "starter";
   else if (isPro) plan = "pro";
+  else if (isFree) plan = "free";
 
-  return { isLoading, plan, isStarter, isPro, isTrialing };
+  return { isLoading, plan, isFree, isStarter, isPro, isTrialing: false };
 }

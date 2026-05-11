@@ -56,7 +56,7 @@ export function WelcomeBanner() {
             Bonjour {firstName}, créez votre premier devis en 30 secondes
           </p>
           <p className="text-sm text-indigo-200">
-            Votre essai Pro de 14 jours est actif. Profitez de toutes les fonctionnalités.
+            Vous êtes sur le plan Gratuit (5 devis/mois). Bienvenue chez Quovi.
           </p>
         </div>
         <Link

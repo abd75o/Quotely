@@ -1,9 +1,12 @@
+"use client";
+
 import { IconCheck } from "@tabler/icons-react";
 import { Button } from "@/components/ui/Button";
 import { Highlight } from "@/components/ui/Highlight";
 import { ScrollIndicator } from "@/components/landing/ScrollIndicator";
 import { AudioWave } from "@/components/landing/AudioWave";
 import { HeroMockup } from "@/components/landing/HeroMockup";
+import { useUser } from "@/hooks/useUser";
 
 const TRUST = [
   "Plan gratuit disponible",
@@ -12,6 +15,9 @@ const TRUST = [
 ];
 
 export function Hero() {
+  const { isAuthenticated, isLoading } = useUser();
+  const showAuthedCta = !isLoading && isAuthenticated;
+
   return (
     <section className="relative isolate overflow-hidden bg-gradient-to-b from-white via-white to-[#FBFAF7] flex flex-col justify-center min-h-screen min-h-[100svh] pt-24 md:pt-20 pb-12 md:pb-32">
       <AudioWave />
@@ -30,22 +36,30 @@ export function Hero() {
             </p>
 
             <div className="mt-8 md:mt-10 flex flex-col sm:flex-row items-stretch sm:items-center justify-center lg:justify-start gap-3 sm:gap-4">
-              <Button href="/inscription" variant="primary" icon>
-                Démarrer gratuitement
-              </Button>
+              {showAuthedCta ? (
+                <Button href="/dashboard" variant="primary" icon>
+                  Accéder à mon espace
+                </Button>
+              ) : (
+                <Button href="/inscription" variant="primary" icon>
+                  Démarrer gratuitement
+                </Button>
+              )}
               <Button href="#comment-ca-marche" variant="secondary">
                 Voir comment ça marche
               </Button>
             </div>
 
-            <div className="mt-6 md:mt-8 flex flex-wrap gap-x-5 gap-y-2 justify-center lg:justify-start text-[13px] text-[var(--text-muted)]">
-              {TRUST.map((label) => (
-                <span key={label} className="inline-flex items-center gap-1.5">
-                  <IconCheck size={14} className="text-[var(--primary)]" />
-                  {label}
-                </span>
-              ))}
-            </div>
+            {!showAuthedCta && (
+              <div className="mt-6 md:mt-8 flex flex-wrap gap-x-5 gap-y-2 justify-center lg:justify-start text-[13px] text-[var(--text-muted)]">
+                {TRUST.map((label) => (
+                  <span key={label} className="inline-flex items-center gap-1.5">
+                    <IconCheck size={14} className="text-[var(--primary)]" />
+                    {label}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Hero mockup */}

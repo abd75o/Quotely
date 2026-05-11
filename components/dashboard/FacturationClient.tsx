@@ -310,28 +310,16 @@ function PlanCard({
         Réactiver mon abonnement
       </button>
     );
-  } else if (state === "trial_active") {
-    badge = "Essai en cours";
-    title = "Vous testez actuellement le plan Pro pendant 14 jours.";
-    subtitle = `Il vous reste ${daysLeft ?? 14} jour${(daysLeft ?? 14) > 1 ? "s" : ""} d'essai.`;
+  } else if (state === "subscribed_free") {
+    badge = "Plan Gratuit";
+    title = "Vous êtes sur le plan Gratuit.";
+    subtitle = "5 devis par mois. Passez à Starter ou Pro pour aller plus loin.";
     action = (
       <a
         href="/tarifs"
         className="inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-bold text-white bg-[var(--primary)] hover:bg-[var(--primary-dark)] rounded-xl cursor-pointer transition-colors shadow-sm"
       >
-        Choisir mon plan
-      </a>
-    );
-  } else if (state === "trial_expired") {
-    badge = "Essai expiré";
-    title = "Votre essai gratuit est terminé.";
-    subtitle = "Choisissez un plan pour reprendre votre activité.";
-    action = (
-      <a
-        href="/tarifs"
-        className="inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-bold text-white bg-[var(--primary)] hover:bg-[var(--primary-dark)] rounded-xl cursor-pointer transition-colors shadow-sm"
-      >
-        Choisir mon plan
+        Voir les plans
       </a>
     );
   } else if (isStarter) {

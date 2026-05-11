@@ -130,8 +130,8 @@ export default function CGUPage() {
               <li><span className="font-semibold text-[var(--text-primary)]">Pro&nbsp;: {LEGAL_INFO.prixPro}</span> — devis illimités, dictée vocale, IA, relances automatiques, statistiques avancées.</li>
             </ul>
             <p className="mb-3">
-              Une période d&apos;essai gratuite de <span className="font-semibold text-[var(--text-primary)]">{LEGAL_INFO.dureeEssai}</span>{" "}
-              du plan Pro est offerte à toute nouvelle inscription, sans demande de carte bancaire.
+              Un plan <span className="font-semibold text-[var(--text-primary)]">Gratuit</span>{" "}
+              (limité à 5 devis par mois) est accessible à toute nouvelle inscription, sans demande de carte bancaire.
             </p>
             <p>
               Régime de TVA applicable&nbsp;: {LEGAL_INFO.regimeTva}. Les tarifs sont susceptibles d&apos;évoluer&nbsp;;

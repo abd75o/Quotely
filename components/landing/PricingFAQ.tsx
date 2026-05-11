@@ -11,24 +11,24 @@ const FAQS = [
       "Aucun engagement. Vous pouvez résilier votre abonnement à tout moment depuis votre espace, en un clic.",
   },
   {
-    question: "Que se passe-t-il après les 14 jours d’essai ?",
+    question: "Puis-je passer du plan Gratuit au plan Pro à tout moment ?",
     answer:
-      "Si vous décidez de continuer, vous serez prélevé du montant de votre plan. Sinon, votre compte est désactivé sans frais. Aucune carte bancaire n’est demandée pour commencer.",
+      "Oui, à tout moment. Vous changez de plan en un clic depuis votre tableau de bord. Le passage est immédiat, et vous ne payez que le prorata des jours restants dans le mois.",
   },
   {
-    question: "Puis-je changer de plan en cours de route ?",
+    question: "Que se passe-t-il si j’atteins la limite de devis du mois ?",
     answer:
-      "Oui, à tout moment. Vous pouvez passer de Starter à Pro (ou inversement) depuis votre espace. La facturation est ajustée au prorata.",
+      "Vous recevez une notification quand vous approchez de la limite. Si vous l’atteignez, vous pouvez soit attendre le mois suivant, soit passer au plan supérieur. Vos devis déjà créés restent toujours accessibles.",
   },
   {
     question: "Comment fonctionne la facturation ?",
     answer:
-      "Mensuelle, par carte bancaire via Stripe. Une facture est automatiquement générée et envoyée par email. Vos données restent privées et hébergées en France.",
+      "Vous êtes débité chaque mois à la même date que votre inscription, sur la carte enregistrée au moment de votre passage à un plan payant. Vous recevez automatiquement votre facture par email.",
   },
   {
-    question: "Y a-t-il une réduction pour un paiement annuel ?",
+    question: "Que se passe-t-il avec mes devis si je résilie ?",
     answer:
-      "Pas pour le moment. Quovi vient de sortir, nous gardons les choses simples : un prix mensuel, sans engagement.",
+      "Vos devis et factures restent accessibles en lecture seule pendant 90 jours après résiliation. Vous pouvez les exporter en PDF à tout moment. Aucune donnée n’est supprimée pendant ce délai.",
   },
 ];
 
@@ -87,17 +87,8 @@ export function PricingFAQ() {
   return (
     <section
       id="faq-tarifs"
-      className="relative isolate overflow-hidden py-16 md:py-24 bg-gradient-to-br from-[#F8FAFC] via-[#EEF2FF] to-[#FEF9F0]"
+      className="relative isolate overflow-hidden py-16 md:py-24 bg-[#FBFAF7]"
     >
-      <div
-        aria-hidden
-        className="hidden md:block absolute -top-32 -right-32 w-[28rem] h-[28rem] rounded-full bg-[var(--primary-bg)] opacity-20 blur-3xl pointer-events-none -z-10"
-      />
-      <div
-        aria-hidden
-        className="hidden md:block absolute -bottom-32 -left-32 w-[24rem] h-[24rem] rounded-3xl bg-[var(--accent-warm-bg)] opacity-20 blur-3xl pointer-events-none -z-10"
-      />
-
       <div className="relative max-w-3xl mx-auto px-6 lg:px-8">
         <div className="text-center mb-12">
           <h2 className="font-display text-[32px] md:text-[40px] font-bold leading-[1.15] tracking-tight text-[var(--text-primary)]">

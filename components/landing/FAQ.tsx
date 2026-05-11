@@ -8,7 +8,7 @@ const FAQS = [
   {
     question: "Qui sont Émile et Iris ?",
     answer:
-      "Ce sont les deux agents qui tournent dans Quovi. Émile rédige vos devis à partir d’une simple description (voix, texte ou photo). Iris surveille les devis envoyés et relance au bon moment. Ils bossent en coulisse pendant que vous êtes sur le chantier.",
+      "Émile et Iris sont les deux agents IA qui tournent dans Quovi. Émile rédige vos devis à partir d’une simple description (voix ou texte), prépare le mail et l’envoie au client. Iris surveille ensuite les devis envoyés, relance au bon moment, et génère la facture après signature. Ils bossent en coulisse pendant que vous êtes sur le chantier. D’autres agents arriveront prochainement pour vous aider encore plus.",
   },
   {
     question: "La signature électronique de Quovi est-elle légalement valide ?",

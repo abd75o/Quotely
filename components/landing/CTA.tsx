@@ -19,7 +19,15 @@ const TRUST = [
   { Icon: IconLock, label: "Paiement sécurisé Stripe" },
 ];
 
-export function CTA() {
+interface CTAProps {
+  secondaryHref?: string;
+  secondaryLabel?: string;
+}
+
+export function CTA({
+  secondaryHref = "#tarifs",
+  secondaryLabel = "Voir les tarifs",
+}: CTAProps = {}) {
   const { state, isLoading } = useUserState();
   const effectiveState = isLoading ? "visitor" : state;
   const isVisitor = effectiveState === "visitor";
@@ -47,14 +55,14 @@ export function CTA() {
               <Highlight variant="light">ce soir</Highlight>.
             </>
           ) : (
-            <>Prêt à signer votre prochain devis ?</>
+            <>Créez votre prochain devis maintenant.</>
           )}
         </h2>
 
         <p className="mt-6 text-lg md:text-xl text-white/85 leading-relaxed max-w-xl mx-auto">
           {isVisitor
             ? "Créez votre compte. Testez sur un cas réel. Décidez ensuite."
-            : "Allez à votre espace et créez un nouveau devis."}
+            : "Émile vous attend dans votre espace."}
         </p>
 
         <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -63,14 +71,22 @@ export function CTA() {
               <Button href="/inscription" variant="primary-inverted" icon>
                 Démarrer gratuitement
               </Button>
-              <Button href="#tarifs" variant="secondary-outline-light">
-                Voir les tarifs
+              <Button href={secondaryHref} variant="secondary-outline-light">
+                {secondaryLabel}
               </Button>
             </>
           ) : (
-            <Button href="/dashboard" variant="primary-inverted" icon>
-              Mon espace
-            </Button>
+            <>
+              <Button href="/dashboard" variant="primary-inverted" icon>
+                Accéder à mon espace
+              </Button>
+              <Button
+                href="/dashboard/quotes"
+                variant="secondary-outline-light"
+              >
+                Voir mes devis
+              </Button>
+            </>
           )}
         </div>
 

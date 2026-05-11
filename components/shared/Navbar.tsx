@@ -73,22 +73,33 @@ export function Navbar() {
 
             {/* Desktop CTAs */}
             <div className="hidden lg:flex items-center gap-3">
-              {!isAuthed && (
-                <Link
-                  href="/connexion"
-                  className="px-4 py-2 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors duration-150 cursor-pointer"
-                >
-                  Connexion
-                </Link>
-              )}
-              {isAuthed ? (
+              {isLoading ? (
+                <>
+                  <span
+                    aria-hidden
+                    className="h-9 w-24 rounded-md bg-[var(--bg-tertiary)] animate-pulse"
+                  />
+                  <span
+                    aria-hidden
+                    className="h-11 w-44 rounded-full bg-[var(--bg-tertiary)] animate-pulse"
+                  />
+                </>
+              ) : isAuthed ? (
                 <Button href="/dashboard" variant="primary" size="sm">
                   Mon espace
                 </Button>
               ) : (
-                <Button href="/inscription" variant="primary" size="sm">
-                  Démarrer gratuitement
-                </Button>
+                <>
+                  <Link
+                    href="/connexion"
+                    className="px-4 py-2 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors duration-150 cursor-pointer"
+                  >
+                    Connexion
+                  </Link>
+                  <Button href="/inscription" variant="primary" size="sm">
+                    Démarrer gratuitement
+                  </Button>
+                </>
               )}
             </div>
 

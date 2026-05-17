@@ -9,6 +9,12 @@ import {
 } from "react";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
+import {
+  PLAN_FEATURES,
+  getPlanFeatures,
+  type Plan,
+  type PlanFeatures,
+} from "@/lib/permissions";
 
 export type UserStateValue =
   | "visitor"
@@ -22,7 +28,10 @@ export type UserStateValue =
 
 export interface UserProfile {
   id: string;
-  plan: "free" | "trial" | "starter" | "pro" | null;
+  /** 'trial' is legacy — kept in the union so historic rows still type-check. */
+  plan: "free" | "trial" | "starter" | "pro" | "comptable" | null;
+  subscription_status: "active" | "canceled" | "past_due" | null;
+  /** @deprecated populated only on legacy rows; new signups leave it null. */
   trial_ends_at: string | null;
   onboarded_at: string | null;
   subscription_cancel_at: string | null;
@@ -114,7 +123,7 @@ export function UserStateProvider({ children }: { children: ReactNode }) {
       const { data: profile } = await supabase
         .from("profiles")
         .select(
-          "id, plan, trial_ends_at, onboarded_at, subscription_cancel_at, subscription_current_period_end"
+          "id, plan, subscription_status, trial_ends_at, onboarded_at, subscription_cancel_at, subscription_current_period_end"
         )
         .eq("id", user.id)
         .single();
@@ -150,20 +159,38 @@ export function useUserState() {
 
 // ─── Plan-aware helpers ──────────────────────────────────────────────────────
 
-export type EffectivePlan = "free" | "starter" | "pro" | null;
+export type EffectivePlan = Plan | null;
 
 export interface UserPlanValue {
   isLoading: boolean;
+  /** Resolved plan, or `null` while loading / when no user is signed in. */
   plan: EffectivePlan;
+  /** Resolved permissions matrix (always defined — defaults to Free). */
+  features: PlanFeatures;
   isFree: boolean;
   isStarter: boolean;
   isPro: boolean;
+  /** Devis created by this user since the 1st of the current month. */
+  monthlyQuotesUsed: number;
+  /** Monthly quota for the resolved plan (Infinity for Comptable). */
+  monthlyQuotesLimit: number;
+  /** `monthlyQuotesLimit - monthlyQuotesUsed`, floored at 0. */
+  remainingQuotes: number;
+  /** `true` while the user still has room under the monthly quota. */
+  canCreateNewQuote: boolean;
   /** @deprecated trial concept removed; always false. */
   isTrialing: boolean;
 }
 
+function startOfMonthIso(): string {
+  const d = new Date();
+  d.setDate(1);
+  d.setHours(0, 0, 0, 0);
+  return d.toISOString();
+}
+
 export function useUserPlan(): UserPlanValue {
-  const { isLoading, state } = useUserState();
+  const { isLoading: stateLoading, state, user } = useUserState();
 
   const isFree = state === "subscribed_free";
   const isStarter = state === "subscribed_starter";
@@ -174,5 +201,57 @@ export function useUserPlan(): UserPlanValue {
   else if (isPro) plan = "pro";
   else if (isFree) plan = "free";
 
-  return { isLoading, plan, isFree, isStarter, isPro, isTrialing: false };
+  const features = getPlanFeatures(plan);
+
+  const [monthlyQuotesUsed, setMonthlyQuotesUsed] = useState(0);
+  const [quotesLoading, setQuotesLoading] = useState(true);
+
+  useEffect(() => {
+    if (stateLoading) return;
+    if (!user) {
+      setMonthlyQuotesUsed(0);
+      setQuotesLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setQuotesLoading(true);
+    (async () => {
+      const supabase = createClient();
+      const { count } = await supabase
+        .from("quotes")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .gte("created_at", startOfMonthIso());
+      if (cancelled) return;
+      setMonthlyQuotesUsed(count ?? 0);
+      setQuotesLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [stateLoading, user]);
+
+  const monthlyQuotesLimit = features.maxDevisPerMonth;
+  const remainingQuotes = Number.isFinite(monthlyQuotesLimit)
+    ? Math.max(0, monthlyQuotesLimit - monthlyQuotesUsed)
+    : Number.POSITIVE_INFINITY;
+  const canCreateNewQuote = !Number.isFinite(monthlyQuotesLimit)
+    ? true
+    : monthlyQuotesUsed < monthlyQuotesLimit;
+
+  return {
+    isLoading: stateLoading || quotesLoading,
+    plan,
+    features,
+    isFree,
+    isStarter,
+    isPro,
+    monthlyQuotesUsed,
+    monthlyQuotesLimit,
+    remainingQuotes,
+    canCreateNewQuote,
+    isTrialing: false,
+  };
 }
+
+export { PLAN_FEATURES };

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Mail, Loader2, CheckCircle2, AlertCircle, ArrowLeft } from "lucide-react";
-import { Logo } from "@/components/shared/Logo";
+import { QuoviLogo } from "@/components/shared/QuoviLogo";
 
 export default function MotDePasseOubliePage() {
   const [email, setEmail] = useState("");
@@ -40,7 +40,7 @@ export default function MotDePasseOubliePage() {
 
       <header className="relative z-10 flex justify-center pt-8 pb-4">
         <Link href="/" className="cursor-pointer">
-          <Logo variant="horizontal" size={30} id="reset" />
+          <QuoviLogo size={30} />
         </Link>
       </header>
 

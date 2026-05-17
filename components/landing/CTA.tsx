@@ -81,7 +81,7 @@ export function CTA({
                 Accéder à mon espace
               </Button>
               <Button
-                href="/dashboard/quotes"
+                href="/dashboard/devis"
                 variant="secondary-outline-light"
               >
                 Voir mes devis

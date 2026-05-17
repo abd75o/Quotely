@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import { Plus, X, Sparkles } from "lucide-react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { PLAN_FEATURES } from "@/lib/permissions";
+import { NewQuoteButton } from "@/components/quotes/NewQuoteButton";
 
 export function WelcomeBanner() {
   const [visible, setVisible] = useState(true);
@@ -56,16 +57,15 @@ export function WelcomeBanner() {
             Bonjour {firstName}, créez votre premier devis en 30 secondes
           </p>
           <p className="text-sm text-indigo-200">
-            Vous êtes sur le plan Gratuit (5 devis/mois). Bienvenue chez Quovi.
+            Vous êtes sur le plan Free ({PLAN_FEATURES.free.maxDevisPerMonth} devis/mois). Bienvenue chez Quovi.
           </p>
         </div>
-        <Link
-          href="/dashboard/quotes/new"
+        <NewQuoteButton
           className="flex items-center gap-2 px-5 py-2.5 bg-white text-[var(--primary)] text-sm font-bold rounded-xl hover:bg-gray-50 cursor-pointer transition-colors shadow-md flex-shrink-0"
         >
           <Plus className="w-4 h-4" />
           Créer mon premier devis
-        </Link>
+        </NewQuoteButton>
       </div>
     </div>
   );

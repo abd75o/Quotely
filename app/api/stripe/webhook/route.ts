@@ -75,6 +75,43 @@ export async function POST(request: Request) {
     }
 
     console.log(`[webhook] profiles.plan updated to '${plan}' for user ${userId}`);
+
+    // ── Affiliate + parrainage conversion on first payment ──────────────────
+    // Best-effort: errors here must NOT fail the webhook (Stripe would retry
+    // and we'd re-update the plan, which is fine but noisy).
+    try {
+      await handleFirstPaymentAttribution(userId);
+    } catch (e) {
+      console.error("[webhook] attribution-on-payment failed:", e);
+    }
+  }
+
+  // ── customer.subscription.updated ──────────────────────────────────────────
+  // Fires when the customer changes plan from the Stripe Customer Portal
+  // (e.g. upgrades from Starter → Pro outside of our embedded checkout).
+  // We resolve the new plan from the price_id on the active subscription item
+  // and write it back so profiles.plan stays the source of truth.
+  if (event.type === "customer.subscription.updated") {
+    const subscription = event.data.object as Stripe.Subscription;
+    const userId = subscription.metadata?.userId;
+    const priceId = subscription.items?.data?.[0]?.price?.id ?? "";
+    let plan: "starter" | "pro" | null = null;
+    if (priceId === process.env.STRIPE_STARTER_MONTHLY_PRICE_ID) plan = "starter";
+    else if (priceId === process.env.STRIPE_PRO_MONTHLY_PRICE_ID) plan = "pro";
+
+    console.log("[webhook] subscription.updated — userId:", userId ?? "(missing)", "plan:", plan ?? "(unknown)");
+
+    if (userId && plan) {
+      const { error } = await getSupabaseAdmin()
+        .from("profiles")
+        .update({ plan, stripe_subscription_id: subscription.id })
+        .eq("id", userId);
+      if (error) {
+        console.error("[webhook] subscription.updated DB error:", error.message);
+      } else {
+        console.log(`[webhook] plan synced to '${plan}' for user ${userId}`);
+      }
+    }
   }
 
   // ── customer.subscription.deleted ──────────────────────────────────────────
@@ -84,13 +121,75 @@ export async function POST(request: Request) {
     console.log("[webhook] subscription.deleted — userId:", userId ?? "(missing)");
 
     if (userId) {
+      // Downgrade to `free`, NOT `trial` — the 14-day trial was retired in
+      // May 2026 and `trial` is no longer in the profiles.plan CHECK
+      // constraint (see migration 20260513_freemium_signup.sql). Writing
+      // `trial` would 500 on the DB.
       await getSupabaseAdmin()
         .from("profiles")
-        .update({ plan: "trial", trial_ends_at: null })
+        .update({ plan: "free", trial_ends_at: null })
         .eq("id", userId);
-      console.log(`[webhook] plan reset to 'trial' for user ${userId}`);
+      console.log(`[webhook] plan reset to 'free' for user ${userId}`);
     }
   }
 
   return NextResponse.json({ received: true });
+}
+
+/**
+ * On a user's first paid checkout:
+ *  - Mark the affiliate_referrals row as having received first payment (so
+ *    commission accrual starts on the next billing cycle).
+ *  - Convert the referrals row (parrainage) from 'pending' to 'converted'
+ *    and grant +1 month of credit to BOTH the referrer and the referred.
+ *
+ * Idempotent: relies on `first_payment_date IS NULL` / `status = 'pending'`
+ * filters so repeated webhook deliveries don't double-credit.
+ */
+async function handleFirstPaymentAttribution(userId: string): Promise<void> {
+  const admin = getSupabaseAdmin();
+
+  // 1. Affiliate attribution timestamp
+  await admin
+    .from("affiliate_referrals")
+    .update({ first_payment_date: new Date().toISOString() })
+    .eq("referred_user_id", userId)
+    .is("first_payment_date", null);
+
+  // 2. Parrainage conversion
+  const { data: ref } = await admin
+    .from("referrals")
+    .select("id, referrer_id, referred_id, status")
+    .eq("referred_id", userId)
+    .eq("status", "pending")
+    .maybeSingle();
+
+  if (!ref) return;
+
+  const now = new Date().toISOString();
+  await admin
+    .from("referrals")
+    .update({
+      status: "rewarded",
+      first_payment_date: now,
+      reward_granted_at: now,
+    })
+    .eq("id", ref.id);
+
+  // +1 month for each of the referrer and the referred. Read-then-write is
+  // fine here — these events fire at most once per user per checkout.
+  await Promise.all(
+    [ref.referrer_id, userId].map(async (uid) => {
+      const { data: rp } = await admin
+        .from("profiles")
+        .select("referral_credits_months")
+        .eq("id", uid)
+        .maybeSingle();
+      const current = rp?.referral_credits_months ?? 0;
+      await admin
+        .from("profiles")
+        .update({ referral_credits_months: current + 1 })
+        .eq("id", uid);
+    }),
+  );
 }

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Logo } from "@/components/shared/Logo";
+import { QuoviLogo } from "@/components/shared/QuoviLogo";
 import { Button } from "@/components/ui/Button";
 import { useUserState } from "@/lib/hooks/useUserState";
 
@@ -55,7 +55,8 @@ export function Navbar() {
               href="/"
               className="flex items-center hover:opacity-90 transition-opacity duration-150 cursor-pointer"
             >
-              <Logo variant="horizontal" size={36} />
+              {/* Landing navbar — animated mount once per full page load. */}
+              <QuoviLogo size={36} animated />
             </Link>
 
             {/* Desktop nav */}
@@ -137,7 +138,7 @@ export function Navbar() {
           )}
         >
           <div className="flex items-center justify-between px-6 h-[72px] border-b border-[var(--border-light)]">
-            <Logo variant="horizontal" size={36} />
+            <QuoviLogo size={36} />
             <button
               onClick={() => setIsMenuOpen(false)}
               className="inline-flex items-center justify-center w-11 h-11 rounded-lg text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-colors duration-150 cursor-pointer"

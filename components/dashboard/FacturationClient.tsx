@@ -10,10 +10,12 @@ import {
   Loader2,
   Sparkles,
 } from "lucide-react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useUserState, useUserPlan } from "@/lib/hooks/useUserState";
-import { useUpgradeModal } from "@/lib/hooks/useUpgradeModal";
+import { PLAN_FEATURES } from "@/lib/permissions";
 import { toastError, toastInfo, toastSuccess } from "@/lib/toast";
 import { cn } from "@/lib/utils";
+import { UpgradeModal } from "@/components/billing/UpgradeModal";
 
 interface InvoiceRow {
   id: string;
@@ -48,7 +50,35 @@ function formatDate(iso: string | null | undefined): string | null {
 export function FacturationClient() {
   const { state, daysLeft, profile } = useUserState();
   const { isStarter, isPro, isTrialing } = useUserPlan();
-  const { showUpgradeModal } = useUpgradeModal();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const currentPlan: "free" | "starter" | "pro" = isPro
+    ? "pro"
+    : isStarter
+      ? "starter"
+      : "free";
+
+  // ?upgrade=success → green toast + clean URL. The plan itself is synced via
+  // the Stripe webhook (checkout.session.completed → profiles.plan), so we
+  // don't try to re-read it client-side here — the next page render picks it
+  // up from useUserState.
+  useEffect(() => {
+    if (searchParams?.get("upgrade") === "success") {
+      toastSuccess("Bienvenue sur ton nouveau plan 🎉");
+      if (pathname) {
+        const params = new URLSearchParams(searchParams.toString());
+        params.delete("upgrade");
+        params.delete("session_id");
+        const next = params.toString() ? `${pathname}?${params}` : pathname;
+        router.replace(next, { scroll: false });
+      }
+    }
+    // pathname/router are stable refs; we want this to fire only when the
+    // search params change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const cancelAt = profile?.subscription_cancel_at ?? null;
   const periodEnd = profile?.subscription_current_period_end ?? null;
@@ -131,13 +161,7 @@ export function FacturationClient() {
         isCancelled={isCancelled}
         nextChargeLabel={nextChargeLabel}
         cancelDateLabel={cancelDateLabel}
-        onUpgradeProClick={() =>
-          showUpgradeModal(
-            "Plan Pro",
-            "Passez au Pro pour débloquer la dictée vocale, l'IA, les relances automatiques et les devis illimités.",
-            Sparkles
-          )
-        }
+        onUpgradeProClick={() => setUpgradeOpen(true)}
         onCancelClick={() => setConfirmCancelOpen(true)}
         onReactivate={openStripePortal}
       />
@@ -221,6 +245,12 @@ export function FacturationClient() {
           </button>
         </section>
       )}
+
+      <UpgradeModal
+        open={upgradeOpen}
+        onClose={() => setUpgradeOpen(false)}
+        currentPlan={currentPlan}
+      />
 
       {confirmCancelOpen && (
         <CancelConfirmModal
@@ -311,16 +341,17 @@ function PlanCard({
       </button>
     );
   } else if (state === "subscribed_free") {
-    badge = "Plan Gratuit";
-    title = "Vous êtes sur le plan Gratuit.";
-    subtitle = "5 devis par mois. Passez à Starter ou Pro pour aller plus loin.";
+    badge = "Plan Free";
+    title = "Vous êtes sur le plan Free.";
+    subtitle = `${PLAN_FEATURES.free.maxDevisPerMonth} devis par mois. Passez à Starter ou Pro pour aller plus loin.`;
     action = (
-      <a
-        href="/tarifs"
+      <button
+        type="button"
+        onClick={onUpgradeProClick}
         className="inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-bold text-white bg-[var(--primary)] hover:bg-[var(--primary-dark)] rounded-xl cursor-pointer transition-colors shadow-sm"
       >
         Voir les plans
-      </a>
+      </button>
     );
   } else if (isStarter) {
     badge = "Plan Starter · 25 €/mois";
@@ -345,12 +376,13 @@ function PlanCard({
       ? `Prochain prélèvement : ${nextChargeLabel}.`
       : "Toutes les fonctionnalités sont débloquées.";
     action = (
-      <a
-        href="/tarifs"
+      <button
+        type="button"
+        onClick={onUpgradeProClick}
         className="inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold text-[var(--text-primary)] bg-white border border-[var(--border)] hover:bg-[var(--surface)] rounded-xl cursor-pointer transition-colors"
       >
-        Repasser à Starter
-      </a>
+        Gérer mon plan
+      </button>
     );
     inlineCancel = true;
   }

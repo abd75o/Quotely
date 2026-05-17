@@ -104,7 +104,7 @@ function QuoteRowMenu({ quote }: { quote: QuoteRow }) {
               <Copy className="w-3.5 h-3.5" /> Copier le lien
             </button>
             <Link
-              href={`/dashboard/quotes/${quote.id}`}
+              href={`/dashboard/devis/${quote.id}`}
               className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-gray-50 cursor-pointer"
             >
               <Send className="w-3.5 h-3.5" /> Envoyer au client
@@ -248,7 +248,7 @@ export function QuotesList({ initialQuotes }: { initialQuotes: QuoteRow[] }) {
             {filtered.map((quote) => (
               <li key={quote.id}>
                 <Link
-                  href={`/dashboard/quotes/${quote.id}`}
+                  href={`/dashboard/devis/${quote.id}`}
                   className="block bg-white rounded-2xl border border-[var(--border)] p-4 hover:border-[var(--primary)]/30 hover:shadow-sm cursor-pointer transition-all"
                 >
                   <div className="flex items-center justify-between gap-2 mb-2">
@@ -292,7 +292,7 @@ export function QuotesList({ initialQuotes }: { initialQuotes: QuoteRow[] }) {
               {filtered.map((quote) => (
                 <li key={quote.id}>
                   <Link
-                    href={`/dashboard/quotes/${quote.id}`}
+                    href={`/dashboard/devis/${quote.id}`}
                     className="grid grid-cols-[1fr_160px_120px_140px_100px_40px] gap-4 items-center px-6 py-4 hover:bg-[var(--surface)] cursor-pointer transition-colors group"
                   >
                     <div className="flex items-center gap-3 min-w-0">

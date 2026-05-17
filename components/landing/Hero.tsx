@@ -2,7 +2,6 @@
 
 import { IconCheck } from "@tabler/icons-react";
 import { Button } from "@/components/ui/Button";
-import { Highlight } from "@/components/ui/Highlight";
 import { ScrollIndicator } from "@/components/landing/ScrollIndicator";
 import { AudioWave } from "@/components/landing/AudioWave";
 import { HeroMockup } from "@/components/landing/HeroMockup";
@@ -24,15 +23,19 @@ export function Hero() {
 
       <div className="relative w-full max-w-[1600px] mx-auto px-6 lg:px-8">
         <div className="grid lg:grid-cols-12 gap-10 lg:gap-16 items-center">
-          {/* Copy */}
+          {/* Copy — sans-serif (Inter) extrabold for the new value-prop hero. */}
           <div className="lg:col-span-7 animate-fade-in-up text-center lg:text-left">
-            <h1 className="font-display text-[36px] sm:text-[40px] md:text-[56px] font-medium leading-[1.05] tracking-[-0.025em] text-[var(--text-primary)]">
-              Pendant que vous écrivez,{" "}
-              <Highlight variant="primary">ils signent ailleurs</Highlight>.
+            <h1 className="font-sans text-[36px] sm:text-[44px] md:text-[60px] font-extrabold leading-[1.05] tracking-[-0.03em] text-[var(--text-primary)]">
+              Devis BTP en 2 minutes,
+              <br />
+              <span className="text-[var(--primary)]">
+                signature en 1 clic.
+              </span>
             </h1>
 
             <p className="mt-6 text-base md:text-xl leading-relaxed text-[var(--text-secondary)] max-w-xl mx-auto lg:mx-0">
-              Le devis part en 30 secondes. Votre client signe sur son téléphone. Vous, vous bossez.
+              Émile, ton assistant IA, rédige tes devis pendant que tu encaisses
+              tes chantiers. Plus simple, plus rapide, plus signé.
             </p>
 
             <div className="mt-8 md:mt-10 flex flex-col sm:flex-row items-stretch sm:items-center justify-center lg:justify-start gap-3 sm:gap-4">
@@ -42,11 +45,11 @@ export function Hero() {
                 </Button>
               ) : (
                 <Button href="/inscription" variant="primary" icon>
-                  Démarrer gratuitement
+                  Essayer gratuitement
                 </Button>
               )}
               <Button href="#comment-ca-marche" variant="secondary">
-                Voir comment ça marche
+                Voir une démo
               </Button>
             </div>
 

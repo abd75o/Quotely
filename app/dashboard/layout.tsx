@@ -1,8 +1,6 @@
 import type { ReactNode } from "react";
 import { Toaster } from "sonner";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
-import { TrialBanner } from "@/components/dashboard/TrialBanner";
-import { ChatBotWrapper } from "@/components/ai/ChatBotWrapper";
 import { UpgradeModalProvider } from "@/lib/hooks/useUpgradeModal";
 
 export const metadata = {
@@ -17,11 +15,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         <DashboardSidebar />
         <main className="flex-1 min-w-0 flex flex-col w-full">
           <div className="flex-1 px-4 lg:px-8 py-5 lg:py-8">
-            <TrialBanner />
             {children}
           </div>
         </main>
-        <ChatBotWrapper />
       </div>
       <Toaster
         position="top-center"

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Mail } from "lucide-react";
-import { Logo } from "@/components/shared/Logo";
+import { QuoviLogo } from "@/components/shared/QuoviLogo";
 
 const PRODUCT_LINKS = [
   { label: "Émile", href: "/#emile" },
@@ -45,7 +45,7 @@ export function Footer() {
               href="/"
               className="inline-flex mb-4 hover:opacity-80 transition-opacity duration-150"
             >
-              <Logo variant="horizontal" size={36} inverted />
+              <QuoviLogo size={36} inverted />
             </Link>
             <p className="text-sm text-gray-300 leading-relaxed mb-6 max-w-xs">
               Le devis qui signe pour vous.

@@ -153,7 +153,7 @@ export function PendingQuotesList({ className }: { className?: string }) {
                 <Clock className="w-4 h-4 text-amber-600" />
               </div>
               <Link
-                href={`/dashboard/quotes/${q.id}`}
+                href={`/dashboard/devis/${q.id}`}
                 className="flex-1 min-w-0 group cursor-pointer"
               >
                 <p className="text-sm font-semibold text-[var(--text-primary)] truncate group-hover:text-[var(--primary)] transition-colors">

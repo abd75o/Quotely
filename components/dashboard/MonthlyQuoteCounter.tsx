@@ -1,6 +1,5 @@
 "use client";
 
-import { useMonthlyQuoteCount } from "@/lib/hooks/useMonthlyQuoteCount";
 import { useUserPlan } from "@/lib/hooks/useUserState";
 import { cn } from "@/lib/utils";
 
@@ -12,13 +11,20 @@ import { cn } from "@/lib/utils";
  * - red-600 si limite atteinte
  */
 export function MonthlyQuoteCounter({ className }: { className?: string }) {
-  const { isStarter, isLoading: planLoading } = useUserPlan();
-  const { isLoading, count, limit, remaining, isLimitReached } = useMonthlyQuoteCount();
+  const {
+    isStarter,
+    isLoading,
+    monthlyQuotesUsed,
+    monthlyQuotesLimit,
+    remainingQuotes,
+    canCreateNewQuote,
+  } = useUserPlan();
 
-  if (planLoading || !isStarter) return null;
-  if (isLoading || !Number.isFinite(limit)) return null;
+  if (isLoading || !isStarter) return null;
+  if (!Number.isFinite(monthlyQuotesLimit)) return null;
 
-  const lowRemaining = remaining <= 5 && !isLimitReached;
+  const isLimitReached = !canCreateNewQuote;
+  const lowRemaining = remainingQuotes <= 5 && !isLimitReached;
   const colorClass = isLimitReached
     ? "text-red-600"
     : lowRemaining
@@ -29,7 +35,7 @@ export function MonthlyQuoteCounter({ className }: { className?: string }) {
     <p className={cn("text-xs sm:text-sm font-medium", colorClass, className)}>
       {isLimitReached
         ? "Limite mensuelle atteinte"
-        : `Vous avez créé ${count} / ${limit} devis ce mois-ci`}
+        : `Vous avez créé ${monthlyQuotesUsed} / ${monthlyQuotesLimit} devis ce mois-ci`}
     </p>
   );
 }

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff, Loader2, CheckCircle2, AlertCircle, Lock } from "lucide-react";
-import { Logo } from "@/components/shared/Logo";
+import { QuoviLogo } from "@/components/shared/QuoviLogo";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -55,7 +55,7 @@ export default function ResetPasswordPage() {
 
       <header className="relative z-10 flex justify-center pt-8 pb-4">
         <Link href="/" className="cursor-pointer">
-          <Logo variant="horizontal" size={30} id="reset-password" />
+          <QuoviLogo size={30} />
         </Link>
       </header>
 

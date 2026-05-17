@@ -6,21 +6,23 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   FileText,
   Users,
+  UserCircle2,
   BarChart2,
   Settings,
+  LayoutDashboard,
+  Lock,
   Plus,
   Menu,
   X,
   ChevronLeft,
   ChevronRight,
   LogOut,
+  Gift,
 } from "lucide-react";
-import { Logo } from "@/components/shared/Logo";
-import { TrialBadge } from "@/components/auth/TrialBadge";
+import { QuoviLogo } from "@/components/shared/QuoviLogo";
 import { NewQuoteButton } from "@/components/quotes/NewQuoteButton";
-import { ProBadge } from "@/components/ui/ProBadge";
 import { useUserPlan } from "@/lib/hooks/useUserState";
-import { useUpgradeModal } from "@/lib/hooks/useUpgradeModal";
+import { getPlanFeatures, type Plan } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 
 interface NavItemDef {
@@ -32,21 +34,21 @@ interface NavItemDef {
 }
 
 const NAV: NavItemDef[] = [
-  { label: "Équipe",                 icon: Users,     href: "/dashboard/equipe" },
-  { label: "Devis",                  icon: FileText,  href: "/dashboard/quotes" },
-  { label: "Clients",                icon: Users,     href: "/dashboard/clients" },
-  { label: "Statistiques avancées",  icon: BarChart2, href: "/dashboard/stats", proOnly: true },
-  { label: "Paramètres",             icon: Settings,  href: "/dashboard/parametres" },
+  { label: "Tableau de bord", icon: LayoutDashboard, href: "/dashboard" },
+  { label: "Mon équipe",      icon: Users,           href: "/dashboard/equipe" },
+  { label: "Devis",           icon: FileText,        href: "/dashboard/devis" },
+  { label: "Clients",         icon: UserCircle2,     href: "/dashboard/clients" },
+  { label: "Statistiques",    icon: BarChart2,       href: "/dashboard/stats", proOnly: true },
+  { label: "Parrainage",      icon: Gift,            href: "/dashboard/parrainage" },
+  { label: "Paramètres",      icon: Settings,        href: "/dashboard/parametres" },
 ];
 
-const REDACTEUR_PATH = "/dashboard/equipe/redacteur";
+const EMILE_PATH = "/dashboard/emile";
 
 interface SidebarData {
   email: string;
   initials: string;
   company: string;
-  plan: string;
-  trialEndsAt: string | null;
 }
 
 function useSidebarData(): SidebarData {
@@ -54,8 +56,6 @@ function useSidebarData(): SidebarData {
     email: "",
     initials: "?",
     company: "",
-    plan: "trial",
-    trialEndsAt: null,
   });
 
   useEffect(() => {
@@ -69,7 +69,7 @@ function useSidebarData(): SidebarData {
 
         supabase
           .from("profiles")
-          .select("plan, trial_ends_at, company")
+          .select("company")
           .eq("id", user.id)
           .single()
           .then(({ data: profile }) => {
@@ -78,8 +78,6 @@ function useSidebarData(): SidebarData {
               email,
               initials: (profile.company ?? email).slice(0, 2).toUpperCase(),
               company: profile.company ?? "",
-              plan: profile.plan ?? "trial",
-              trialEndsAt: profile.trial_ends_at ?? null,
             });
           });
       });
@@ -95,14 +93,12 @@ function NavItem({
   locked,
   collapsed,
   onClick,
-  onLockedClick,
 }: {
   item: NavItemDef;
   active: boolean;
   locked: boolean;
   collapsed: boolean;
   onClick?: () => void;
-  onLockedClick?: () => void;
 }) {
   const baseCls = cn(
     "group relative flex items-center rounded-xl text-sm font-medium transition-all duration-150 cursor-pointer",
@@ -123,41 +119,26 @@ function NavItem({
   const tooltip = collapsed ? (
     <span className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-[11px] font-medium text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
       {item.label}
-      {locked && " (Pro)"}
+      {locked && " · Pro"}
     </span>
   ) : null;
-
-  if (locked) {
-    return (
-      <button
-        type="button"
-        onClick={() => {
-          onClick?.();
-          onLockedClick?.();
-        }}
-        className={cn(baseCls, !collapsed && "w-full text-left")}
-        aria-label={item.label}
-      >
-        <item.icon className={iconCls} />
-        {!collapsed && <span className="truncate">{item.label}</span>}
-        {!collapsed && (
-          <ProBadge size="sm" withIcon={false} className="ml-auto" />
-        )}
-        {tooltip}
-      </button>
-    );
-  }
 
   return (
     <Link
       href={item.href}
       onClick={onClick}
       className={baseCls}
-      aria-label={item.label}
+      aria-label={locked ? `${item.label} — fonctionnalité Pro` : item.label}
     >
       <item.icon className={iconCls} />
-      {!collapsed && item.label}
-      {!collapsed && active && (
+      {!collapsed && <span className="truncate flex-1">{item.label}</span>}
+      {!collapsed && locked && (
+        <Lock
+          className="w-3 h-3 text-[var(--text-muted)] ml-auto"
+          aria-hidden
+        />
+      )}
+      {!collapsed && !locked && active && (
         <ChevronRight className="w-3 h-3 ml-auto text-[var(--primary)]" />
       )}
       {tooltip}
@@ -176,9 +157,10 @@ function SidebarContent({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { email, initials, company, plan, trialEndsAt } = useSidebarData();
-  const { isStarter } = useUserPlan();
-  const { showUpgradeModal } = useUpgradeModal();
+  const { email, initials, company } = useSidebarData();
+  const { isPro, plan } = useUserPlan();
+  const resolvedPlan: Plan = plan ?? "free";
+  const planLabel = `Plan ${getPlanFeatures(resolvedPlan).label}`;
 
   async function handleLogout() {
     const { createClient } = await import("@/lib/supabase/client");
@@ -205,11 +187,9 @@ function SidebarContent({
           className="cursor-pointer"
           aria-label="Quovi"
         >
-          <Logo
-            variant={collapsed ? "icon" : "horizontal"}
-            size={28}
-            id="sidebar"
-          />
+          {/* Static — re-mounts on every dashboard route change, never
+              animate so the user doesn't see the logo "respawn". */}
+          <QuoviLogo size={32} iconOnly={collapsed} />
         </Link>
         {onClose ? (
           <button
@@ -261,29 +241,23 @@ function SidebarContent({
         )}
       >
         {NAV.map((item) => {
-          const locked = !!item.proOnly && isStarter;
+          const locked = !!item.proOnly && !isPro;
+          const isActive =
+            item.href === "/dashboard"
+              ? pathname === "/dashboard"
+              : pathname.startsWith(item.href);
           return (
             <NavItem
               key={item.href}
               item={item}
-              active={!locked && pathname.startsWith(item.href)}
+              active={isActive}
               locked={locked}
               collapsed={collapsed}
               onClick={onClose}
-              onLockedClick={() =>
-                showUpgradeModal(
-                  "Statistiques avancées",
-                  "Graphiques d'évolution du chiffre d'affaires, score de signature et tableaux de bord détaillés.",
-                  BarChart2
-                )
-              }
             />
           );
         })}
       </nav>
-
-      {/* Trial badge — masqué en mode réduit */}
-      {!collapsed && <TrialBadge trialEndsAt={trialEndsAt} plan={plan} />}
 
       {/* User info + logout */}
       <div
@@ -313,13 +287,18 @@ function SidebarContent({
                 <p className="text-sm font-semibold text-[var(--text-primary)] truncate">
                   {company || email || "Mon compte"}
                 </p>
-                <p className="text-xs text-[var(--text-muted)] truncate">
-                  {plan === "trial"
-                    ? "Essai Pro"
-                    : plan === "starter"
-                      ? "Starter"
-                      : "Pro"}
-                </p>
+                <span
+                  className={cn(
+                    "inline-flex items-center px-2 py-0.5 mt-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider",
+                    resolvedPlan === "pro" || resolvedPlan === "comptable"
+                      ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white"
+                      : resolvedPlan === "starter"
+                        ? "bg-blue-50 text-blue-700 border border-blue-200"
+                        : "bg-gray-100 text-[var(--text-secondary)] border border-[var(--border)]"
+                  )}
+                >
+                  {planLabel}
+                </span>
               </div>
               <LogOut className="w-3.5 h-3.5 text-[var(--text-muted)] group-hover:text-red-500 flex-shrink-0 transition-colors" />
             </>
@@ -337,15 +316,15 @@ function SidebarContent({
 
 export function DashboardSidebar() {
   const pathname = usePathname();
-  const isRedacteur = pathname.startsWith(REDACTEUR_PATH);
-  const [collapsed, setCollapsed] = useState<boolean>(isRedacteur);
+  const isEmile = pathname.startsWith(EMILE_PATH);
+  const [collapsed, setCollapsed] = useState<boolean>(isEmile);
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // Auto-collapse en entrant sur Le Rédacteur, auto-expand en sortant.
+  // Auto-collapse en entrant sur Émile, auto-expand en sortant.
   // L'utilisateur peut toggle librement tant qu'il reste sur la même section.
   useEffect(() => {
-    setCollapsed(isRedacteur);
-  }, [isRedacteur]);
+    setCollapsed(isEmile);
+  }, [isEmile]);
 
   return (
     <>
@@ -374,7 +353,7 @@ export function DashboardSidebar() {
         </button>
 
         <Link href="/dashboard" className="justify-self-center cursor-pointer" aria-label="Tableau de bord">
-          <Logo variant="horizontal" size={28} id="mobile-header" />
+          <QuoviLogo size={28} />
         </Link>
 
         <NewQuoteButton

@@ -4,9 +4,13 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
-import { Logo } from "@/components/shared/Logo";
+import { QuoviLogo } from "@/components/shared/QuoviLogo";
+import { humanizeError } from "@/lib/errors";
 
 type Status = "loading" | "success" | "error";
+
+const EXPIRED_LINK_FALLBACK =
+  "Lien expiré. Demande un nouvel email de vérification.";
 
 function VerifyEmailContent() {
   const router = useRouter();
@@ -19,7 +23,12 @@ function VerifyEmailContent() {
     const errorParam = searchParams.get("error");
 
     if (errorParam) {
-      setErrorMessage(searchParams.get("error_description") ?? errorParam);
+      setErrorMessage(
+        humanizeError(
+          searchParams.get("error_description") ?? errorParam,
+          EXPIRED_LINK_FALLBACK,
+        ),
+      );
       setStatus("error");
       return;
     }
@@ -40,16 +49,26 @@ function VerifyEmailContent() {
         if (cancelled) return;
         if (error) {
           setStatus("error");
-          setErrorMessage(error.message);
+          setErrorMessage(humanizeError(error, EXPIRED_LINK_FALLBACK));
           return;
+        }
+        // Best-effort attribution: the verify-email flow is the primary signup
+        // path (email link). Without this, affiliate / parrainage cookies set
+        // at landing never get consumed. Server reads cookies + authenticated
+        // user from the session we just established.
+        try {
+          await fetch("/api/affiliates/track", {
+            method: "POST",
+            credentials: "include",
+          });
+        } catch (attribErr) {
+          console.error("[verify-email] attribution failed:", attribErr);
         }
         setStatus("success");
       } catch (err: unknown) {
         if (cancelled) return;
         setStatus("error");
-        setErrorMessage(
-          err instanceof Error ? err.message : "Erreur de vérification."
-        );
+        setErrorMessage(humanizeError(err, "Erreur de vérification."));
       }
     })();
 
@@ -61,8 +80,8 @@ function VerifyEmailContent() {
   useEffect(() => {
     if (status !== "success") return;
     const t = setTimeout(
-      () => router.push("/onboarding?welcome=true"),
-      2000
+      () => router.push("/dashboard/onboarding?welcome=true"),
+      700,
     );
     return () => clearTimeout(t);
   }, [status, router]);
@@ -71,7 +90,7 @@ function VerifyEmailContent() {
     <div className="min-h-screen bg-[#FBFAF7] flex flex-col">
       <header className="relative z-10 flex justify-center pt-8 pb-4">
         <Link href="/" className="cursor-pointer">
-          <Logo variant="horizontal" size={30} id="verify-email" />
+          <QuoviLogo size={30} />
         </Link>
       </header>
 
@@ -119,8 +138,8 @@ function VerifyEmailContent() {
                   Lien invalide ou expiré
                 </h1>
                 <p className="text-sm text-[var(--text-secondary)] leading-relaxed mb-2">
-                  Le lien de vérification n’est plus valide. Demandez un
-                  nouveau lien pour activer votre compte.
+                  Le lien de vérification n’est plus valide. Demande un
+                  nouveau lien pour activer ton compte.
                 </p>
                 {errorMessage && (
                   <p className="text-xs text-[var(--text-muted)] mb-6">

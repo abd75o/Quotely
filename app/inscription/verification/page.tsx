@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Mail, Loader2, Check } from "lucide-react";
-import { Logo } from "@/components/shared/Logo";
+import { QuoviLogo } from "@/components/shared/QuoviLogo";
 
 const COOLDOWN_SECONDS = 60;
 
@@ -52,7 +52,7 @@ function VerificationContent() {
       setError(
         err instanceof Error
           ? err.message
-          : "Impossible de renvoyer l’email. Réessayez."
+          : "Impossible de renvoyer l’email. Réessaie."
       );
     } finally {
       setResending(false);
@@ -63,7 +63,7 @@ function VerificationContent() {
     <div className="min-h-screen bg-[#FBFAF7] flex flex-col">
       <header className="relative z-10 flex justify-center pt-8 pb-4">
         <Link href="/" className="cursor-pointer">
-          <Logo variant="horizontal" size={30} id="verification" />
+          <QuoviLogo size={30} />
         </Link>
       </header>
 
@@ -75,18 +75,18 @@ function VerificationContent() {
             </div>
 
             <h1 className="font-display text-[28px] font-medium text-[var(--text-primary)] tracking-tight mb-3">
-              Vérifiez votre email
+              Vérifie ton email
             </h1>
 
             <p className="text-sm text-[var(--text-secondary)] leading-relaxed mb-1">
-              On vous a envoyé un email à
+              On t&apos;a envoyé un email à
             </p>
             <p className="text-sm font-semibold text-[var(--text-primary)] mb-5 break-all">
-              {email || "votre adresse"}
+              {email || "ton adresse"}
             </p>
 
             <p className="text-sm text-[var(--text-secondary)] leading-relaxed mb-8">
-              Cliquez sur le lien dans l’email pour activer votre compte. Le
+              Clique sur le lien dans l&apos;email pour activer ton compte. Le
               lien expire dans 24 heures.
             </p>
 
@@ -127,8 +127,7 @@ function VerificationContent() {
           </div>
 
           <p className="text-center text-xs text-[var(--text-muted)] mt-5">
-            Pensez à vérifier votre dossier spam si vous ne recevez pas
-            l’email.
+            Pense à vérifier ton dossier spam si tu ne reçois pas l&apos;email.
           </p>
         </div>
       </main>

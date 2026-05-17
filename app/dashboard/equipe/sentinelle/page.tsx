@@ -1,46 +1,135 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { ArrowLeft, Eye } from "lucide-react";
+import { LockedFeature } from "@/components/shared/LockedFeature";
+import { IrisDashboard } from "@/components/iris/IrisDashboard";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "La Sentinelle — Quovi",
+  title: "Iris — Quovi",
+  robots: { index: false, follow: false },
 };
 
-export default function SentinellePage() {
-  return (
-    <div className="mx-auto max-w-4xl">
-      <header className="mb-6">
-        <Link
-          href="/dashboard/equipe"
-          className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Retour à l&apos;équipe
-        </Link>
-        <div className="mt-3 border-b border-[var(--border-light)] pb-5">
-          <h1 className="text-2xl font-medium text-[var(--text-primary)]">
-            La Sentinelle
-          </h1>
-          <p className="mt-0.5 text-sm text-[var(--text-secondary)]">
-            Suivi & relances — surveille tes devis envoyés et te prévient quand
-            relancer.
-          </p>
-        </div>
-      </header>
+interface PendingItem {
+  id: string;
+  number: string;
+  clientName: string;
+  total: number;
+  daysSince: number;
+  nextRelance: "J+3" | "J+7" | "J+14";
+}
 
-      <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--border)] bg-white px-6 py-20 text-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#FAEEDA]">
-          <Eye className="h-7 w-7 text-[#BA7517]" />
-        </div>
-        <h2 className="mt-5 text-lg font-semibold text-[var(--text-primary)]">
-          Bientôt disponible
-        </h2>
-        <p className="mt-2 max-w-md text-sm text-[var(--text-secondary)]">
-          Cette fonctionnalité arrive en Phase 4 (mi-mai 2026). La Sentinelle
-          surveillera tes devis envoyés et te préviendra automatiquement quand
-          il faut relancer.
-        </p>
-      </div>
-    </div>
+interface IrisData {
+  pendingItems: PendingItem[];
+  remindersSentThisMonth: number;
+  signedThanksToIris: number;
+  successRate: number;
+  pendingOver3Days: number;
+}
+
+function nextRelance(daysSince: number): PendingItem["nextRelance"] {
+  if (daysSince < 3) return "J+3";
+  if (daysSince < 7) return "J+7";
+  return "J+14";
+}
+
+async function getIrisData(): Promise<IrisData> {
+  const empty: IrisData = {
+    pendingItems: [],
+    remindersSentThisMonth: 0,
+    signedThanksToIris: 0,
+    successRate: 0,
+    pendingOver3Days: 0,
+  };
+  try {
+    const { createClient } = await import("@/lib/supabase/server");
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return empty;
+
+    const { data, error } = await supabase
+      .from("quotes")
+      .select(
+        "id, number, total, status, created_at, client:clients(name)"
+      )
+      .eq("user_id", user.id)
+      .eq("status", "pending")
+      .order("created_at", { ascending: true });
+
+    if (error || !data) return empty;
+
+    const now = Date.now();
+    type Joined = { name?: string | null } | { name?: string | null }[] | null;
+    const rows = (data as Array<{
+      id: string;
+      number: string;
+      total: number | null;
+      created_at: string;
+      client: Joined;
+    }>).map((q) => {
+      const c = q.client;
+      const clientName = Array.isArray(c) ? c[0]?.name ?? "Client" : c?.name ?? "Client";
+      const daysSince = Math.floor((now - new Date(q.created_at).getTime()) / 86_400_000);
+      return {
+        id: q.id,
+        number: q.number,
+        clientName,
+        total: Number(q.total ?? 0),
+        daysSince,
+      };
+    });
+
+    const pendingOver3Days = rows.filter((r) => r.daysSince >= 3).length;
+    const pendingItems: PendingItem[] = rows
+      .filter((r) => r.daysSince >= 3)
+      .slice(0, 10)
+      .map((r) => ({ ...r, nextRelance: nextRelance(r.daysSince) }));
+
+    return {
+      pendingItems,
+      pendingOver3Days,
+      // Iris n'envoie pas encore de relances réellement : placeholders honnêtes.
+      remindersSentThisMonth: 0,
+      signedThanksToIris: 0,
+      successRate: 0,
+    };
+  } catch (err) {
+    console.error("[dashboard/sentinelle] getIrisData failed:", err);
+    return empty;
+  }
+}
+
+export default async function SentinellePage() {
+  const data = await getIrisData();
+
+  const teaserDescription = `Tu as actuellement ${data.pendingOver3Days} devis en attente depuis plus de 3 jours. Iris peut les relancer automatiquement pour toi (J+3 · J+7 · J+14) — avec une moyenne de 35% de devis signés en plus grâce aux relances.`;
+
+  return (
+    <LockedFeature
+      feature="canUseIris"
+      requiredPlan="pro"
+      variant="overlay"
+      teaser={{
+        title: "Iris pourrait t'aider",
+        description:
+          data.pendingOver3Days > 0
+            ? teaserDescription
+            : "Iris surveille tes devis envoyés et te prévient quand relancer. Plus jamais un client oublié.",
+        stats: [
+          { label: "En attente > 3j", value: data.pendingOver3Days },
+          { label: "Gain moyen", value: "+35%" },
+          { label: "Auto", value: "24/7" },
+        ],
+      }}
+    >
+      <IrisDashboard
+        pendingItems={data.pendingItems}
+        remindersSentThisMonth={data.remindersSentThisMonth}
+        signedThanksToIris={data.signedThanksToIris}
+        successRate={data.successRate}
+        recentActivity={[]}
+      />
+    </LockedFeature>
   );
 }

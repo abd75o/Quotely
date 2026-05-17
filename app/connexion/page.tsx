@@ -11,7 +11,7 @@ import {
   Lock,
   Mail,
 } from "lucide-react";
-import { Logo } from "@/components/shared/Logo";
+import { QuoviLogo } from "@/components/shared/QuoviLogo";
 import { SocialButton } from "@/components/auth/SocialButton";
 
 export default function ConnexionPage() {
@@ -30,8 +30,8 @@ export default function ConnexionPage() {
 
   async function handleSignin(e: React.FormEvent) {
     e.preventDefault();
-    if (!email.trim()) { setError("Entrez votre adresse email."); return; }
-    if (!password) { setError("Entrez votre mot de passe."); return; }
+    if (!email.trim()) { setError("Entre ton adresse email."); return; }
+    if (!password) { setError("Entre ton mot de passe."); return; }
     setLoading(true);
     setError("");
     try {
@@ -45,23 +45,26 @@ export default function ConnexionPage() {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("onboarded_at")
+        .select("onboarded_at, onboarding_completed")
         .eq("id", data.user.id)
         .single();
 
-      if (!profile?.onboarded_at) {
-        router.push(plan ? `/onboarding?plan=${plan}` : "/onboarding");
+      const isOnboarded =
+        !!profile?.onboarding_completed || !!profile?.onboarded_at;
+
+      if (!isOnboarded) {
+        router.push(plan ? `/dashboard/onboarding?plan=${plan}` : "/dashboard/onboarding");
       } else {
-        router.push(plan ? `/paiement?plan=${plan}` : "/dashboard/quotes");
+        router.push(plan ? `/paiement?plan=${plan}` : "/dashboard/devis");
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "";
       if (msg.toLowerCase().includes("invalid") || msg.toLowerCase().includes("credentials")) {
         setError("Email ou mot de passe incorrect.");
       } else if (msg.toLowerCase().includes("confirm")) {
-        setError("Confirmez votre email avant de vous connecter.");
+        setError("Confirme ton email avant de te connecter.");
       } else {
-        setError(msg || "Erreur de connexion. Réessayez.");
+        setError(msg || "Erreur de connexion. Réessaie.");
       }
     } finally {
       setLoading(false);
@@ -76,7 +79,7 @@ export default function ConnexionPage() {
 
       <header className="relative z-10 flex justify-center pt-8 pb-4">
         <Link href="/" className="cursor-pointer">
-          <Logo variant="horizontal" size={30} id="connexion" />
+          <QuoviLogo size={30} />
         </Link>
       </header>
 
@@ -143,7 +146,7 @@ export default function ConnexionPage() {
                       type={showPassword ? "text" : "password"}
                       value={password}
                       onChange={(e) => { setPassword(e.target.value); setError(""); }}
-                      placeholder="Votre mot de passe"
+                      placeholder="Ton mot de passe"
                       autoComplete="current-password"
                       className="w-full h-12 pl-10 pr-11 text-base sm:text-sm bg-white border border-[var(--border)] rounded-xl outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 placeholder:text-[var(--text-muted)] transition-all"
                     />

@@ -18,7 +18,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { Quote, SignatureType, getSignatureLabel } from "@/types";
-import { Logo } from "@/components/shared/Logo";
+import { QuoviLogo } from "@/components/shared/QuoviLogo";
 import { cn } from "@/lib/utils";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
@@ -277,7 +277,7 @@ export function SignatureClient({ quote }: { quote: Quote }) {
             </div>
           </div>
           <div className="mt-8 pt-6 border-t border-[var(--border)] flex justify-center">
-            <Logo variant="horizontal" size={24} />
+            <QuoviLogo size={24} />
           </div>
         </div>
       </div>
@@ -336,7 +336,7 @@ export function SignatureClient({ quote }: { quote: Quote }) {
       {/* Header */}
       <header className="bg-white border-b border-[var(--border)] sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
-          <Logo variant="horizontal" size={28} />
+          <QuoviLogo size={28} />
           <div className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold", badge.classes)}>
             <BadgeIcon className="w-3 h-3" />
             {badge.label}
@@ -587,7 +587,7 @@ export function SignatureClient({ quote }: { quote: Quote }) {
             </span>
           </div>
           <div className="flex justify-center mt-4">
-            <Logo variant="horizontal" size={22} />
+            <QuoviLogo size={22} />
           </div>
         </div>
       </div>

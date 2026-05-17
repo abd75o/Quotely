@@ -7,16 +7,17 @@
 -- ─── TABLE : profiles ────────────────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS public.profiles (
-  id                 UUID        PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  metier             TEXT,
-  company            TEXT,
-  telephone          TEXT,
-  plan               TEXT        DEFAULT 'trial' CHECK (plan IN ('trial', 'starter', 'pro')),
-  trial_ends_at      TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '14 days'),
-  onboarded_at       TIMESTAMPTZ,
-  reminder_scheduled BOOLEAN     DEFAULT FALSE,
-  created_at         TIMESTAMPTZ DEFAULT NOW(),
-  updated_at         TIMESTAMPTZ DEFAULT NOW()
+  id                  UUID        PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  metier              TEXT,
+  company             TEXT,
+  telephone           TEXT,
+  plan                TEXT        DEFAULT 'free' CHECK (plan IN ('free', 'starter', 'pro', 'comptable')),
+  subscription_status TEXT        DEFAULT 'active' CHECK (subscription_status IN ('active', 'canceled', 'past_due')),
+  trial_ends_at       TIMESTAMPTZ, -- deprecated: kept nullable for legacy reads, no longer populated
+  onboarded_at        TIMESTAMPTZ,
+  reminder_scheduled  BOOLEAN     DEFAULT FALSE,
+  created_at          TIMESTAMPTZ DEFAULT NOW(),
+  updated_at          TIMESTAMPTZ DEFAULT NOW()
 );
 
 
@@ -102,8 +103,10 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  INSERT INTO public.profiles (id, plan, trial_ends_at)
-  VALUES (NEW.id, 'trial', NOW() + INTERVAL '14 days')
+  -- Freemium model (May 2026): every new signup lands on Free with an
+  -- active subscription status. No more 14-day trial window.
+  INSERT INTO public.profiles (id, plan, subscription_status)
+  VALUES (NEW.id, 'free', 'active')
   ON CONFLICT (id) DO NOTHING;
   RETURN NEW;
 END;

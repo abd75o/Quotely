@@ -13,7 +13,7 @@ import {
   Lock,
   Mail,
 } from "lucide-react";
-import { Logo } from "@/components/shared/Logo";
+import { QuoviLogo } from "@/components/shared/QuoviLogo";
 import { SocialButton } from "@/components/auth/SocialButton";
 
 type Strength = {
@@ -82,7 +82,7 @@ export default function InscriptionPage() {
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
     if (!emailValid) {
-      setError("Entrez une adresse email valide.");
+      setError("Entre une adresse email valide.");
       return;
     }
     if (!passwordValid) {
@@ -96,7 +96,7 @@ export default function InscriptionPage() {
       return;
     }
     if (!cguAccepted) {
-      setError("Vous devez accepter les CGU pour continuer.");
+      setError("Tu dois accepter les CGU pour continuer.");
       return;
     }
     setLoading(true);
@@ -112,7 +112,7 @@ export default function InscriptionPage() {
       });
       if (sbError) throw sbError;
       if (data.session) {
-        router.push(plan ? `/onboarding?plan=${plan}` : "/onboarding");
+        router.push(plan ? `/dashboard/onboarding?plan=${plan}` : "/dashboard/onboarding");
       } else {
         router.push(
           `/inscription/verification?email=${encodeURIComponent(email.trim())}${plan ? `&plan=${plan}` : ""}`
@@ -131,7 +131,7 @@ export default function InscriptionPage() {
     <div className="min-h-screen bg-[#FBFAF7] flex flex-col">
       <header className="relative z-10 flex justify-center pt-8 pb-4">
         <Link href="/" className="cursor-pointer">
-          <Logo variant="horizontal" size={30} id="inscription" />
+          <QuoviLogo size={30} />
         </Link>
       </header>
 
@@ -142,13 +142,13 @@ export default function InscriptionPage() {
               <Info className="w-4 h-4 text-[var(--primary)] flex-shrink-0 mt-0.5" />
               <div className="text-left">
                 <p className="text-sm font-semibold text-[var(--primary-dark)]">
-                  Vous avez sélectionné le plan{" "}
+                  Tu as sélectionné le plan{" "}
                   {plan === "starter" ? "Starter" : "Pro"}
                 </p>
                 <p className="text-xs text-[var(--primary-dark)]/80 mt-0.5 leading-snug">
-                  Vous commencez en plan Gratuit pour tester. Vous pourrez
-                  basculer vers {plan === "starter" ? "Starter" : "Pro"} depuis
-                  votre tableau de bord.
+                  Tu commences en plan Gratuit pour tester. Tu pourras basculer
+                  vers {plan === "starter" ? "Starter" : "Pro"} depuis ton
+                  tableau de bord.
                 </p>
               </div>
             </div>
@@ -157,7 +157,7 @@ export default function InscriptionPage() {
           <div className="bg-white rounded-3xl border border-[var(--border)] shadow-xl p-8 md:p-12">
             <div className="text-center mb-8">
               <h1 className="text-2xl font-extrabold text-[var(--text-primary)] tracking-tight">
-                Créez votre compte
+                Crée ton compte
               </h1>
               <p className="text-sm text-[var(--text-secondary)] mt-1.5">
                 Déjà inscrit ?{" "}
@@ -288,7 +288,7 @@ export default function InscriptionPage() {
                         setConfirmPassword(e.target.value);
                         setError("");
                       }}
-                      placeholder="Saisissez à nouveau"
+                      placeholder="Saisis à nouveau"
                       autoComplete="new-password"
                       className={`w-full h-12 pl-10 pr-16 text-base sm:text-sm bg-white border rounded-xl outline-none focus:ring-2 placeholder:text-[var(--text-muted)] transition-all ${
                         confirmMismatch

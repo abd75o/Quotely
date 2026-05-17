@@ -7,12 +7,13 @@ import { Button } from "@/components/ui/Button";
 import { Reveal } from "@/components/ui/Reveal";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { useUserState, type UserStateValue } from "@/lib/hooks/useUserState";
+import { PLAN_FEATURES } from "@/lib/permissions";
 
 const UPGRADE_TOOLTIP =
   "Bientôt disponible. Stripe en cours de configuration.";
 
 const FREE_HIGHLIGHTS = [
-  "Émile inclus (5 devis/mois)",
+  `Émile inclus (${PLAN_FEATURES.free.maxDevisPerMonth} devis/mois)`,
   "Devis au design pro (à votre image)",
   "TVA automatique",
   "Mentions légales automatiques",
@@ -21,7 +22,7 @@ const FREE_HIGHLIGHTS = [
 
 const STARTER_HIGHLIGHTS = [
   "Tout le plan Gratuit inclus",
-  "Émile inclus (30 devis/mois)",
+  `Émile inclus (${PLAN_FEATURES.starter.maxDevisPerMonth} devis/mois)`,
   "Signature en ligne par email",
   "Suivi en temps réel",
   "Facture générée après signature",
@@ -32,7 +33,7 @@ const PRO_HIGHLIGHTS = [
   "Tout le plan Starter inclus",
   "Signature certifiée pour les missions importantes",
   "Tableau de bord (revenus en temps réel)",
-  "Jusqu’à 100 devis par mois",
+  `Jusqu’à ${PLAN_FEATURES.pro.maxDevisPerMonth} devis par mois`,
   "Support prioritaire",
 ];
 

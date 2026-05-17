@@ -1,0 +1,149 @@
+import { NextRequest } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { generateQuotePdfBuffer } from "@/lib/pdf/generate";
+import type {
+  PdfClient,
+  PdfProfile,
+  PdfQuote,
+} from "@/lib/pdf/quote-template";
+
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
+interface QuoteItemRaw {
+  id?: string;
+  label?: string;
+  price?: number;
+  quantity?: number;
+  unite?: string | null;
+  tva?: number;
+}
+
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+  const supabase = await createClient();
+  const token = req.nextUrl.searchParams.get("token");
+
+  // Accès propriétaire OU accès public via signature_token
+  let query = supabase
+    .from("quotes")
+    .select(
+      "id, user_id, client_id, number, status, items, subtotal, tax_rate, tax_amount, total, valid_until, notes, signature_token, signed_at, signature_data, created_at, clients(*)",
+    )
+    .eq("id", id);
+
+  if (token) {
+    query = query.eq("signature_token", token);
+  } else {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    query = query.eq("user_id", user.id);
+  }
+
+  const { data: quote, error } = await query.maybeSingle();
+  if (error) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+  if (!quote) {
+    return new Response(JSON.stringify({ error: "Not found" }), {
+      status: 404,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", quote.user_id as string)
+    .maybeSingle();
+
+  const items = Array.isArray(quote.items)
+    ? (quote.items as QuoteItemRaw[])
+    : [];
+  const clientRow = Array.isArray(quote.clients)
+    ? (quote.clients[0] as Record<string, unknown> | undefined)
+    : ((quote.clients as Record<string, unknown> | null) ?? undefined);
+
+  const sigDataRaw = (quote as { signature_data?: unknown }).signature_data;
+  const signatureData =
+    sigDataRaw && typeof sigDataRaw === "object" && !Array.isArray(sigDataRaw)
+      ? (sigDataRaw as Record<string, unknown>)
+      : null;
+
+  const pdfQuote: PdfQuote = {
+    number: quote.number as string,
+    status: quote.status as string,
+    created_at: quote.created_at as string,
+    valid_until: (quote.valid_until as string | null) ?? null,
+    items: items.map((it, idx) => ({
+      id: String(it.id ?? `l-${idx}`),
+      label: String(it.label ?? "Prestation"),
+      quantity: Number(it.quantity ?? 1),
+      unite: (it.unite ?? null) as string | null,
+      price: Number(it.price ?? 0),
+      tva: Number(it.tva ?? quote.tax_rate ?? 20),
+    })),
+    subtotal: Number(quote.subtotal),
+    tax_rate: Number(quote.tax_rate),
+    tax_amount: Number(quote.tax_amount),
+    total: Number(quote.total),
+    notes: (quote.notes as string | null) ?? null,
+    signed_at: (quote as { signed_at?: string | null }).signed_at ?? null,
+    signature_data: signatureData,
+    signature_token:
+      (quote as { signature_token?: string | null }).signature_token ?? null,
+  };
+
+  const profileForPdf: PdfProfile = (profile ?? {}) as PdfProfile;
+  const clientForPdf: PdfClient = clientRow
+    ? {
+        name: String(clientRow.name ?? "Client"),
+        first_name: (clientRow.first_name as string | null) ?? null,
+        email: (clientRow.email as string | null) ?? null,
+        phone: (clientRow.phone as string | null) ?? null,
+        address: (clientRow.address as string | null) ?? null,
+        postal_code: (clientRow.postal_code as string | null) ?? null,
+        city: (clientRow.city as string | null) ?? null,
+        type_client:
+          (clientRow.type_client as "particulier" | "professionnel" | null) ??
+          null,
+        siret: (clientRow.siret as string | null) ?? null,
+      }
+    : { name: "Client" };
+
+  let buffer: Buffer;
+  try {
+    buffer = await generateQuotePdfBuffer({
+      quote: pdfQuote,
+      profile: profileForPdf,
+      client: clientForPdf,
+    });
+  } catch (e) {
+    return new Response(
+      JSON.stringify({ error: (e as Error).message ?? "PDF échoué" }),
+      { status: 500, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  return new Response(new Uint8Array(buffer), {
+    status: 200,
+    headers: {
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `inline; filename="Devis-${quote.number}.pdf"`,
+      "Cache-Control": "no-store",
+    },
+  });
+}

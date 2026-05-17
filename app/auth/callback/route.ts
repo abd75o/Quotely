@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import {
+  attributeNewUser,
+  REF_COOKIE,
+  PARRAIN_COOKIE,
+} from "@/lib/auth/attribution";
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/dashboard/quotes";
+  const next = searchParams.get("next") ?? "/dashboard/devis";
   const plan = searchParams.get("plan"); // preserved through email confirmation flow
 
   if (!code) {
@@ -36,16 +41,34 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${origin}/connexion?error=auth_failed`);
   }
 
+  // Attribute the new user to an affiliate / referrer if attribution cookies
+  // are present. Best-effort — errors are swallowed so signup never breaks.
+  const refCode = request.cookies.get(REF_COOKIE)?.value ?? null;
+  const parrainCode = request.cookies.get(PARRAIN_COOKIE)?.value ?? null;
+  if (refCode || parrainCode) {
+    try {
+      await attributeNewUser({
+        userId: user.id,
+        refCode,
+        parrainCode,
+      });
+    } catch (e) {
+      console.error("[auth/callback] attribution failed:", e);
+    }
+    if (refCode) response.cookies.delete(REF_COOKIE);
+    if (parrainCode) response.cookies.delete(PARRAIN_COOKIE);
+  }
+
   // Ensure profile exists (upsert — DB trigger also handles this for new users)
   const { data: profile } = await supabase
     .from("profiles")
     .upsert({ id: user.id, plan: "free" }, { onConflict: "id", ignoreDuplicates: true })
-    .select("id, onboarded_at")
+    .select("id, onboarding_completed, onboarded_at")
     .single();
 
   const onboardingDest = (plan === "starter" || plan === "pro")
-    ? `/onboarding?plan=${plan}`
-    : "/onboarding";
+    ? `/dashboard/onboarding?plan=${plan}`
+    : "/dashboard/onboarding";
 
   if (!profile) {
     // New user — create profile on Free plan
@@ -56,7 +79,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL(onboardingDest, origin), { headers: response.headers });
   }
 
-  if (!profile.onboarded_at) {
+  // V4: onboarding_completed is the source of truth; legacy onboarded_at honoured.
+  const isOnboarded = !!profile.onboarding_completed || !!profile.onboarded_at;
+  if (!isOnboarded) {
     return NextResponse.redirect(new URL(onboardingDest, origin), { headers: response.headers });
   }
 

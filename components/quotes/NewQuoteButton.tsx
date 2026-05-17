@@ -1,37 +1,44 @@
 "use client";
 
 import { type ReactNode } from "react";
-import Link from "next/link";
 import { FileText } from "lucide-react";
 import { useUserPlan } from "@/lib/hooks/useUserState";
-import { useMonthlyQuoteCount } from "@/lib/hooks/useMonthlyQuoteCount";
 import { useUpgradeModal } from "@/lib/hooks/useUpgradeModal";
+import { useStartEmileQuote } from "@/lib/emile/use-start-quote";
 
 interface NewQuoteButtonProps {
   className?: string;
   children: ReactNode;
   ariaLabel?: string;
   onClick?: () => void;
+  /** Optional client name to mention in the seed prompt to Émile. */
+  clientName?: string;
 }
 
 /**
  * Bouton « Nouveau devis » plan-aware.
- * - Starter avec count >= 30 ce mois → ouvre l'UpgradeProModal au lieu de naviguer.
- * - Sinon → comportement Link standard vers /dashboard/quotes/new.
+ * - Si la limite mensuelle du plan est atteinte → ouvre l'UpgradeProModal au lieu de naviguer.
+ * - Sinon → crée une nouvelle conversation Émile et navigue vers /dashboard/emile/<id>.
+ *   La création passe TOUJOURS par Émile (le rédacteur conversationnel). Pas de
+ *   formulaire manuel — c'est le différenciateur produit de Quovi.
  */
 export function NewQuoteButton({
   className,
   children,
   ariaLabel,
   onClick,
+  clientName,
 }: NewQuoteButtonProps) {
-  const { isStarter } = useUserPlan();
-  const { isLimitReached } = useMonthlyQuoteCount();
+  const { canCreateNewQuote, monthlyQuotesLimit, features, isLoading } = useUserPlan();
   const { showUpgradeModal } = useUpgradeModal();
+  const { startNewQuote, starting } = useStartEmileQuote();
 
-  const blocked = isStarter && isLimitReached;
+  const blocked = !isLoading && !canCreateNewQuote;
 
   if (blocked) {
+    const nextLabel = features.nextUpgrade
+      ? features.nextUpgrade.charAt(0).toUpperCase() + features.nextUpgrade.slice(1)
+      : "supérieur";
     return (
       <button
         type="button"
@@ -40,7 +47,7 @@ export function NewQuoteButton({
           onClick?.();
           showUpgradeModal(
             "Devis illimités",
-            "Vous avez atteint la limite de 30 devis ce mois-ci sur le plan Starter. Passez au Pro pour créer des devis sans limite.",
+            `Vous avez atteint la limite de ${monthlyQuotesLimit} devis ce mois-ci sur le plan ${features.label}. Passez au ${nextLabel} pour aller plus loin.`,
             FileText
           );
         }}
@@ -52,13 +59,17 @@ export function NewQuoteButton({
   }
 
   return (
-    <Link
-      href="/dashboard/quotes/new"
-      className={className}
+    <button
+      type="button"
       aria-label={ariaLabel}
-      onClick={onClick}
+      disabled={starting}
+      onClick={() => {
+        onClick?.();
+        void startNewQuote(clientName ? { clientName } : undefined);
+      }}
+      className={className}
     >
       {children}
-    </Link>
+    </button>
   );
 }

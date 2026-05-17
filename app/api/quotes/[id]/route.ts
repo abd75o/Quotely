@@ -37,13 +37,36 @@ export async function PUT(
     return Response.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  // Recalculate totals if items changed
+  // Build update payload explicitly — never spread `body` into the DB call:
+  // camelCase keys (taxRate, validUntil) silently no-op against Postgres
+  // columns (tax_rate, valid_until), so writes were being dropped.
+  const update: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+  };
+
+  if (typeof body.notes === "string" || body.notes === null) update.notes = body.notes;
+  const validUntilRaw = body.validUntil ?? body.valid_until;
+  if (validUntilRaw !== undefined) update.valid_until = validUntilRaw;
+
   if (body.items && Array.isArray(body.items)) {
-    const taxRate = Number(body.taxRate ?? 20);
-    const subtotal = (body.items as { total: number }[]).reduce((s, i) => s + i.total, 0);
-    const taxAmount = Math.round(subtotal * (taxRate / 100) * 100) / 100;
-    const total = subtotal + taxAmount;
-    body = { ...body, subtotal, tax_rate: taxRate, tax_amount: taxAmount, total, signature_type: getSignatureType(total) };
+    const items = body.items as { total?: number; quantity?: number; unitPrice?: number }[];
+    const taxRate = Number(body.taxRate ?? body.tax_rate ?? 20);
+    const subtotal = items.reduce(
+      (s, i) =>
+        s +
+        (Number(i.total) || (Number(i.quantity) || 0) * (Number(i.unitPrice) || 0)),
+      0,
+    );
+    const subtotalRounded = Math.round(subtotal * 100) / 100;
+    const taxAmount = Math.round(subtotalRounded * (taxRate / 100) * 100) / 100;
+    const total = Math.round((subtotalRounded + taxAmount) * 100) / 100;
+
+    update.items = items;
+    update.subtotal = subtotalRounded;
+    update.tax_rate = taxRate;
+    update.tax_amount = taxAmount;
+    update.total = total;
+    update.signature_type = getSignatureType(total);
   }
 
   try {
@@ -52,14 +75,15 @@ export async function PUT(
 
     const { data, error } = await supabase
       .from("quotes")
-      .update({ ...body, updated_at: new Date().toISOString() })
+      .update(update)
       .eq("id", id)
       .select()
       .single();
 
     if (error) throw error;
     return Response.json({ quote: data });
-  } catch {
+  } catch (e) {
+    console.error("[PUT /api/quotes/:id] update failed", e);
     return Response.json({ error: "Update failed" }, { status: 500 });
   }
 }

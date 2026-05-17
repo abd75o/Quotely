@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Building2, CreditCard } from "lucide-react";
+import { Building2, CreditCard, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const TABS = [
+  { href: "/dashboard/parametres/profil", label: "Mon profil", icon: User },
   { href: "/dashboard/parametres/entreprise", label: "Mon entreprise", icon: Building2 },
   { href: "/dashboard/parametres/facturation", label: "Facturation", icon: CreditCard },
 ];

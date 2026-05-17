@@ -5,6 +5,7 @@ import { ImageIcon, Loader2, Save, Trash2, Upload } from "lucide-react";
 import { TextField, SelectField, FieldShell } from "@/components/ui/Field";
 import { createClient } from "@/lib/supabase/client";
 import { toastError, toastSuccess } from "@/lib/toast";
+import { humanizeError } from "@/lib/errors";
 
 const LOGO_BUCKET = "company-logos";
 const LOGO_MAX_BYTES = 2 * 1024 * 1024;
@@ -54,8 +55,22 @@ interface CompanyForm {
   iban: string;
   bic: string;
   primary_color: string;
+  /** Canonical accent — replaces primary_color/couleur_principale. PDF + email
+   *  read this first. Validated /^#[0-9A-Fa-f]{6}$/ server-side and in DB. */
+  brand_color: string;
   logo_url: string;
 }
+
+const BRAND_PRESETS: ReadonlyArray<{ label: string; hex: string }> = [
+  { label: "Noir", hex: "#0F172A" },
+  { label: "Bleu", hex: "#2563EB" },
+  { label: "Indigo", hex: "#5B5BF6" },
+  { label: "Vert", hex: "#059669" },
+  { label: "Rouge", hex: "#DC2626" },
+  { label: "Orange", hex: "#EA580C" },
+];
+
+const BRAND_HEX_RE = /^#[0-9A-Fa-f]{6}$/;
 
 const EMPTY: CompanyForm = {
   email: "",
@@ -71,6 +86,7 @@ const EMPTY: CompanyForm = {
   iban: "",
   bic: "",
   primary_color: "#6366F1",
+  brand_color: "#0F172A",
   logo_url: "",
 };
 
@@ -100,7 +116,7 @@ export function EntrepriseForm() {
       const { data: profile } = await supabase
         .from("profiles")
         .select(
-          "company, metier, telephone, siret, address, postal_code, city, vat_status, vat_number, iban, bic, primary_color, logo_url"
+          "company, metier, telephone, siret, address, postal_code, city, vat_status, vat_number, iban, bic, primary_color, brand_color, logo_url"
         )
         .eq("id", user.id)
         .single();
@@ -121,6 +137,7 @@ export function EntrepriseForm() {
         iban: profile?.iban ?? "",
         bic: profile?.bic ?? "",
         primary_color: profile?.primary_color ?? "#6366F1",
+        brand_color: (profile?.brand_color as string | null) ?? "#0F172A",
         logo_url: profile?.logo_url ?? "",
       };
       setForm(next);
@@ -177,7 +194,8 @@ export function EntrepriseForm() {
       update("logo_url", url);
       toastSuccess("Logo téléversé");
     } catch (err) {
-      toastError(err instanceof Error ? err.message : "Échec du téléversement");
+      console.error("[EntrepriseForm] logo upload failed:", err);
+      toastError(humanizeError(err, "Échec du téléversement"));
     } finally {
       setUploadingLogo(false);
     }
@@ -200,6 +218,9 @@ export function EntrepriseForm() {
     if (form.vat_status === "assujetti" && !form.vat_number.trim()) {
       errs.vat_number = "Numéro de TVA requis pour les assujettis.";
     }
+    if (form.brand_color && !BRAND_HEX_RE.test(form.brand_color)) {
+      errs.brand_color = "Couleur invalide. Format attendu : #RRGGBB.";
+    }
     setErrors(errs);
     return Object.keys(errs).length === 0;
   }
@@ -209,16 +230,15 @@ export function EntrepriseForm() {
     if (!validate()) return;
     setSaving(true);
     try {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) throw new Error("Session expirée");
-
-      const payload = {
-        id: user.id,
-        company: form.company.trim(),
-        company_name: form.company.trim(),
+      // Build payload from FORM STATE ONLY. We never spread `form` or any
+      // other state into the body — that's how `plan` / `subscription_status`
+      // / `trial_ends_at` would sneak in and trip the `profiles_plan_check`
+      // CHECK constraint. Routing through /api/profile adds a second guard:
+      // the server-side allowlist drops any non-whitelisted column even if a
+      // future refactor accidentally widens this object.
+      const payload: Record<string, string | null> = {
+        company: form.company.trim() || null,
+        company_name: form.company.trim() || null,
         metier: form.metier || null,
         telephone: form.telephone.trim() || null,
         siret: form.siret.replace(/\s+/g, "") || null,
@@ -226,20 +246,35 @@ export function EntrepriseForm() {
         postal_code: form.postal_code.trim() || null,
         city: form.city.trim() || null,
         vat_status: form.vat_status,
-        vat_number: form.vat_status === "assujetti" ? form.vat_number.trim() : null,
+        vat_number:
+          form.vat_status === "assujetti" ? form.vat_number.trim() || null : null,
         iban: form.iban.replace(/\s+/g, "") || null,
         bic: form.bic.replace(/\s+/g, "").toUpperCase() || null,
         primary_color: form.primary_color || "#6366F1",
+        // Keep brand_color and primary_color in sync until the legacy column
+        // can be retired. brand_color is the canonical read path going forward.
+        brand_color: form.brand_color || "#0F172A",
         logo_url: form.logo_url || null,
       };
 
-      const { error } = await supabase.from("profiles").upsert(payload);
-      if (error) throw error;
+      const res = await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as {
+          error?: string;
+          fieldErrors?: Record<string, string>;
+        };
+        throw body.error || body.fieldErrors ? body : new Error(`HTTP ${res.status}`);
+      }
 
       setInitial(form);
       toastSuccess("Profil entreprise mis à jour");
     } catch (err) {
-      toastError(err instanceof Error ? err.message : "Erreur lors de la sauvegarde");
+      console.error("[EntrepriseForm] save failed:", err);
+      toastError(humanizeError(err, "Erreur lors de la sauvegarde"));
     } finally {
       setSaving(false);
     }
@@ -257,7 +292,7 @@ export function EntrepriseForm() {
     <form onSubmit={handleSubmit} className="pb-24">
       {/* Section 1 — Identité */}
       <Section title="Identité de l'entreprise">
-        <FieldShell label="Logo" hint="PNG, JPG, SVG ou WebP · 2 Mo max. Apparaît sur vos devis et factures.">
+        <FieldShell label="Logo" hint="Format conseillé : PNG transparent, 400×200px, fond transparent. PNG, JPG, SVG ou WebP · 2 Mo max. Apparaît sur vos devis et factures.">
           <div className="flex items-center gap-4 flex-wrap">
             <div className="w-16 h-16 rounded-2xl bg-[var(--surface)] border border-dashed border-[var(--border)] flex items-center justify-center text-[var(--text-muted)] overflow-hidden">
               {form.logo_url ? (
@@ -430,27 +465,71 @@ export function EntrepriseForm() {
         />
       </Section>
 
-      {/* Section 6 — Apparence */}
-      <Section title="Apparence des devis">
-        <FieldShell label="Couleur principale" hint="Utilisée sur les en-têtes et badges des devis">
+      {/* Section 6 — Identité visuelle */}
+      <Section title="Identité visuelle">
+        <FieldShell
+          label="Couleur de marque"
+          hint="Cette couleur s'applique sur vos devis (total, badge statut, accents). Choisissez une couleur lisible sur fond blanc."
+          error={errors.brand_color}
+        >
           <div className="flex items-center gap-3">
             <input
               type="color"
-              value={form.primary_color}
-              onChange={(e) => update("primary_color", e.target.value)}
-              aria-label="Choisir la couleur principale"
+              value={form.brand_color}
+              onChange={(e) => {
+                // Sync legacy primary_color so anything still reading it
+                // keeps in step. brand_color stays canonical.
+                update("brand_color", e.target.value);
+                update("primary_color", e.target.value);
+              }}
+              aria-label="Choisir la couleur de marque"
               className="w-12 h-11 rounded-xl border border-[var(--border)] cursor-pointer"
             />
             <input
               type="text"
-              value={form.primary_color}
-              onChange={(e) => update("primary_color", e.target.value)}
-              className="h-11 px-3 text-sm font-mono bg-white border border-[var(--border)] rounded-xl outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 w-32"
+              value={form.brand_color}
+              onChange={(e) => {
+                const v = e.target.value;
+                update("brand_color", v);
+                if (BRAND_HEX_RE.test(v)) update("primary_color", v);
+              }}
+              spellCheck={false}
+              className="h-11 px-3 text-sm font-mono bg-white border border-[var(--border)] rounded-xl outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 w-32 uppercase"
             />
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {BRAND_PRESETS.map((preset) => {
+              const active =
+                form.brand_color.toLowerCase() === preset.hex.toLowerCase();
+              return (
+                <button
+                  key={preset.hex}
+                  type="button"
+                  onClick={() => {
+                    update("brand_color", preset.hex);
+                    update("primary_color", preset.hex);
+                  }}
+                  aria-label={`Couleur ${preset.label} ${preset.hex}`}
+                  aria-pressed={active}
+                  className={
+                    "inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors cursor-pointer " +
+                    (active
+                      ? "border-[var(--text-primary)] bg-[var(--text-primary)] text-white"
+                      : "border-[var(--border)] bg-white text-[var(--text-secondary)] hover:bg-[var(--surface)]")
+                  }
+                >
+                  <span
+                    className="h-3.5 w-3.5 rounded-full border border-black/10"
+                    style={{ backgroundColor: preset.hex }}
+                  />
+                  {preset.label}
+                </button>
+              );
+            })}
           </div>
         </FieldShell>
 
-        <ColorPreview color={form.primary_color} company={form.company || "Mon entreprise"} />
+        <BrandColorPreview color={form.brand_color} />
       </Section>
 
       {/* Sticky save bar */}
@@ -484,32 +563,42 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function ColorPreview({ color, company }: { color: string; company: string }) {
+/**
+ * Mini-PDF preview rendered side-by-side with the picker. Reproduces the
+ * accent surfaces from the real PDF (grand total + status pill) so the
+ * artisan judges contrast on the same backgrounds before saving. Width is
+ * 200px tall ~80px per spec.
+ */
+function BrandColorPreview({ color }: { color: string }) {
+  const valid = /^#[0-9A-Fa-f]{6}$/.test(color);
+  const accent = valid ? color : "#0F172A";
   return (
-    <div className="rounded-2xl border border-[var(--border)] p-4 bg-[var(--surface)]">
-      <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] mb-3">
-        Aperçu
-      </p>
-      <div className="bg-white rounded-xl border border-[var(--border-light)] overflow-hidden">
-        <div
-          className="px-4 py-3 text-white text-sm font-bold flex items-center justify-between"
-          style={{ background: color }}
-        >
-          <span>{company}</span>
-          <span className="text-xs opacity-75">Devis #042</span>
-        </div>
-        <div className="p-4 text-sm text-[var(--text-secondary)]">
-          <div className="flex justify-between mb-1">
-            <span>Prestation</span>
-            <span className="font-semibold text-[var(--text-primary)]">1 200 €</span>
-          </div>
-          <div
-            className="inline-block mt-2 px-2 py-0.5 rounded-full text-[10px] font-bold text-white"
-            style={{ background: color }}
+    <div className="rounded-2xl border border-[var(--border)] p-3 bg-[var(--surface)] inline-flex">
+      <div
+        className="flex h-20 w-[260px] items-center justify-between rounded-xl border border-[var(--border-light)] bg-white px-4"
+        aria-label="Aperçu de la couleur sur un devis"
+      >
+        <div>
+          <p
+            className="text-[9px] font-bold uppercase tracking-[0.18em]"
+            style={{ color: "#94A3B8" }}
           >
-            En attente
-          </div>
+            Total TTC
+          </p>
+          <p
+            className="mt-0.5 text-xl font-extrabold tabular-nums"
+            style={{ color: accent }}
+          >
+            8 998,00 €
+          </p>
         </div>
+        <span
+          className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white"
+          style={{ backgroundColor: accent }}
+        >
+          <span className="h-1.5 w-1.5 rounded-full bg-white/90" />
+          Signé
+        </span>
       </div>
     </div>
   );

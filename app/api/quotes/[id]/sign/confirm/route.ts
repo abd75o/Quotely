@@ -110,6 +110,6 @@ async function notifyArtisanIfPossible(quote: {
     clientName: quote.client?.name ?? "Votre client",
     quoteNumber: quote.number ?? "",
     totalEuros: quote.total ?? 0,
-    quoteUrl: `${origin}/dashboard/quotes/${quote.id}`,
+    quoteUrl: `${origin}/dashboard/devis/${quote.id}`,
   }).catch(console.error);
 }

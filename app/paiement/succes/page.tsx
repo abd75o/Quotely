@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { CheckCircle, Sparkles, ArrowRight } from "lucide-react";
-import { Logo } from "@/components/shared/Logo";
+import { QuoviLogo } from "@/components/shared/QuoviLogo";
 
 function SuccesContent() {
   const searchParams = useSearchParams();
@@ -13,7 +13,7 @@ function SuccesContent() {
 
   useEffect(() => {
     if (seconds <= 0) {
-      window.location.href = "/dashboard/quotes";
+      window.location.href = "/dashboard/devis";
       return;
     }
     const t = setTimeout(() => setSeconds((s) => s - 1), 1000);
@@ -41,7 +41,7 @@ export default function PaiementSuccesPage() {
     <div className="min-h-screen bg-[var(--surface)] flex flex-col items-center justify-center p-4">
       <div className="bg-white rounded-3xl p-10 max-w-md w-full text-center shadow-xl border border-[var(--border)]">
         <div className="mb-6">
-          <Logo variant="horizontal" size={28} className="justify-center" />
+          <QuoviLogo size={28} className="justify-center" />
         </div>
 
         <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -59,7 +59,7 @@ export default function PaiementSuccesPage() {
         </Suspense>
 
         <Link
-          href="/dashboard/quotes"
+          href="/dashboard/devis"
           className="flex items-center justify-center gap-2 w-full py-3.5 bg-[var(--primary)] hover:bg-[var(--primary-dark)] text-white text-sm font-bold rounded-xl transition-colors cursor-pointer shadow-md"
         >
           Accéder à mon dashboard

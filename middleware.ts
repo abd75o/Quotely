@@ -5,7 +5,13 @@ const REF_COOKIE = "qv_ref";
 const PARRAIN_COOKIE = "qv_parrain";
 const ATTRIBUTION_TTL_DAYS = 30;
 
-export async function proxy(request: NextRequest) {
+// Next.js 16.2.4 ships a deprecation warning telling us to rename this to
+// `proxy.ts` with `export function proxy()`, but the new convention isn't
+// actually wired in 16.2.4 — renaming produces an empty middleware-manifest
+// and the file silently stops running. Stick with the "deprecated" name until
+// Next ships a functional proxy runtime; auth + onboarding guards depend on
+// this running on every request.
+export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
 
   // ── 0. Attribution cookies (any route, before auth) ────────────────────────

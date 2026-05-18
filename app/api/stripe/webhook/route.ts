@@ -23,35 +23,27 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
-  console.log("[webhook] Event received:", event.type);
-
   // ── checkout.session.completed ─────────────────────────────────────────────
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
 
     const userId = session.metadata?.userId;
-    console.log("[webhook] userId from metadata:", userId ?? "(missing)");
-    console.log("[webhook] plan from metadata:", session.metadata?.plan ?? "(missing)");
 
     // Primary source: plan stored in metadata during checkout creation
     let plan = session.metadata?.plan as "starter" | "pro" | undefined;
 
     // Fallback: resolve plan from the purchased price_id
     if (!plan) {
-      console.log("[webhook] plan missing in metadata — resolving from line_items");
       const full = await getStripe().checkout.sessions.retrieve(session.id, {
         expand: ["line_items"],
       });
       const priceId = full.line_items?.data?.[0]?.price?.id ?? "";
-      console.log("[webhook] price_id from line_items:", priceId || "(empty)");
 
       if (priceId && priceId === process.env.STRIPE_STARTER_MONTHLY_PRICE_ID) {
         plan = "starter";
       } else if (priceId && priceId === process.env.STRIPE_PRO_MONTHLY_PRICE_ID) {
         plan = "pro";
       }
-
-      console.log("[webhook] plan resolved from price_id:", plan ?? "(unresolved)");
     }
 
     if (!userId || !plan) {
@@ -73,8 +65,6 @@ export async function POST(request: Request) {
       console.error("[webhook] Supabase update error:", error.message);
       return NextResponse.json({ error: "DB error" }, { status: 500 });
     }
-
-    console.log(`[webhook] profiles.plan updated to '${plan}' for user ${userId}`);
 
     // ── Affiliate + parrainage conversion on first payment ──────────────────
     // Best-effort: errors here must NOT fail the webhook (Stripe would retry
@@ -99,8 +89,6 @@ export async function POST(request: Request) {
     if (priceId === process.env.STRIPE_STARTER_MONTHLY_PRICE_ID) plan = "starter";
     else if (priceId === process.env.STRIPE_PRO_MONTHLY_PRICE_ID) plan = "pro";
 
-    console.log("[webhook] subscription.updated — userId:", userId ?? "(missing)", "plan:", plan ?? "(unknown)");
-
     if (userId && plan) {
       const { error } = await getSupabaseAdmin()
         .from("profiles")
@@ -108,8 +96,6 @@ export async function POST(request: Request) {
         .eq("id", userId);
       if (error) {
         console.error("[webhook] subscription.updated DB error:", error.message);
-      } else {
-        console.log(`[webhook] plan synced to '${plan}' for user ${userId}`);
       }
     }
   }
@@ -118,7 +104,6 @@ export async function POST(request: Request) {
   if (event.type === "customer.subscription.deleted") {
     const subscription = event.data.object as Stripe.Subscription;
     const userId = subscription.metadata?.userId;
-    console.log("[webhook] subscription.deleted — userId:", userId ?? "(missing)");
 
     if (userId) {
       // Downgrade to `free`, NOT `trial` — the 14-day trial was retired in
@@ -129,7 +114,6 @@ export async function POST(request: Request) {
         .from("profiles")
         .update({ plan: "free", trial_ends_at: null })
         .eq("id", userId);
-      console.log(`[webhook] plan reset to 'free' for user ${userId}`);
     }
   }
 

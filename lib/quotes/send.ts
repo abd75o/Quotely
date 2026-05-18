@@ -38,15 +38,14 @@ export async function executeSendQuote(
   opts: SendQuoteOptions,
 ): Promise<SendQuoteResult> {
   const { supabase, userId, userEmail, quoteId, customMessage, appUrl } = opts;
-  console.log("[SEND QUOTE] Starting...", { quoteId, userId });
 
   if (!process.env.RESEND_API_KEY) {
-    console.warn(
+    console.error(
       "[SEND QUOTE] RESEND_API_KEY is missing — set it in .env.local",
     );
   }
   if (!process.env.RESEND_FROM_EMAIL) {
-    console.warn(
+    console.error(
       "[SEND QUOTE] RESEND_FROM_EMAIL is missing — falling back to onboarding@resend.dev",
     );
   }
@@ -72,7 +71,6 @@ export async function executeSendQuote(
     ? (quote.items as QuoteItemRaw[])
     : [];
   if (items.length === 0) {
-    console.warn("[SEND QUOTE] Empty items list", { quoteId });
     return {
       ok: false,
       status: 422,
@@ -82,7 +80,6 @@ export async function executeSendQuote(
   }
 
   if (!quote.client_id) {
-    console.warn("[SEND QUOTE] No client linked", { quoteId });
     return {
       ok: false,
       status: 422,
@@ -94,10 +91,6 @@ export async function executeSendQuote(
     ? (quote.clients[0] as Record<string, unknown> | undefined)
     : ((quote.clients as Record<string, unknown> | null) ?? undefined);
   if (!clientRow || !clientRow.email) {
-    console.warn("[SEND QUOTE] Client has no email", {
-      quoteId,
-      clientId: quote.client_id,
-    });
     return {
       ok: false,
       status: 422,
@@ -111,20 +104,11 @@ export async function executeSendQuote(
     .select("*")
     .eq("id", userId)
     .maybeSingle();
-  console.log("[SEND QUOTE] Profile loaded", {
-    profileId: (profile as { id?: string } | null)?.id,
-    company:
-      (profile as { company?: string; company_name?: string } | null)
-        ?.company_name ??
-      (profile as { company?: string } | null)?.company ??
-      null,
-  });
 
   const profileCheck = checkProfileForSend(
     profile as Record<string, unknown> | null,
   );
   if (!profileCheck.ok) {
-    console.warn("[SEND QUOTE] Profile incomplete", profileCheck.missing);
     return {
       ok: false,
       status: 422,
@@ -186,12 +170,6 @@ export async function executeSendQuote(
   };
 
   const signLink = `${appUrl}/sign/${quote.signature_token}`;
-  console.log("[SEND QUOTE] Sending via Resend...", {
-    to: clientForPdf.email,
-    quoteNumber: pdfQuote.number,
-    itemsCount: pdfQuote.items.length,
-    total: pdfQuote.total,
-  });
 
   const result = await sendQuoteEmail({
     quote: { ...pdfQuote, id: quote.id as string },
@@ -199,10 +177,6 @@ export async function executeSendQuote(
     client: clientForPdf,
     signLink,
     customMessage,
-  });
-  console.log("[SEND QUOTE] Resend response:", {
-    messageId: result.messageId,
-    error: result.error,
   });
 
   if (result.error || !result.messageId) {
@@ -230,11 +204,6 @@ export async function executeSendQuote(
       updateErr,
     );
   }
-
-  console.log("[SEND QUOTE] Done", {
-    messageId: result.messageId,
-    signLink,
-  });
 
   return {
     ok: true,

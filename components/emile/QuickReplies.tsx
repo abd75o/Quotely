@@ -36,10 +36,6 @@ export function parseQuickReplies(text: string): {
         .filter(Boolean)
         .slice(0, 4)
     : [];
-  if (process.env.NODE_ENV !== "production" && text.includes("QUICK_REPLIES")) {
-    // eslint-disable-next-line no-console
-    console.debug("[QR Parser]", { found: !!match, options: replies });
-  }
   cleaned = cleaned.replace(QUICK_REPLIES_REGEX, "").trim();
   cleaned = cleaned.replace(PROFILE_BUTTON_REGEX, "").trim();
   cleaned = cleaned.replace(CLIENT_PICKER_REGEX, "").trim();

@@ -19,13 +19,6 @@ export async function POST(request: Request) {
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL!;
   const priceId = STRIPE_PRICES[plan].monthly;
-  const secretKey = process.env.STRIPE_SECRET_KEY;
-
-  console.log("[checkout] plan:", plan);
-  console.log("[checkout] priceId:", priceId || "(empty)");
-  console.log("[checkout] STRIPE_SECRET_KEY:", secretKey
-    ? secretKey.slice(0, 7) + "..." + secretKey.slice(-4)
-    : "(not set)");
 
   try {
     const session = await createCheckoutSession({

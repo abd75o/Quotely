@@ -9,7 +9,7 @@ export function getResend(): Resend {
   const key = process.env.RESEND_API_KEY;
   if (!key) {
     if (!warnedMissingKey) {
-      console.warn(
+      console.error(
         "[RESEND] RESEND_API_KEY is not configured — emails will fail. Set it in .env.local.",
       );
       warnedMissingKey = true;
@@ -23,7 +23,7 @@ export function getResend(): Resend {
 export function resendFromAddress(displayName: string): string {
   const technical = process.env.RESEND_FROM_EMAIL;
   if (!technical && !warnedMissingFrom) {
-    console.warn(
+    console.error(
       "[RESEND] RESEND_FROM_EMAIL is not set — falling back to onboarding@resend.dev.",
     );
     warnedMissingFrom = true;

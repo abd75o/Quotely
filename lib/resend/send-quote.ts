@@ -39,15 +39,9 @@ export async function sendQuoteEmail(
   const company = companyDisplay(profile);
   const showBranding = shouldShowBranding(profile.plan, profile.hide_branding);
 
-  console.log("[SEND QUOTE] Generating PDF...");
   let pdfBuffer: Buffer;
   try {
     pdfBuffer = await generateQuotePdfBuffer({ quote, profile, client });
-    console.log(
-      "[SEND QUOTE] PDF generated, size:",
-      pdfBuffer.length,
-      "bytes",
-    );
   } catch (e) {
     console.error("[SEND QUOTE] PDF generation failed", e);
     return {

@@ -1,10 +1,10 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { Quote } from "@/types";
-import { getSignatureType } from "@/lib/signature";
 import { SignatureClient } from "./SignatureClient";
 
-// ─── Data fetching ────────────────────────────────────────────────────────────
+// Legacy public signature route. New canonical is /sign/[token]. Kept alive
+// for bookmarked URLs that point at the old `public_token` flow.
 async function getQuoteByPublicToken(token: string): Promise<Quote | null> {
   try {
     const { createClient } = await import("@/lib/supabase/server");
@@ -19,51 +19,10 @@ async function getQuoteByPublicToken(token: string): Promise<Quote | null> {
 
     if (error || !data) return null;
     return data as Quote;
-  } catch {
-    // Dev mode: return mock data so the page is always renderable
-    return getMockQuote(token);
+  } catch (err) {
+    console.error("[devis/[id]] getQuoteByPublicToken failed:", err);
+    return null;
   }
-}
-
-function getMockQuote(token: string): Quote {
-  const total = 2_856;
-  return {
-    id: "mock-quote-001",
-    userId: "artisan-001",
-    clientId: "client-001",
-    publicToken: token,
-    number: "DEV-2024-089",
-    status: "pending",
-    signatureType: getSignatureType(total),
-    artisan: {
-      name: "Thomas Renaud",
-      company: "TR Électricité",
-      email: "thomas@tr-electricite.fr",
-      phone: "06 12 34 56 78",
-      siret: "123 456 789 00012",
-    },
-    client: {
-      id: "client-001",
-      userId: "artisan-001",
-      name: "Marc Dupont",
-      email: "marc.dupont@example.fr",
-      createdAt: new Date(),
-    },
-    items: [
-      { id: "1", description: "Tableau électrique 3 rangées", quantity: 1, unitPrice: 480, total: 480 },
-      { id: "2", description: "Câblage complet appartement 65m²", quantity: 1, unitPrice: 1_200, total: 1_200 },
-      { id: "3", description: "Prises et interrupteurs (20 points)", quantity: 20, unitPrice: 35, total: 700 },
-      { id: "4", description: "Mise en conformité tableau CONSUEL", quantity: 1, unitPrice: 200, total: 200 },
-    ],
-    subtotal: 2_380,
-    taxRate: 20,
-    taxAmount: 476,
-    total,
-    validUntil: new Date(Date.now() + 30 * 24 * 3600 * 1000),
-    notes: "Travaux prévus du 15 au 17 janvier 2025. Devis valable 30 jours.",
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
 }
 
 // ─── Metadata ─────────────────────────────────────────────────────────────────

@@ -196,11 +196,6 @@ export function QuotePreview({ quote }: { quote: Quote }) {
 
   async function copyLink() {
     const link = signLink || buildSignLink(quote);
-    console.log("[COPY LINK]", {
-      signature_token: quote.signature_token,
-      public_token: quote.public_token,
-      url: link,
-    });
     if (!link) {
       toast.error("Aucun lien de signature disponible pour ce devis.");
       return;

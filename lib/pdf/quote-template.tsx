@@ -467,14 +467,22 @@ function buildStyles(accent: string) {
     },
 
     // ── Section blocks (Échéancier / Validité / Bank / Notes) ──────────
+    // Apple Cards style: subtle slate-50 surface inside a hairline border
+    // with rounded corners. Each card stays separable visually while still
+    // letting the page read as one continuous document.
     section: {
-      marginTop: 28,
+      marginTop: 12,
+      backgroundColor: palette.zebra,
+      borderWidth: 1,
+      borderColor: palette.hairline,
+      borderRadius: 12,
+      padding: 18,
     },
     sectionTitleRow: {
+      paddingBottom: 10,
+      marginBottom: 12,
       borderBottomWidth: 1,
       borderBottomColor: palette.hairline,
-      paddingBottom: 8,
-      marginBottom: 12,
     },
     sectionTitle: {
       fontSize: 9,

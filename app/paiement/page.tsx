@@ -24,16 +24,6 @@ export default async function PaiementPage({
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL!;
   const priceId = STRIPE_PRICES[plan].monthly;
-  const secretKey = process.env.STRIPE_SECRET_KEY;
-
-  // Diagnostic logs — visible in Netlify function logs
-  console.log("[paiement] plan:", plan);
-  console.log("[paiement] priceId:", priceId || "(empty — STRIPE_" + plan.toUpperCase() + "_MONTHLY_PRICE_ID not set)");
-  console.log("[paiement] STRIPE_SECRET_KEY:", secretKey
-    ? secretKey.slice(0, 7) + "..." + secretKey.slice(-4)
-    : "(not set)");
-  console.log("[paiement] NEXT_PUBLIC_APP_URL:", appUrl || "(not set)");
-  console.log("[paiement] userId:", user.id);
 
   let session;
   try {

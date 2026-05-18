@@ -468,8 +468,8 @@ export function EntrepriseForm() {
       {/* Section 6 — Identité visuelle */}
       <Section title="Identité visuelle">
         <FieldShell
-          label="Couleur de marque"
-          hint="Cette couleur s'applique sur vos devis (total, badge statut, accents). Choisissez une couleur lisible sur fond blanc."
+          label="Couleur d'accent"
+          hint="Cette couleur sera utilisée sur vos devis PDF et la page de signature."
           error={errors.brand_color}
         >
           <div className="flex items-center gap-3">

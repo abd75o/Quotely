@@ -746,7 +746,8 @@ export function createEmileTools(ctx: EmileToolContext) {
             userEmail: userEmail ?? null,
             quoteId,
             customMessage,
-            appUrl: appUrl ?? "http://localhost:3000",
+            appUrl:
+              appUrl ?? process.env.NEXT_PUBLIC_APP_URL ?? "https://quovi.fr",
           });
           if (!result.ok) {
             console.error("[TOOL sendQuote] failed", {
@@ -760,10 +761,6 @@ export function createEmileTools(ctx: EmileToolContext) {
               ...(result.missing ? { missing: result.missing } : {}),
             };
           }
-          console.log("[TOOL sendQuote] success", {
-            quoteId,
-            messageId: result.messageId,
-          });
           return ok({
             success: true,
             messageId: result.messageId,

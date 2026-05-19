@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from("clients")
-      .select("id, name, email, phone")
+      .select("id, name, first_name, email, phone")
       .order("name")
       .eq("user_id", user.id);
 

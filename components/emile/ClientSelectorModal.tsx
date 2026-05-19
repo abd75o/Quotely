@@ -7,8 +7,15 @@ import { cn } from "@/lib/utils";
 export interface ExistingClient {
   id: string;
   name: string;
+  first_name?: string | null;
   email: string | null;
   phone?: string | null;
+}
+
+function fullClientName(c: ExistingClient): string {
+  return (
+    [c.first_name, c.name].filter(Boolean).join(" ").trim() || c.name
+  );
 }
 
 interface ClientSelectorModalProps {
@@ -76,6 +83,7 @@ export function ClientSelectorModal({
     return clients.filter(
       (c) =>
         c.name.toLowerCase().includes(q) ||
+        (c.first_name ?? "").toLowerCase().includes(q) ||
         (c.email ?? "").toLowerCase().includes(q),
     );
   }, [clients, query]);
@@ -155,7 +163,7 @@ export function ClientSelectorModal({
                     </div>
                     <div className="min-w-0">
                       <p className="truncate text-[13px] font-semibold text-[var(--text-primary)]">
-                        {client.name}
+                        {fullClientName(client)}
                       </p>
                       {client.email && (
                         <p className="truncate text-[12px] text-[var(--text-secondary)]">

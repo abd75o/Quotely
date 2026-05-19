@@ -102,11 +102,21 @@ function EmileMessageInner({
   const isUser = message.role === "user";
   const isSystem = message.role === "system";
 
-  if (isSystem) {
+  // Internal protocol messages (modal completions, picker cancels, etc.) are
+  // sent through sendMessage() so the model receives them, but they must not
+  // surface in the UI as if the artisan typed them. We detect the [SYSTEM]
+  // sentinel on user messages and render them as the same discreet centered
+  // pill we use for true system-role messages (bug C6).
+  const isInternalSystem = isUser && /^\[SYSTEM\]/i.test(cleaned);
+
+  if (isSystem || isInternalSystem) {
+    const pillText = isInternalSystem
+      ? cleaned.replace(/^\[SYSTEM\]\s*—?\s*/i, "").trim()
+      : cleaned;
     return (
       <div className="flex justify-center">
         <span className="rounded-full bg-[var(--surface)] px-3 py-1 text-[11px] text-[var(--text-muted)]">
-          {cleaned}
+          {pillText || "…"}
         </span>
       </div>
     );

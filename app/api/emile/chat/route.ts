@@ -14,6 +14,24 @@ interface RequestBody {
   conversationId?: string | null;
 }
 
+// Cap the history sent to Anthropic. Sonnet 4.5 tolerates 200k context, but we
+// trim aggressively to stay well under the practical budget once tool inputs
+// and outputs are inlined. Slicing the last N items preserves intra-turn
+// tool-call/result pairs because each UIMessage holds them together in its
+// `parts` array — we only need to make sure the window doesn't START on an
+// orphan assistant/tool message that would dangle without its triggering user
+// turn.
+const MAX_HISTORY = 20;
+
+function trimHistory(msgs: UIMessage[]): UIMessage[] {
+  if (msgs.length <= MAX_HISTORY) return msgs;
+  let trimmed = msgs.slice(-MAX_HISTORY);
+  while (trimmed.length > 0 && trimmed[0].role !== "user") {
+    trimmed = trimmed.slice(1);
+  }
+  return trimmed;
+}
+
 export async function POST(req: Request) {
   const supabase = await createClient();
   const {
@@ -111,7 +129,7 @@ export async function POST(req: Request) {
   const result = streamText({
     model: anthropic(MODEL),
     system: systemPrompt,
-    messages: await convertToModelMessages(messages),
+    messages: await convertToModelMessages(trimHistory(messages)),
     tools,
     // 8 leaves headroom for a multi-tool turn (e.g. searchClients → getMarketPrices
     // → saveQuoteDraft → text) without the stream ending before the assistant
@@ -122,16 +140,23 @@ export async function POST(req: Request) {
     temperature: 0.6,
     // AI SDK v6 renames `maxTokens` → `maxOutputTokens` (same semantics).
     maxOutputTokens: 2048,
-    onFinish: async ({ text, toolCalls }) => {
+    onFinish: async ({ text, toolCalls, toolResults }) => {
       if (!conversationIdSafe) return;
       try {
-        if (text) {
+        const hasCalls = Array.isArray(toolCalls) && toolCalls.length > 0;
+        const hasResults =
+          Array.isArray(toolResults) && toolResults.length > 0;
+        // Persist whenever the turn produced text OR tool activity — a turn
+        // that only ran tools (e.g. saveQuoteDraft followed by no text) must
+        // still survive a refresh, otherwise the assistant loses memory of
+        // what was executed and can repeat it on the next turn.
+        if (text || hasCalls) {
           await supabase.from("messages").insert({
             conversation_id: conversationIdSafe,
             role: "assistant",
-            content: text,
-            tool_calls:
-              toolCalls && toolCalls.length > 0 ? toolCalls : null,
+            content: text || null,
+            tool_calls: hasCalls ? toolCalls : null,
+            tool_results: hasResults ? toolResults : null,
           });
         }
         await supabase

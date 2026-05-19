@@ -113,21 +113,69 @@ interface DbMessageRow {
   role: "user" | "assistant" | "system" | "tool";
   content: string | null;
   tool_calls: unknown;
+  tool_results: unknown;
   tool_call_id: string | null;
   created_at: string;
 }
+
+type AnyPart = Record<string, unknown>;
 
 function dbMessageToUI(row: DbMessageRow): EmileMessage | null {
   if (row.role === "tool") return null;
   const role: "user" | "assistant" | "system" =
     row.role === "system" ? "system" : row.role;
+
+  const parts: AnyPart[] = [];
+
+  // Assistant turns persist their tool activity as JSONB on the row. Rebuild
+  // each call as an AI-SDK tool part in `output-available` state so when this
+  // conversation resumes (refresh, share link, switch back), the model sees
+  // the same history as during the live stream. Without this, Émile reloads
+  // the thread, forgets he already saved the devis, and either re-runs
+  // saveQuoteDraft or creates a 2nd quote — violating his own "1 conversation
+  // = 1 devis" rule.
+  if (role === "assistant") {
+    const calls = Array.isArray(row.tool_calls)
+      ? (row.tool_calls as AnyPart[])
+      : [];
+    const results = Array.isArray(row.tool_results)
+      ? (row.tool_results as AnyPart[])
+      : [];
+    const resultByCallId = new Map<string, AnyPart>();
+    for (const r of results) {
+      const id = r.toolCallId as string | undefined;
+      if (id) resultByCallId.set(id, r);
+    }
+    for (const call of calls) {
+      const toolName = (call.toolName as string | undefined) ?? "unknown";
+      const toolCallId =
+        (call.toolCallId as string | undefined) ?? makeId();
+      const input = (call.input ?? call.args ?? {}) as AnyPart;
+      const matched = resultByCallId.get(toolCallId);
+      const output = matched
+        ? ((matched.output ?? matched.result ?? null) as unknown)
+        : null;
+      parts.push({
+        type: `tool-${toolName}`,
+        toolCallId,
+        input,
+        output,
+        state: matched ? "output-available" : "input-available",
+      });
+    }
+  }
+
+  if (row.content) {
+    parts.push({ type: "text", text: row.content });
+  }
+
   // Defensive: every UI message must carry a non-empty id so React keys and any
   // future per-message logic stay collision-free. DB rows have UUIDs in
   // practice, but we mint a fallback rather than trust the wire.
   return {
     id: row.id || makeId(),
     role,
-    parts: row.content ? [{ type: "text", text: row.content }] : [],
+    parts: parts as EmileMessage["parts"],
   };
 }
 
@@ -269,6 +317,13 @@ export function useEmile(
   );
 
   const loadConversation = useCallback(async (id: string) => {
+    // Abort any in-flight stream BEFORE swapping conversations. Otherwise the
+    // previous fetch keeps running, lands its assistant message into
+    // setMessages (now bound to the new conv) and its server-side onFinish
+    // persists to the OLD conv — split-brain state on refresh (bug C2).
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setIsLoading(false);
     setIsHydrated(false);
     try {
       const res = await fetch(`/api/conversations/${id}`);

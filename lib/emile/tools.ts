@@ -151,6 +151,40 @@ function escapePostgrestQuery(q: string): string {
   return q.replace(/[%_,()*'"\\]/g, "\\$&").trim();
 }
 
+/**
+ * Build the next quote number for a user as a continuous yearly sequence.
+ * Format: QTL-YYYY-NNNNN (5-digit zero-padded counter).
+ *
+ * French tax authorities require that quotes follow a continuous numbering
+ * series — the previous `Date.now()`-derived suffix neither guaranteed
+ * uniqueness nor continuity, so this replaces it with a deterministic count.
+ * The caller pairs this with a UNIQUE(user_id, number) DB constraint and a
+ * short retry loop to handle the rare race where two concurrent inserts
+ * would otherwise pick the same suffix.
+ */
+async function nextQuoteNumber(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<string> {
+  const year = new Date().getFullYear();
+  const prefix = `QTL-${year}-`;
+  const { count } = await supabase
+    .from("quotes")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .like("number", `${prefix}%`);
+  const seq = (count ?? 0) + 1;
+  return `${prefix}${String(seq).padStart(5, "0")}`;
+}
+
+function bumpQuoteNumber(current: string): string {
+  const m = /^(.*-)(\d+)$/.exec(current);
+  if (!m) return current;
+  const next = parseInt(m[2], 10) + 1;
+  const width = Math.max(m[2].length, 5);
+  return `${m[1]}${String(next).padStart(width, "0")}`;
+}
+
 async function maybeAutoNameConversation(
   supabase: SupabaseClient,
   conversationId: string | null | undefined,
@@ -306,7 +340,9 @@ export function createEmileTools(ctx: EmileToolContext) {
               "id, name, first_name, email, phone, address, postal_code, city, type_client, siret",
             )
             .eq("user_id", userId)
-            .or(`name.ilike.%${safe}%,email.ilike.%${safe}%`)
+            .or(
+              `name.ilike.%${safe}%,first_name.ilike.%${safe}%,email.ilike.%${safe}%`,
+            )
             .limit(5);
           if (error) return err(error.message);
           return ok({ clients: data ?? [] });
@@ -559,25 +595,47 @@ export function createEmileTools(ctx: EmileToolContext) {
             });
           }
 
-          const number = `QTL-${new Date().getFullYear()}-${String(Date.now()).slice(-4)}`;
-          const { data, error } = await supabase
-            .from("quotes")
-            .insert({
-              user_id: userId,
-              client_id: clientId ?? null,
-              number,
-              status: "draft",
-              items,
-              subtotal,
-              tax_rate: taxRate,
-              tax_amount: taxAmount,
-              tax_breakdown: breakdown,
-              total,
-              valid_until: validUntil,
-            })
-            .select("id, number, total")
-            .single();
-          if (error) return err(error.message);
+          // Sequential per-user numbering. Retry on UNIQUE(user_id, number)
+          // violations (Postgres code 23505) which can happen if two saves
+          // race for the same suffix — bump by one and try again. Three
+          // attempts is plenty in practice and bounds the cost of the rare
+          // collision case.
+          let candidateNumber = await nextQuoteNumber(supabase, userId);
+          let data: { id: string; number: string; total: number } | null =
+            null;
+          let lastError: { message: string; code?: string } | null = null;
+          for (let attempt = 0; attempt < 3; attempt++) {
+            const res = await supabase
+              .from("quotes")
+              .insert({
+                user_id: userId,
+                client_id: clientId ?? null,
+                number: candidateNumber,
+                status: "draft",
+                items,
+                subtotal,
+                tax_rate: taxRate,
+                tax_amount: taxAmount,
+                tax_breakdown: breakdown,
+                total,
+                valid_until: validUntil,
+              })
+              .select("id, number, total")
+              .single();
+            if (!res.error) {
+              data = res.data;
+              break;
+            }
+            lastError = res.error as { message: string; code?: string };
+            if (lastError.code === "23505") {
+              candidateNumber = bumpQuoteNumber(candidateNumber);
+              continue;
+            }
+            break;
+          }
+          if (!data) {
+            return err(lastError?.message ?? "Erreur enregistrement devis");
+          }
 
           // Link the new quote back to the conversation so subsequent calls update.
           if (conversationId) {

@@ -280,7 +280,10 @@ export function EmileChat({
   const handleClientSelected = useCallback(
     (client: ExistingClient) => {
       setClientSelectorOpen(false);
-      const parts: string[] = [`Client sélectionné : ${client.name}`];
+      const fullName =
+        [client.first_name, client.name].filter(Boolean).join(" ").trim() ||
+        client.name;
+      const parts: string[] = [`Client sélectionné : ${fullName}`];
       if (client.email) parts.push(client.email);
       parts.push(`id:${client.id}`);
       void sendMessage(parts.join(" — "));

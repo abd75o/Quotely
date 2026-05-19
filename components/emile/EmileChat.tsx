@@ -31,6 +31,10 @@ import {
   type ProfileField,
   type ProfileUpdated,
 } from "./ProfileCompletionModal";
+import {
+  BulkImportModal,
+  type BulkImportSuccess,
+} from "./BulkImportModal";
 import type { EmileQuoteLine } from "./types";
 
 const ALL_PROFILE_FIELDS: ProfileField[] = [
@@ -99,6 +103,12 @@ export function EmileChat({
   const [clientSelectorOpen, setClientSelectorOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [profileMissing, setProfileMissing] = useState<ProfileField[]>([]);
+  // Bulk paste flow. `bulkRawText` is the verbatim clipboard content; the
+  // modal parses it into structured rows and posts them straight to the DB
+  // (bypassing the LLM, which would otherwise spend ~10k output tokens
+  // regurgitating the same lines into a tool call argument).
+  const [bulkImportOpen, setBulkImportOpen] = useState(false);
+  const [bulkRawText, setBulkRawText] = useState("");
 
   useEffect(() => {
     if (conversationId && loadedRef.current !== conversationId) {
@@ -119,6 +129,8 @@ export function EmileChat({
     setClientSelectorOpen(false);
     setProfileModalOpen(false);
     setProfileMissing([]);
+    setBulkImportOpen(false);
+    setBulkRawText("");
     autoSeededRef.current = null;
   }, [conversationId]);
 
@@ -369,6 +381,49 @@ export function EmileChat({
     );
   }, [sendMessage]);
 
+  // EmileInput hands us the raw clipboard content when a long paste is
+  // detected. We stash it and open the structured editor. The modal owns the
+  // submit + the [SYSTEM] notification back to Émile (via onImported).
+  const handleBulkPaste = useCallback((rawText: string) => {
+    setBulkRawText(rawText);
+    setBulkImportOpen(true);
+  }, []);
+
+  const handleBulkImported = useCallback(
+    (info: BulkImportSuccess) => {
+      justHandledModalRef.current = true;
+      // Push the new totals into the right-panel preview synchronously —
+      // saveQuoteDraft would normally do this on the next assistant turn, but
+      // bulk imports bypass the LLM so we forward the response directly.
+      onQuoteUpdate?.({
+        quoteId: info.quoteId,
+        number: info.number,
+        total: info.total,
+      });
+      const eur = new Intl.NumberFormat("fr-FR", {
+        style: "currency",
+        currency: "EUR",
+        minimumFractionDigits: 2,
+      }).format(info.total);
+      void sendMessage(
+        `[SYSTEM] Devis ${info.number} enrichi de ${info.addedCount} ligne${
+          info.addedCount > 1 ? "s" : ""
+        } via import en masse (total ${info.totalLines} lignes, ${eur} HT). Reprends la main pour clarifier ou proposer la suite.`,
+      );
+    },
+    [onQuoteUpdate, sendMessage],
+  );
+
+  const handleBulkImportClose = useCallback(() => {
+    setBulkImportOpen(false);
+    if (justHandledModalRef.current) {
+      justHandledModalRef.current = false;
+      return;
+    }
+    // Silent close — we don't want a "[SYSTEM] Import annulé" pill polluting
+    // the thread for a flow the user may have triggered by accident.
+  }, []);
+
   const activeToolName = useMemo(() => {
     if (!isLoading) return null;
     if (!lastMessage || lastMessage.role !== "assistant") return null;
@@ -461,6 +516,7 @@ export function EmileChat({
         isLoading={isLoading}
         onAbort={abort}
         placeholder={placeholder}
+        onBulkPaste={handleBulkPaste}
       />
 
       <NewClientModal
@@ -486,6 +542,14 @@ export function EmileChat({
         missingFields={profileMissing}
         onClose={handleProfileModalClose}
         onCompleted={handleProfileCompleted}
+      />
+
+      <BulkImportModal
+        open={bulkImportOpen}
+        rawText={bulkRawText}
+        conversationId={conversationId ?? null}
+        onClose={handleBulkImportClose}
+        onImported={handleBulkImported}
       />
     </div>
   );

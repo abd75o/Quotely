@@ -128,13 +128,27 @@ export async function POST(req: Request) {
 
   const result = streamText({
     model: anthropic(MODEL),
-    system: systemPrompt,
+    // SystemModelMessage form (not the plain `string` form) so we can attach
+    // Anthropic-specific providerOptions. `cacheControl: ephemeral` marks the
+    // 530-line prompt for the Prompt Caching feature — Anthropic returns a
+    // cached_prompt_token count on subsequent calls and bills those at ~10%
+    // of normal input cost. The ephemeral cache lives ~5min, plenty for a
+    // sustained chat session.
+    system: {
+      role: "system",
+      content: systemPrompt,
+      providerOptions: {
+        anthropic: { cacheControl: { type: "ephemeral" } },
+      },
+    },
     messages: await convertToModelMessages(trimHistory(messages)),
     tools,
-    // 8 leaves headroom for a multi-tool turn (e.g. searchClients → getMarketPrices
-    // → saveQuoteDraft → text) without the stream ending before the assistant
-    // emits visible text.
-    stopWhen: stepCountIs(8),
+    // 12 leaves room for legitimate multi-tool turns: checkProfileCompleteness
+    // → refreshProfile → findClient → calculateTVA → getUserPastPrices →
+    // saveQuoteDraft → final text. Bumping from 8 also covers the "MODE 2"
+    // case where Émile extracts prestations from a natural-language client
+    // brief in a single user message.
+    stopWhen: stepCountIs(12),
     // Slightly lower than 0.7 → marginally faster sampling and tighter,
     // less rambly French. Still warm enough for natural phrasing.
     temperature: 0.6,

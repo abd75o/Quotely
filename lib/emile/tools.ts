@@ -2,6 +2,7 @@ import { tool } from "ai";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { executeSendQuote } from "@/lib/quotes/send";
+import { nextQuoteNumber, bumpQuoteNumber } from "@/lib/quotes/numbering";
 
 export interface EmileToolContext {
   supabase: SupabaseClient;
@@ -149,40 +150,6 @@ function safeNumber(value: unknown, fallback = 0): number {
  */
 function escapePostgrestQuery(q: string): string {
   return q.replace(/[%_,()*'"\\]/g, "\\$&").trim();
-}
-
-/**
- * Build the next quote number for a user as a continuous yearly sequence.
- * Format: QTL-YYYY-NNNNN (5-digit zero-padded counter).
- *
- * French tax authorities require that quotes follow a continuous numbering
- * series — the previous `Date.now()`-derived suffix neither guaranteed
- * uniqueness nor continuity, so this replaces it with a deterministic count.
- * The caller pairs this with a UNIQUE(user_id, number) DB constraint and a
- * short retry loop to handle the rare race where two concurrent inserts
- * would otherwise pick the same suffix.
- */
-async function nextQuoteNumber(
-  supabase: SupabaseClient,
-  userId: string,
-): Promise<string> {
-  const year = new Date().getFullYear();
-  const prefix = `QTL-${year}-`;
-  const { count } = await supabase
-    .from("quotes")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .like("number", `${prefix}%`);
-  const seq = (count ?? 0) + 1;
-  return `${prefix}${String(seq).padStart(5, "0")}`;
-}
-
-function bumpQuoteNumber(current: string): string {
-  const m = /^(.*-)(\d+)$/.exec(current);
-  if (!m) return current;
-  const next = parseInt(m[2], 10) + 1;
-  const width = Math.max(m[2].length, 5);
-  return `${m[1]}${String(next).padStart(width, "0")}`;
 }
 
 async function maybeAutoNameConversation(

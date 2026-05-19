@@ -1,14 +1,37 @@
 "use client";
 
-import { useRef, useState, type KeyboardEvent } from "react";
+import { useRef, useState, type ClipboardEvent, type KeyboardEvent } from "react";
 import { Send, Square } from "lucide-react";
 import { VoiceButton } from "./VoiceButton";
+import { toastError } from "@/lib/toast";
 
 interface EmileInputProps {
   onSend: (text: string) => void;
   isLoading: boolean;
   onAbort?: () => void;
   placeholder?: string;
+  /**
+   * Called when the user pastes content with more than {@link BULK_THRESHOLD}
+   * non-empty lines. EmileChat opens the BulkImportModal so the lines go
+   * through a structured editor + direct DB write instead of being shoved
+   * through the LLM (which would burn ~10k output tokens regurgitating them).
+   */
+  onBulkPaste?: (rawText: string) => void;
+}
+
+// Heuristic threshold: 25 lines = roughly "more than a typical chat message
+// could justify going through the LLM". Stays in sync with the system prompt
+// notice about long pastes.
+const BULK_THRESHOLD = 25;
+// Hard cap shared with the server-side validation in /api/quotes/bulk-lines.
+const HARD_CAP = 500;
+
+function countNonEmptyLines(text: string): number {
+  let n = 0;
+  for (const line of text.split(/\r?\n/)) {
+    if (line.trim().length > 0) n += 1;
+  }
+  return n;
 }
 
 export function EmileInput({
@@ -16,6 +39,7 @@ export function EmileInput({
   isLoading,
   onAbort,
   placeholder,
+  onBulkPaste,
 }: EmileInputProps) {
   const [value, setValue] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -32,6 +56,26 @@ export function EmileInput({
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       submit(value);
+    }
+  }
+
+  function handlePaste(e: ClipboardEvent<HTMLTextAreaElement>) {
+    if (!onBulkPaste) return;
+    const pasted = e.clipboardData.getData("text");
+    if (!pasted) return;
+    const lineCount = countNonEmptyLines(pasted);
+    if (lineCount > HARD_CAP) {
+      e.preventDefault();
+      toastError(
+        `Limite ${HARD_CAP} lignes par devis dépassée (${lineCount} détectées). Sépare en 2 devis ou retire des lignes.`,
+      );
+      return;
+    }
+    if (lineCount > BULK_THRESHOLD) {
+      // preventDefault so the huge paste doesn't land in the textarea — the
+      // BulkImportModal becomes the structured editor for it instead.
+      e.preventDefault();
+      onBulkPaste(pasted);
     }
   }
 
@@ -52,6 +96,7 @@ export function EmileInput({
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
           placeholder={
             placeholder ??
             (isLoading ? "Émile réfléchit…" : "Décris ton chantier à Émile…")

@@ -392,13 +392,18 @@ export function EmileChat({
   const handleBulkImported = useCallback(
     (info: BulkImportSuccess) => {
       justHandledModalRef.current = true;
-      // Push the new totals into the right-panel preview synchronously —
-      // saveQuoteDraft would normally do this on the next assistant turn, but
-      // bulk imports bypass the LLM so we forward the response directly.
+      // Push the new totals AND items into the right-panel preview
+      // synchronously — saveQuoteDraft would normally do this on the next
+      // assistant turn, but bulk imports bypass the LLM so we forward the
+      // response directly. Forwarding items prevents the panel from showing
+      // "0 lignes" right after a successful import, which previously lured
+      // users into re-adding lines manually (and wiping the DB rows via
+      // persistQuote with an empty lines array).
       onQuoteUpdate?.({
         quoteId: info.quoteId,
         number: info.number,
         total: info.total,
+        items: info.items,
       });
       const eur = new Intl.NumberFormat("fr-FR", {
         style: "currency",

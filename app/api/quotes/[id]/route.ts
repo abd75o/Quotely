@@ -1,5 +1,9 @@
 import { NextRequest } from "next/server";
 import { getSignatureType } from "@/types";
+import {
+  computeQuoteTotals,
+  normalizeQuoteItems,
+} from "@/lib/quotes/items";
 
 export async function GET(
   _req: NextRequest,
@@ -49,24 +53,21 @@ export async function PUT(
   if (validUntilRaw !== undefined) update.valid_until = validUntilRaw;
 
   if (body.items && Array.isArray(body.items)) {
-    const items = body.items as { total?: number; quantity?: number; unitPrice?: number }[];
-    const taxRate = Number(body.taxRate ?? body.tax_rate ?? 20);
-    const subtotal = items.reduce(
-      (s, i) =>
-        s +
-        (Number(i.total) || (Number(i.quantity) || 0) * (Number(i.unitPrice) || 0)),
-      0,
-    );
-    const subtotalRounded = Math.round(subtotal * 100) / 100;
-    const taxAmount = Math.round(subtotalRounded * (taxRate / 100) * 100) / 100;
-    const total = Math.round((subtotalRounded + taxAmount) * 100) / 100;
+    // Accept either legacy {description, unitPrice, total} or canonical
+    // {label, price, quantity, unite, tva}. The normalizer stores the
+    // canonical shape so the PDF + send pipelines read the same thing the
+    // bulk-lines / saveQuoteDraft writers produce.
+    const defaultTva = Number(body.taxRate ?? body.tax_rate ?? 20);
+    const items = normalizeQuoteItems(body.items, defaultTva);
+    const totals = computeQuoteTotals(items);
 
     update.items = items;
-    update.subtotal = subtotalRounded;
-    update.tax_rate = taxRate;
-    update.tax_amount = taxAmount;
-    update.total = total;
-    update.signature_type = getSignatureType(total);
+    update.subtotal = totals.subtotal;
+    update.tax_rate = totals.taxRate;
+    update.tax_amount = totals.taxAmount;
+    update.tax_breakdown = totals.taxBreakdown;
+    update.total = totals.total;
+    update.signature_type = getSignatureType(totals.total);
   }
 
   try {

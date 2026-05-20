@@ -2,6 +2,11 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { nextQuoteNumber, bumpQuoteNumber } from "@/lib/quotes/numbering";
+import {
+  computeQuoteTotals,
+  normalizeQuoteItem,
+  type QuoteItem,
+} from "@/lib/quotes/items";
 
 export const runtime = "nodejs";
 
@@ -38,71 +43,20 @@ const BodySchema = z.object({
 
 type Line = z.infer<typeof LineSchema>;
 
-interface QuoteItem {
-  id: string;
-  label: string;
-  price: number;
-  quantity: number;
-  unite: string | null;
-  tva: number;
-}
-
-function mintLineId(idx: number): string {
-  return `l-${Date.now().toString(36)}-${idx}-${Math.floor(Math.random() * 1000)}`;
-}
-
 function toQuoteItems(lines: Line[], startIdx: number): QuoteItem[] {
-  return lines.map((l, i) => ({
-    id: mintLineId(startIdx + i),
-    label: l.label,
-    price: l.price,
-    quantity: l.quantity,
-    unite: l.unite ?? null,
-    tva: l.tva,
-  }));
-}
-
-/**
- * Multi-TVA aware totals. Same algorithm as saveQuoteDraft (lib/emile/tools.ts)
- * so a quote enriched via bulk import looks identical to one produced by the
- * tool: per-rate breakdown for the PDF, dominant rate exposed as the scalar
- * tax_rate column for legacy consumers.
- */
-function computeTotals(items: QuoteItem[]) {
-  const subtotal = +items
-    .reduce((s, it) => s + it.price * it.quantity, 0)
-    .toFixed(2);
-
-  const breakdown: Record<string, { base: number; tax: number; ttc: number }> =
-    {};
-  for (const it of items) {
-    const base = it.price * it.quantity;
-    const key = String(it.tva);
-    const bucket = breakdown[key] ?? { base: 0, tax: 0, ttc: 0 };
-    bucket.base += base;
-    bucket.tax += base * (it.tva / 100);
-    breakdown[key] = bucket;
-  }
-  for (const k of Object.keys(breakdown)) {
-    breakdown[k] = {
-      base: +breakdown[k].base.toFixed(2),
-      tax: +breakdown[k].tax.toFixed(2),
-      ttc: +(breakdown[k].base + breakdown[k].tax).toFixed(2),
-    };
-  }
-  const taxAmount = +Object.values(breakdown)
-    .reduce((s, b) => s + b.tax, 0)
-    .toFixed(2);
-  const total = +(subtotal + taxAmount).toFixed(2);
-  let taxRate = 20;
-  let dominantBase = -1;
-  for (const [rate, b] of Object.entries(breakdown)) {
-    if (b.base > dominantBase) {
-      dominantBase = b.base;
-      taxRate = Number(rate);
-    }
-  }
-  return { subtotal, breakdown, taxAmount, total, taxRate };
+  return lines.map((l, i) =>
+    normalizeQuoteItem(
+      {
+        label: l.label,
+        quantity: l.quantity,
+        unite: l.unite,
+        price: l.price,
+        tva: l.tva,
+      },
+      startIdx + i,
+      l.tva,
+    ),
+  );
 }
 
 export async function POST(req: NextRequest) {
@@ -181,7 +135,7 @@ export async function POST(req: NextRequest) {
 
     const newItems = toQuoteItems(lines, existingItems.length);
     const merged = [...existingItems, ...newItems];
-    const totals = computeTotals(merged);
+    const totals = computeQuoteTotals(merged);
 
     const { data: updated, error: updErr } = await supabase
       .from("quotes")
@@ -190,7 +144,7 @@ export async function POST(req: NextRequest) {
         subtotal: totals.subtotal,
         tax_rate: totals.taxRate,
         tax_amount: totals.taxAmount,
-        tax_breakdown: totals.breakdown,
+        tax_breakdown: totals.taxBreakdown,
         total: totals.total,
         ...(clientId ? { client_id: clientId } : {}),
       })
@@ -204,6 +158,7 @@ export async function POST(req: NextRequest) {
 
     return Response.json({
       quote: updated,
+      items: merged,
       addedCount: newItems.length,
       totalLines: merged.length,
     });
@@ -211,7 +166,7 @@ export async function POST(req: NextRequest) {
 
   // ─── Create-and-insert path ──────────────────────────────────────────────
   const newItems = toQuoteItems(lines, 0);
-  const totals = computeTotals(newItems);
+  const totals = computeQuoteTotals(newItems);
   // 90-day default validity matches saveQuoteDraft.
   const validUntil = new Date(
     Date.now() + 90 * 24 * 60 * 60 * 1000,
@@ -232,7 +187,7 @@ export async function POST(req: NextRequest) {
         subtotal: totals.subtotal,
         tax_rate: totals.taxRate,
         tax_amount: totals.taxAmount,
-        tax_breakdown: totals.breakdown,
+        tax_breakdown: totals.taxBreakdown,
         total: totals.total,
         valid_until: validUntil,
       })
@@ -274,6 +229,7 @@ export async function POST(req: NextRequest) {
       tax_amount: totals.taxAmount,
       total: totals.total,
     },
+    items: newItems,
     addedCount: newItems.length,
     totalLines: newItems.length,
   });

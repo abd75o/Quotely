@@ -1,6 +1,10 @@
 import { NextRequest } from "next/server";
 import { generatePublicToken } from "@/lib/signature";
 import { getSignatureType } from "@/types";
+import {
+  computeQuoteTotals,
+  normalizeQuoteItems,
+} from "@/lib/quotes/items";
 
 function generateQuoteNumber(): string {
   const year = new Date().getFullYear();
@@ -47,8 +51,8 @@ export async function POST(request: NextRequest) {
     clientId?: string;
     newClient?: { name: string; email: string; phone?: string };
     number?: string;
-    taxRate: number;
-    items: { id: string; description: string; quantity: number; unitPrice: number; total: number }[];
+    taxRate?: number;
+    items: unknown;
     validUntil?: string;
     notes?: string;
   };
@@ -59,13 +63,15 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const subtotal = body.items.reduce((sum, item) => sum + item.total, 0);
-  const taxAmount = Math.round(subtotal * (body.taxRate / 100) * 100) / 100;
-  const total = subtotal + taxAmount;
+  const defaultTva = Number.isFinite(Number(body.taxRate))
+    ? Number(body.taxRate)
+    : 20;
+  const items = normalizeQuoteItems(body.items, defaultTva);
+  const totals = computeQuoteTotals(items);
 
   const quoteNumber = body.number || generateQuoteNumber();
   const publicToken = generatePublicToken();
-  const signatureType = getSignatureType(total);
+  const signatureType = getSignatureType(totals.total);
   const validUntil = body.validUntil || new Date(Date.now() + 30 * 86400_000).toISOString();
 
   try {
@@ -96,11 +102,12 @@ export async function POST(request: NextRequest) {
         client_id: clientId,
         number: quoteNumber,
         status: "pending",
-        items: body.items,
-        subtotal,
-        tax_rate: body.taxRate,
-        tax_amount: taxAmount,
-        total,
+        items,
+        subtotal: totals.subtotal,
+        tax_rate: totals.taxRate,
+        tax_amount: totals.taxAmount,
+        tax_breakdown: totals.taxBreakdown,
+        total: totals.total,
         valid_until: validUntil,
         notes: body.notes ?? null,
         public_token: publicToken,

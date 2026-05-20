@@ -30,19 +30,24 @@ function updateToDraft(
   update: EmileQuoteUpdate,
   previous: EmileQuoteDraft | null,
 ): EmileQuoteDraft {
-  const lines = (update.items ?? []).map((l, idx) => ({
-    id: String(l.id ?? `l-${idx}`),
-    label: String(l.libelle ?? l.label ?? "Prestation"),
-    price: Number(l.prixHT ?? l.price ?? 0),
-    quantity: Number(l.quantite ?? l.quantity ?? 1),
-    unit: (l.unite as string | null | undefined) ?? null,
-    tva:
-      typeof l.tauxTVA === "number"
-        ? l.tauxTVA
-        : typeof l.tva === "number"
-          ? l.tva
-          : null,
-  }));
+  // Partial updates (e.g. just totals after a status change) must NOT erase
+  // the lines we already had on screen — `update.items === undefined` keeps
+  // previous.lines; an empty array (`[]`) is treated as an explicit clear.
+  const lines = update.items
+    ? update.items.map((l, idx) => ({
+        id: String(l.id ?? `l-${idx}`),
+        label: String(l.libelle ?? l.label ?? "Prestation"),
+        price: Number(l.prixHT ?? l.price ?? 0),
+        quantity: Number(l.quantite ?? l.quantity ?? 1),
+        unit: (l.unite as string | null | undefined) ?? null,
+        tva:
+          typeof l.tauxTVA === "number"
+            ? l.tauxTVA
+            : typeof l.tva === "number"
+              ? l.tva
+              : null,
+      }))
+    : (previous?.lines ?? []);
   return {
     id: update.quoteId ?? previous?.id,
     number: update.number ?? previous?.number ?? "—",
@@ -221,13 +226,19 @@ export function EmileLayout({ conversationId }: EmileLayoutProps) {
 
 async function persistQuote(quote: EmileQuoteDraft): Promise<void> {
   if (!quote.id) return;
+  // Forward per-line tva and unite — the PUT route normalizes either shape
+  // but we send the canonical one to keep the JSONB consistent with what
+  // bulk-lines / saveQuoteDraft / Émile produce. Falling back to the global
+  // quote.tva for lines without an explicit rate keeps the single-rate UX
+  // unchanged.
   const items = quote.lines.map((l) => ({
     id: l.id,
     label: l.label,
     quantity: l.quantity,
+    unite: l.unit ?? null,
     price: l.price,
-    total: l.quantity * l.price,
-    tva: quote.tva,
+    tva: typeof l.tva === "number" ? l.tva : quote.tva,
+    total: +(l.quantity * l.price).toFixed(2),
   }));
   try {
     const res = await fetch(`/api/quotes/${quote.id}`, {

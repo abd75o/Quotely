@@ -48,6 +48,21 @@ export interface BulkImportSuccess {
   addedCount: number;
   totalLines: number;
   total: number;
+  /**
+   * Full canonical items array after the bulk insert/merge. The modal forwards
+   * it to the parent so the right-side preview can render the rows immediately,
+   * without waiting for the LLM's next turn. Without this the panel showed
+   * "0 lignes" right after a successful import, which lured users into
+   * re-adding lines manually and corrupting the DB.
+   */
+  items: Array<{
+    id: string;
+    label: string;
+    quantity: number;
+    unite: string | null;
+    price: number;
+    tva: number;
+  }>;
 }
 
 interface BulkImportModalProps {
@@ -86,6 +101,12 @@ function parseNumber(raw: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+function stripLeadingNumber(s: string): string {
+  // "1. Dépose baignoire" / "12) Pose carrelage" / "3 - Reprise plomberie"
+  // → drop the bullet so the label cell carries the prestation only.
+  return s.replace(/^\s*\d+\s*[.)\-–—:]\s*/, "");
+}
+
 function parseLine(line: string, defaultTva: number): DraftRow {
   const trimmed = line.trim();
   // 1. Pipe / tab / semicolon delimited "label | qty | unit? | price"
@@ -93,7 +114,7 @@ function parseLine(line: string, defaultTva: number): DraftRow {
   if (delim) {
     const parts = trimmed.split(delim).filter(Boolean);
     if (parts.length >= 3) {
-      const [label, qtyRaw, ...rest] = parts;
+      const [labelRaw, qtyRaw, ...rest] = parts;
       let unite = "";
       let priceRaw = rest[rest.length - 1] ?? "";
       // If a unit cell sits between qty and price.
@@ -108,7 +129,7 @@ function parseLine(line: string, defaultTva: number): DraftRow {
       const price = parseNumber(priceRaw);
       return {
         id: freshId(),
-        label: label.trim(),
+        label: stripLeadingNumber(labelRaw).trim(),
         quantity: qty != null ? String(qty) : "1",
         unite,
         price: price != null ? String(price) : "",
@@ -119,7 +140,7 @@ function parseLine(line: string, defaultTva: number): DraftRow {
 
   // 2. "1. Désignation - 280€" or "Désignation : 280" or "Désignation 280€"
   //    Trailing number = price, leading "N." or "-" stripped.
-  const stripped = trimmed.replace(/^\s*\d+\s*[.\)]\s*/, "");
+  const stripped = stripLeadingNumber(trimmed);
   const priceMatch = /([\d ., ]+)\s*(?:€|EUR|HT)?\s*$/i.exec(stripped);
   if (priceMatch && /\d/.test(priceMatch[1])) {
     const labelPart = stripped.slice(0, priceMatch.index).replace(/[-:–—]\s*$/, "").trim();
@@ -309,6 +330,7 @@ export function BulkImportModal({
       }
       const json = (await res.json()) as {
         quote: { id: string; number: string; total: number };
+        items: BulkImportSuccess["items"];
         addedCount: number;
         totalLines: number;
       };
@@ -321,6 +343,7 @@ export function BulkImportModal({
         addedCount: json.addedCount,
         totalLines: json.totalLines,
         total: json.quote.total,
+        items: json.items ?? [],
       });
       onClose();
     } catch (err) {

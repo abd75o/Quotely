@@ -36,6 +36,14 @@ export interface EmileQuoteLine {
   tva?: number;
 }
 
+export interface EmileQuoteUpdateClient {
+  id: string;
+  name: string;
+  first_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+}
+
 export interface EmileQuoteUpdate {
   quoteId?: string;
   number?: string;
@@ -45,6 +53,17 @@ export interface EmileQuoteUpdate {
   taxAmount?: number;
   total?: number;
   validUntil?: string;
+  /**
+   * Optional client snapshot. Set when the update originates from a full quote
+   * row (e.g. `loadConversation` hydrating the right panel) so EmileLayout can
+   * display the client name without a separate fetch. Tool-emitted updates
+   * (saveQuoteDraft) omit it — the previous client is kept.
+   */
+  client?: EmileQuoteUpdateClient | null;
+  /**
+   * Status snapshot from the DB row. Same hydration use-case as `client`.
+   */
+  status?: string;
 }
 
 export interface UseEmileOptions {
@@ -216,13 +235,26 @@ function extractQuoteUpdate(
 }
 
 function quoteRowToUpdate(row: Record<string, unknown>): EmileQuoteUpdate {
+  // Items: same back-compat mapping as before — emit both canonical and
+  // saveQuoteDraft-style keys so any downstream alias-aware reader keeps
+  // working.
   const items = Array.isArray(row.items)
     ? (row.items as Array<Record<string, unknown>>).map((it) => ({
         id: typeof it.id === "string" ? it.id : undefined,
-        label: typeof it.label === "string" ? it.label : undefined,
-        libelle: typeof it.label === "string" ? it.label : undefined,
-        price: Number(it.price ?? 0),
-        prixHT: Number(it.price ?? 0),
+        label:
+          typeof it.label === "string"
+            ? it.label
+            : typeof it.description === "string"
+              ? (it.description as string)
+              : undefined,
+        libelle:
+          typeof it.label === "string"
+            ? it.label
+            : typeof it.description === "string"
+              ? (it.description as string)
+              : undefined,
+        price: Number(it.price ?? it.unitPrice ?? 0),
+        prixHT: Number(it.price ?? it.unitPrice ?? 0),
         quantity: Number(it.quantity ?? 1),
         quantite: Number(it.quantity ?? 1),
         unite: (it.unite as string | null | undefined) ?? null,
@@ -230,6 +262,21 @@ function quoteRowToUpdate(row: Record<string, unknown>): EmileQuoteUpdate {
         tauxTVA: typeof it.tva === "number" ? it.tva : undefined,
       }))
     : [];
+
+  // The /api/quotes/[id] GET embeds the client via `client:clients(*)` so a
+  // hydrated row gives us name/email/etc. for free.
+  const rawClient = row.client as Record<string, unknown> | null | undefined;
+  const client: EmileQuoteUpdateClient | undefined =
+    rawClient && typeof rawClient === "object"
+      ? {
+          id: String(rawClient.id ?? ""),
+          name: String(rawClient.name ?? "Client"),
+          first_name: (rawClient.first_name as string | null) ?? null,
+          email: (rawClient.email as string | null) ?? null,
+          phone: (rawClient.phone as string | null) ?? null,
+        }
+      : undefined;
+
   return {
     quoteId: row.id as string | undefined,
     number: row.number as string | undefined,
@@ -240,6 +287,8 @@ function quoteRowToUpdate(row: Record<string, unknown>): EmileQuoteUpdate {
     total: Number(row.total ?? 0),
     validUntil:
       typeof row.valid_until === "string" ? row.valid_until : undefined,
+    client,
+    status: typeof row.status === "string" ? row.status : undefined,
   };
 }
 

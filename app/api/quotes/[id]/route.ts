@@ -15,9 +15,14 @@ export async function GET(
     const { createClient } = await import("@/lib/supabase/server");
     const supabase = await createClient();
 
+    // NOTE: we used to embed `artisan:users(name, company, email, phone, siret)`
+    // here. The `users` table lives in the `auth` schema and is NOT exposed via
+    // PostgREST — that embed silently 500'd, the route returned 404, and the
+    // Émile panel never hydrated when reopening a conversation (BUG #2).
+    // Callers that need artisan info should join `profiles` separately.
     const { data, error } = await supabase
       .from("quotes")
-      .select("*, client:clients(*), artisan:users(name, company, email, phone, siret)")
+      .select("*, client:clients(*)")
       .eq("id", id)
       .single();
 

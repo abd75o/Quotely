@@ -9,8 +9,35 @@ import { EmileChat } from "./EmileChat";
 import { QuotePreview } from "./QuotePreview";
 import { QuoteFullscreen } from "./QuoteFullscreen";
 import { NewQuoteLineModal } from "./NewQuoteLineModal";
-import type { EmileQuoteDraft, EmileQuoteLine } from "./types";
+import type {
+  EmileQuoteDraft,
+  EmileQuoteLine,
+  EmileQuoteStatus,
+} from "./types";
 import type { EmileQuoteUpdate } from "@/hooks/useEmile";
+
+const KNOWN_STATUSES: EmileQuoteStatus[] = [
+  "draft",
+  "ready",
+  "sent",
+  "viewed",
+  "signed",
+  "refused",
+  "expired",
+];
+
+function coerceStatus(raw: string | undefined): EmileQuoteStatus | undefined {
+  if (!raw) return undefined;
+  // The DB status set is a superset (e.g. "pending", "invoiced"); collapse
+  // unknowns to a sensible UI bucket so the right-panel badge doesn't crash
+  // out on a status it doesn't render.
+  if ((KNOWN_STATUSES as string[]).includes(raw)) {
+    return raw as EmileQuoteStatus;
+  }
+  if (raw === "pending") return "sent";
+  if (raw === "invoiced") return "signed";
+  return undefined;
+}
 
 interface EmileLayoutProps {
   conversationId?: string;
@@ -48,15 +75,19 @@ function updateToDraft(
               : null,
       }))
     : (previous?.lines ?? []);
+  // Client / status: hydration from a full DB row supplies them, tool-emitted
+  // updates don't — fall back to the previous value rather than wiping it.
+  const client = update.client !== undefined ? update.client : (previous?.client ?? null);
+  const status = coerceStatus(update.status) ?? previous?.status ?? "draft";
   return {
     id: update.quoteId ?? previous?.id,
     number: update.number ?? previous?.number ?? "—",
-    client: previous?.client ?? null,
+    client,
     date: previous?.date ?? todayLabel(),
     validity: previous?.validity ?? 90,
     tva: update.taxRate ?? previous?.tva ?? 20,
     lines,
-    status: previous?.status ?? "draft",
+    status,
   };
 }
 
@@ -112,6 +143,16 @@ export function EmileLayout({ conversationId }: EmileLayoutProps) {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     };
   }, []);
+
+  // Reset the right-panel quote whenever the conversation changes. useEmile
+  // re-runs loadConversation on the same trigger and calls handleQuoteUpdate
+  // again if the new conv has a linked quote — so the panel re-populates
+  // automatically. Without this reset, navigating from conv A (with devis)
+  // to conv B (no devis) leaves A's draft on screen until the user touches
+  // something.
+  useEffect(() => {
+    setQuote(null);
+  }, [conversationId]);
 
   return (
     <div className="flex h-[calc(100vh-6rem)] w-full flex-col lg:h-[calc(100vh-4rem)]">

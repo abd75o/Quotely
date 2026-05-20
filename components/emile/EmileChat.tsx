@@ -60,6 +60,10 @@ interface EmileChatProps {
   conversationId?: string;
   onQuoteUpdate?: (quote: EmileQuoteUpdate) => void;
   onConversationCreated?: (id: string) => void;
+  /** Live snapshot of the right-panel quote so the BulkImportModal can show
+   *  the "X lignes déjà sur le devis" pre-step without an extra round-trip. */
+  activeQuoteLineCount?: number;
+  activeQuoteNumber?: string | null;
 }
 
 const NEAR_BOTTOM_PX = 100;
@@ -68,6 +72,8 @@ export function EmileChat({
   conversationId,
   onQuoteUpdate,
   onConversationCreated,
+  activeQuoteLineCount = 0,
+  activeQuoteNumber,
 }: EmileChatProps) {
   const {
     messages,
@@ -410,10 +416,17 @@ export function EmileChat({
         currency: "EUR",
         minimumFractionDigits: 2,
       }).format(info.total);
+      // Mode-aware [SYSTEM] notification so Émile knows whether the existing
+      // lines were preserved, overwritten, or sit on a separate (older) draft.
+      const pluralS = info.totalLines > 1 ? "s" : "";
+      const sysBody =
+        info.mode === "replace"
+          ? `Devis ${info.number} reconstruit via import en masse — anciennes lignes effacées, ${info.totalLines} ligne${pluralS} au total (${eur} HT)`
+          : info.mode === "new"
+            ? `Nouveau devis ${info.number} créé via import en masse — ${info.totalLines} ligne${pluralS} (${eur} HT)`
+            : `Devis ${info.number} enrichi de ${info.addedCount} ligne${info.addedCount > 1 ? "s" : ""} via import en masse (total ${info.totalLines} ligne${pluralS}, ${eur} HT)`;
       void sendMessage(
-        `[SYSTEM] Devis ${info.number} enrichi de ${info.addedCount} ligne${
-          info.addedCount > 1 ? "s" : ""
-        } via import en masse (total ${info.totalLines} lignes, ${eur} HT). Reprends la main pour clarifier ou proposer la suite.`,
+        `[SYSTEM] ${sysBody}. Reprends la main pour clarifier ou proposer la suite.`,
       );
     },
     [onQuoteUpdate, sendMessage],
@@ -553,6 +566,8 @@ export function EmileChat({
         open={bulkImportOpen}
         rawText={bulkRawText}
         conversationId={conversationId ?? null}
+        existingItemCount={activeQuoteLineCount}
+        existingQuoteNumber={activeQuoteNumber ?? null}
         onClose={handleBulkImportClose}
         onImported={handleBulkImported}
       />

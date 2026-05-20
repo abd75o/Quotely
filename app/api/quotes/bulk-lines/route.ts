@@ -12,12 +12,18 @@ import { autoTitleConversation } from "@/lib/conversations/auto-title";
 export const runtime = "nodejs";
 
 /**
- * POST /api/quotes/bulk-lines — append a batch of pre-parsed lines to a quote.
+ * POST /api/quotes/bulk-lines — ingest a batch of pre-parsed lines.
  *
- * Two modes:
- *   1. `quoteId` provided → append to that quote (auth-scoped to user_id).
- *   2. `quoteId` omitted  → create a new draft and append. If `conversationId`
- *      is given, link the new draft back so Émile sees it in subsequent turns.
+ * Three modes (selected by the client BEFORE posting, defaults to "append"):
+ *   - "append"  : add to the resolved quote (existing behaviour). If no quote
+ *                 resolves (no quoteId, no conv link), a fresh draft is
+ *                 created and the lines are written into it.
+ *   - "replace" : overwrite the items on the resolved quote. Refuses to run
+ *                 on a quote already past "draft" — we don't silently rewrite
+ *                 sent/signed devis. Always requires a resolved quote.
+ *   - "new"     : ignore any resolved quote and create a fresh draft, even
+ *                 when one is linked to the conversation. The conversation's
+ *                 related_quote_id is re-pointed to the new draft.
  *
  * This endpoint exists so the front-end can ingest a long paste (the
  * BulkImportModal opens automatically past 25 lines) without round-tripping
@@ -40,6 +46,9 @@ const BodySchema = z.object({
   conversationId: z.string().uuid().optional(),
   clientId: z.string().uuid().optional(),
   lines: z.array(LineSchema).min(1).max(500),
+  // Optional, defaults to "append" so existing callers (none other than the
+  // modal today, but defensive) keep their behaviour.
+  mode: z.enum(["append", "replace", "new"]).optional().default("append"),
 });
 
 type Line = z.infer<typeof LineSchema>;
@@ -86,29 +95,33 @@ export async function POST(req: NextRequest) {
       { status: 422 },
     );
   }
-  const { quoteId, conversationId, clientId, lines } = parsed.data;
+  const { quoteId, conversationId, clientId, lines, mode } = parsed.data;
 
-  // Resolve target quote: explicit quoteId > conversation.related_quote_id >
-  // create a new draft. Same precedence as the saveQuoteDraft tool — keeps
-  // behaviour consistent between LLM-driven and UI-driven paths.
-  let targetQuoteId = quoteId ?? null;
-  if (!targetQuoteId && conversationId) {
-    const { data: conv } = await supabase
-      .from("conversations")
-      .select("related_quote_id")
-      .eq("id", conversationId)
-      .eq("user_id", user.id)
-      .maybeSingle();
-    if (conv?.related_quote_id) {
-      targetQuoteId = conv.related_quote_id as string;
+  // "new" mode skips quote resolution entirely — even if the conv has a
+  // linked draft, we create a fresh one and re-point the conversation.
+  // Otherwise resolve target the same way as saveQuoteDraft: explicit
+  // quoteId > conversation.related_quote_id > none.
+  let targetQuoteId: string | null = null;
+  if (mode !== "new") {
+    targetQuoteId = quoteId ?? null;
+    if (!targetQuoteId && conversationId) {
+      const { data: conv } = await supabase
+        .from("conversations")
+        .select("related_quote_id")
+        .eq("id", conversationId)
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (conv?.related_quote_id) {
+        targetQuoteId = conv.related_quote_id as string;
+      }
     }
   }
 
-  // ─── Append path ─────────────────────────────────────────────────────────
+  // ─── Append / replace path ───────────────────────────────────────────────
   if (targetQuoteId) {
     const { data: existing, error: fetchErr } = await supabase
       .from("quotes")
-      .select("id, items")
+      .select("id, items, status")
       .eq("id", targetQuoteId)
       .eq("user_id", user.id)
       .maybeSingle();
@@ -119,29 +132,47 @@ export async function POST(req: NextRequest) {
       return Response.json({ error: "Quote not found" }, { status: 404 });
     }
 
-    const existingItems = Array.isArray(existing.items)
-      ? (existing.items as QuoteItem[])
-      : [];
-
-    // Enforce the 500-line ceiling against the COMBINED set so a user can't
-    // paste 400 lines into a quote that already has 200.
-    if (existingItems.length + lines.length > 500) {
+    // Replace is destructive — refuse on anything other than a draft so a
+    // signed devis can never get silently rewritten under the user's nose.
+    const isDraft =
+      !existing.status || existing.status === "draft";
+    if (mode === "replace" && !isDraft) {
       return Response.json(
         {
-          error: `Cap dépassé : devis aurait ${existingItems.length + lines.length} lignes (max 500).`,
+          error:
+            "Impossible de remplacer les lignes d'un devis déjà envoyé ou signé. Crée un nouveau devis à la place.",
+          quoteStatus: existing.status,
         },
         { status: 422 },
       );
     }
 
-    const newItems = toQuoteItems(lines, existingItems.length);
-    const merged = [...existingItems, ...newItems];
-    const totals = computeQuoteTotals(merged);
+    const existingItems = Array.isArray(existing.items)
+      ? (existing.items as QuoteItem[])
+      : [];
+
+    const baseItems = mode === "replace" ? [] : existingItems;
+    // Enforce the 500-line ceiling against the FINAL set so a user can't
+    // paste 400 lines into a quote that already has 200 (append) — but a
+    // replace only counts the new lines.
+    if (baseItems.length + lines.length > 500) {
+      return Response.json(
+        {
+          error: `Cap dépassé : devis aurait ${baseItems.length + lines.length} lignes (max 500).`,
+        },
+        { status: 422 },
+      );
+    }
+
+    const newItems = toQuoteItems(lines, baseItems.length);
+    const finalItems =
+      mode === "replace" ? newItems : [...baseItems, ...newItems];
+    const totals = computeQuoteTotals(finalItems);
 
     const { data: updated, error: updErr } = await supabase
       .from("quotes")
       .update({
-        items: merged,
+        items: finalItems,
         subtotal: totals.subtotal,
         tax_rate: totals.taxRate,
         tax_amount: totals.taxAmount,
@@ -158,8 +189,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Title the conversation now that we have meaningful content. We pass the
-    // FIRST imported line as fallback prestation (the merged[0] could be a
-    // pre-existing line); the helper skips placeholder labels anyway.
+    // FIRST imported line as fallback prestation; the helper skips placeholder
+    // labels anyway. On a replace, this is the first NEW line — exactly what
+    // the user just typed.
     await autoTitleConversation(supabase, conversationId, {
       clientId: clientId ?? (updated.client_id as string | null) ?? null,
       fallbackPrestation: newItems[0]?.label ?? null,
@@ -168,13 +200,25 @@ export async function POST(req: NextRequest) {
 
     return Response.json({
       quote: updated,
-      items: merged,
+      items: finalItems,
       addedCount: newItems.length,
-      totalLines: merged.length,
+      totalLines: finalItems.length,
+      mode,
     });
   }
 
   // ─── Create-and-insert path ──────────────────────────────────────────────
+  // Reached when mode === "new", or when no quote could be resolved (no
+  // quoteId + no conv link + empty append).
+  if (mode === "replace") {
+    // Replace without a target makes no semantic sense — surface it clearly
+    // instead of silently creating a new draft.
+    return Response.json(
+      { error: "Aucun devis cible pour le mode 'replace'." },
+      { status: 422 },
+    );
+  }
+
   const newItems = toQuoteItems(lines, 0);
   const totals = computeQuoteTotals(newItems);
   // 90-day default validity matches saveQuoteDraft.
@@ -222,6 +266,9 @@ export async function POST(req: NextRequest) {
   }
 
   if (conversationId) {
+    // For mode="new" this overwrites any previous related_quote_id — exactly
+    // what the user asked for ("crée un nouveau devis", the conv now points
+    // at the new draft).
     await supabase
       .from("conversations")
       .update({
@@ -235,6 +282,10 @@ export async function POST(req: NextRequest) {
       clientId: clientId ?? null,
       fallbackPrestation: newItems[0]?.label ?? null,
       fallbackNumber: created.number,
+      // When the user explicitly asked for a NEW devis, force re-titling
+      // even if the previous title was clean — the new draft's content
+      // should drive the new title.
+      force: mode === "new",
     });
   }
 
@@ -251,5 +302,6 @@ export async function POST(req: NextRequest) {
     items: newItems,
     addedCount: newItems.length,
     totalLines: newItems.length,
+    mode,
   });
 }

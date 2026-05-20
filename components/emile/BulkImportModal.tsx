@@ -42,12 +42,15 @@ interface DraftRow {
   tva: number;
 }
 
+export type BulkImportMode = "append" | "replace" | "new";
+
 export interface BulkImportSuccess {
   quoteId: string;
   number: string;
   addedCount: number;
   totalLines: number;
   total: number;
+  mode: BulkImportMode;
   /**
    * Full canonical items array after the bulk insert/merge. The modal forwards
    * it to the parent so the right-side preview can render the rows immediately,
@@ -72,6 +75,15 @@ interface BulkImportModalProps {
   quoteId?: string | null;
   conversationId?: string | null;
   clientId?: string | null;
+  /**
+   * How many lines are ALREADY on the active quote. When > 0, the modal
+   * shows a 3-choice pre-step (append / replace / new) before the editor
+   * so the user can't silently double-import. Parent owns the count (lives
+   * in the right-panel state) so we don't pay a round-trip on open.
+   */
+  existingItemCount?: number;
+  /** Active quote number, shown in the pre-step copy ("Devis QTL-… a 12 lignes"). */
+  existingQuoteNumber?: string | null;
   onImported: (info: BulkImportSuccess) => void;
 }
 
@@ -218,15 +230,24 @@ export function BulkImportModal({
   quoteId,
   conversationId,
   clientId,
+  existingItemCount = 0,
+  existingQuoteNumber,
   onImported,
 }: BulkImportModalProps) {
   const [rows, setRows] = useState<DraftRow[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
+  // When the active quote already has lines, force the user to pick an
+  // intent (append/replace/new) BEFORE the editor renders. Defaults to null
+  // so the editor stays hidden behind the pre-step until a choice is made;
+  // we collapse to "append" automatically when there's nothing to overwrite.
+  const [mode, setMode] = useState<BulkImportMode | null>(null);
   // Tracking the rawText we last parsed prevents re-parsing on every render
   // and lets us reset cleanly if the user closes + opens with a different
   // paste (e.g. swapped tabs).
   const lastParsedRef = useRef<string | null>(null);
+
+  const needsModeChoice = existingItemCount > 0;
 
   // Re-parse only when the modal (re)opens or the source paste changes.
   useEffect(() => {
@@ -235,7 +256,10 @@ export function BulkImportModal({
     lastParsedRef.current = rawText;
     setRows(parseBulk(rawText, 20));
     setConfirmClose(false);
-  }, [open, rawText]);
+    // Reset mode whenever the modal reopens with a new paste — the active
+    // quote may have grown / shrunk since the previous import.
+    setMode(needsModeChoice ? null : "append");
+  }, [open, rawText, needsModeChoice]);
 
   // Body scroll lock + ESC.
   useEffect(() => {
@@ -304,13 +328,14 @@ export function BulkImportModal({
   }
 
   async function handleSubmit() {
-    if (!allValid || submitting) return;
+    if (!allValid || submitting || mode === null) return;
     setSubmitting(true);
     try {
       const payload = {
         ...(quoteId ? { quoteId } : {}),
         ...(conversationId ? { conversationId } : {}),
         ...(clientId ? { clientId } : {}),
+        mode,
         lines: rows.map((r) => ({
           label: r.label.trim(),
           quantity: Number(r.quantity),
@@ -333,9 +358,22 @@ export function BulkImportModal({
         items: BulkImportSuccess["items"];
         addedCount: number;
         totalLines: number;
+        mode: BulkImportMode;
       };
+      const verb =
+        json.mode === "replace"
+          ? "remplacée"
+          : json.mode === "new"
+            ? "créée"
+            : "ajoutée";
+      const verbPlural =
+        json.mode === "replace"
+          ? "remplacées"
+          : json.mode === "new"
+            ? "créées"
+            : "ajoutées";
       toastSuccess(
-        `${json.addedCount} ligne${json.addedCount > 1 ? "s" : ""} ajoutée${json.addedCount > 1 ? "s" : ""} au devis.`,
+        `${json.addedCount} ligne${json.addedCount > 1 ? "s" : ""} ${json.addedCount > 1 ? verbPlural : verb}.`,
       );
       onImported({
         quoteId: json.quote.id,
@@ -344,6 +382,7 @@ export function BulkImportModal({
         totalLines: json.totalLines,
         total: json.quote.total,
         items: json.items ?? [],
+        mode: json.mode ?? mode,
       });
       onClose();
     } catch (err) {
@@ -370,12 +409,14 @@ export function BulkImportModal({
         <header className="flex items-center justify-between border-b border-[var(--border)] bg-white px-6 py-4">
           <div>
             <h2 className="font-fraunces text-lg font-bold text-[var(--text-primary)]">
-              Import en masse
+              {mode === null && needsModeChoice
+                ? "Que faire des lignes existantes ?"
+                : "Import en masse"}
             </h2>
             <p className="text-[11px] text-[var(--text-muted)]">
-              {rows.length} ligne{rows.length > 1 ? "s" : ""} détectée
-              {rows.length > 1 ? "s" : ""}. Vérifie / édite avant
-              d&apos;importer.
+              {mode === null && needsModeChoice
+                ? `${existingItemCount} ligne${existingItemCount > 1 ? "s" : ""} déjà sur ${existingQuoteNumber ? `le devis ${existingQuoteNumber}` : "le devis en cours"}. Choisis comment intégrer les ${rows.length} nouvelle${rows.length > 1 ? "s" : ""}.`
+                : `${rows.length} ligne${rows.length > 1 ? "s" : ""} détectée${rows.length > 1 ? "s" : ""}. Vérifie / édite avant d'importer.`}
             </p>
           </div>
           <button
@@ -388,6 +429,14 @@ export function BulkImportModal({
           </button>
         </header>
 
+        {mode === null && needsModeChoice ? (
+          <ModeChoiceStep
+            existingItemCount={existingItemCount}
+            pendingCount={rows.length}
+            onPick={(picked) => setMode(picked)}
+            onCancel={attemptClose}
+          />
+        ) : (
         <div className="min-h-0 flex-1 overflow-auto px-6 py-4">
           {rows.length === 0 ? (
             <p className="py-10 text-center text-sm text-[var(--text-muted)]">
@@ -536,13 +585,26 @@ export function BulkImportModal({
             </p>
           )}
         </div>
+        )}
 
+        {mode !== null && (
         <footer className="flex items-center justify-between gap-3 border-t border-[var(--border)] bg-white px-6 py-3">
-          <div className="text-[13px] text-[var(--text-secondary)]">
-            Total HT :{" "}
-            <span className="text-base font-bold text-[var(--text-primary)]">
-              {EUR.format(subtotal)}
+          <div className="flex flex-col text-[13px] text-[var(--text-secondary)]">
+            <span>
+              Total HT :{" "}
+              <span className="text-base font-bold text-[var(--text-primary)]">
+                {EUR.format(subtotal)}
+              </span>
             </span>
+            {needsModeChoice && (
+              <button
+                type="button"
+                onClick={() => setMode(null)}
+                className="self-start text-[11px] text-[var(--text-muted)] underline-offset-2 transition-colors hover:text-[var(--primary)] hover:underline"
+              >
+                Changer le mode ({modeLabel(mode)})
+              </button>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -559,10 +621,11 @@ export function BulkImportModal({
               className="inline-flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[var(--primary-dark)] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-              Importer {rows.length} ligne{rows.length > 1 ? "s" : ""}
+              {submitLabel(mode, rows.length)}
             </button>
           </div>
         </footer>
+        )}
       </div>
 
       {confirmClose && (
@@ -605,5 +668,115 @@ export function BulkImportModal({
         </div>
       )}
     </div>
+  );
+}
+
+// ─── Mode choice step ──────────────────────────────────────────────────────
+// Rendered BEFORE the line editor when the active quote already has items.
+// Forces the user to pick an intent so we don't silently double-import.
+
+function modeLabel(mode: BulkImportMode): string {
+  switch (mode) {
+    case "append":
+      return "ajouter";
+    case "replace":
+      return "remplacer";
+    case "new":
+      return "nouveau devis";
+  }
+}
+
+function submitLabel(mode: BulkImportMode, count: number): string {
+  const plural = count > 1 ? "s" : "";
+  switch (mode) {
+    case "append":
+      return `Ajouter ${count} ligne${plural}`;
+    case "replace":
+      return `Remplacer par ${count} ligne${plural}`;
+    case "new":
+      return `Créer un devis (${count} ligne${plural})`;
+  }
+}
+
+interface ModeChoiceStepProps {
+  existingItemCount: number;
+  pendingCount: number;
+  onPick: (mode: BulkImportMode) => void;
+  onCancel: () => void;
+}
+
+function ModeChoiceStep({
+  existingItemCount,
+  pendingCount,
+  onPick,
+  onCancel,
+}: ModeChoiceStepProps) {
+  return (
+    <div className="min-h-0 flex-1 overflow-auto px-6 py-6">
+      <div className="mx-auto flex max-w-2xl flex-col gap-3">
+        <ChoiceCard
+          tone="default"
+          title={`Ajouter aux ${existingItemCount} ligne${existingItemCount > 1 ? "s" : ""} existante${existingItemCount > 1 ? "s" : ""}`}
+          description={`Le devis aura ${existingItemCount + pendingCount} ligne${existingItemCount + pendingCount > 1 ? "s" : ""} au total.`}
+          onClick={() => onPick("append")}
+        />
+        <ChoiceCard
+          tone="warn"
+          title={`Remplacer tout (supprime les ${existingItemCount} ligne${existingItemCount > 1 ? "s" : ""})`}
+          description={`Garde le numéro de devis, mais écrase les lignes actuelles. Seul un devis en brouillon peut être remplacé.`}
+          onClick={() => onPick("replace")}
+        />
+        <ChoiceCard
+          tone="default"
+          title="Créer un nouveau devis"
+          description={`Crée un brouillon séparé. L'ancien devis est conservé tel quel (et n'est plus lié à cette conversation).`}
+          onClick={() => onPick("new")}
+        />
+        <button
+          type="button"
+          onClick={onCancel}
+          className="mt-2 self-center text-[12px] text-[var(--text-muted)] underline-offset-2 hover:text-[var(--text-primary)] hover:underline"
+        >
+          Annuler l&apos;import
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ChoiceCard({
+  tone,
+  title,
+  description,
+  onClick,
+}: {
+  tone: "default" | "warn";
+  title: string;
+  description: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "w-full rounded-xl border bg-white px-4 py-3 text-left transition-all hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30",
+        tone === "warn"
+          ? "border-amber-200 hover:border-amber-400"
+          : "border-[var(--border)] hover:border-[var(--primary)]",
+      )}
+    >
+      <p
+        className={cn(
+          "text-[14px] font-bold",
+          tone === "warn" ? "text-amber-900" : "text-[var(--text-primary)]",
+        )}
+      >
+        {title}
+      </p>
+      <p className="mt-0.5 text-[12px] text-[var(--text-secondary)]">
+        {description}
+      </p>
+    </button>
   );
 }

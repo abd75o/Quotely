@@ -165,6 +165,8 @@ export function EmileLayout({ conversationId }: EmileLayoutProps) {
             conversationId={conversationId}
             onQuoteUpdate={handleQuoteUpdate}
             onConversationCreated={handleConversationCreated}
+            activeQuoteLineCount={quote?.lines.length ?? 0}
+            activeQuoteNumber={quote?.number ?? null}
           />
         </div>
         {/* The desktop layout sits to the right of the chat */}

@@ -1,6 +1,7 @@
 import {
   Document,
   Image,
+  Link,
   Page,
   StyleSheet,
   Text,
@@ -11,36 +12,35 @@ import { resolveMentionsLegales } from "./mentions-legales";
 import { shouldShowBranding } from "@/lib/branding/should-show";
 
 // ─── Design system ─────────────────────────────────────────────────────────
-// Apple-receipt aesthetic: a neutral slate palette with a single artisan-
-// supplied accent. Every literal in the template references these tokens, so
-// re-skinning the PDF is a one-line change here.
-//
-// react-pdf does NOT support CSS variables, so we resolve the accent at the
-// top of QuotePdfDocument and pass it into buildStyles().
+// Quovi PDF v2 — modern, premium, indigo accent. Re-skinning the document is
+// a one-line change here (palette + DEFAULT_ACCENT). react-pdf does NOT
+// support CSS variables, so the accent is threaded through buildStyles().
 const palette = {
-  textPrimary: "#0F172A",   // slate-900
-  textSecondary: "#475569", // slate-600
-  textTertiary: "#94A3B8",  // slate-400  (labels)
-  hairline: "#E2E8F0",      // slate-200  (separators)
-  zebra: "#F8FAFC",         // slate-50   (alt rows)
+  ink: "#0F172A",          // slate-900 — strong headings + grand total
+  text: "#1F2937",         // slate-800 — body copy
+  textMuted: "#475569",    // slate-600 — secondary text
+  label: "#94A3B8",        // slate-400 — uppercase labels
+  hairline: "#E5E7EB",     // gray-200  — separators
+  surfaceSoft: "#F8F9FB",  // near-white  — zebra rows + totals card
   white: "#FFFFFF",
-  statusPending: "#F59E0B", // amber-500
-  statusRefused: "#DC2626", // red-600
-  statusDraft: "#94A3B8",   // slate-400
+  statusPending: "#F59E0B",
+  statusRefused: "#DC2626",
+  statusDraft: "#94A3B8",
 } as const;
 
-const DEFAULT_ACCENT = "#0F172A"; // slate-900 — never reads bad on white.
+// Indigo per spec; resolveAccent() lets the artisan brand_color override.
+const DEFAULT_ACCENT = "#6366F1";
 const HEX_RE = /^#[0-9A-Fa-f]{6}$/;
 
-// Tail-spaced typography tokens. PT-based because react-pdf measures in pt.
+// react-pdf bundles Helvetica + Courier; no Font.register call avoids
+// shipping TTFs in the serverless bundle. Mono for digits sells the
+// "modern receipt" feel without a custom font drop.
 const fonts = {
-  // No external font registration — we stick to Helvetica/Helvetica-Bold,
-  // which react-pdf bundles. Switching to Inter would require shipping TTFs
-  // and a Font.register call; the spec lists it as optional with Helvetica
-  // as an acceptable fallback, so we keep deploy size lean.
   regular: "Helvetica",
   bold: "Helvetica-Bold",
   italic: "Helvetica-Oblique",
+  mono: "Courier",
+  monoBold: "Courier-Bold",
 } as const;
 
 // ─── Public shape ──────────────────────────────────────────────────────────
@@ -99,6 +99,8 @@ export interface PdfProfile {
   iban?: string | null;
   bic?: string | null;
   logo_url?: string | null;
+  /** Optional artisan-supplied signature image (PNG/JPEG URL). */
+  signature_url?: string | null;
   /** Canonical brand accent — added in 20260518_brand_color. */
   brand_color?: string | null;
   /** Legacy aliases kept as PDF-side fallback while back-fill runs. */
@@ -125,6 +127,8 @@ export interface PdfClient {
   city?: string | null;
   type_client?: "particulier" | "professionnel" | null;
   siret?: string | null;
+  /** "M.", "Mme", "Mlle" — when set, prepended to the displayed name. */
+  civility?: string | null;
 }
 
 // ─── Formatters ────────────────────────────────────────────────────────────
@@ -134,6 +138,19 @@ function formatDate(iso: string | null | undefined): string {
     return new Date(iso).toLocaleDateString("fr-FR", {
       day: "2-digit",
       month: "long",
+      year: "numeric",
+    });
+  } catch {
+    return "—";
+  }
+}
+
+function formatDateShort(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  try {
+    return new Date(iso).toLocaleDateString("fr-FR", {
+      day: "2-digit",
+      month: "2-digit",
       year: "numeric",
     });
   } catch {
@@ -170,7 +187,7 @@ function formatEuros(value: number): string {
   const [intPart, decPart] = fixed.split(".");
   const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
   const sign = n < 0 ? "-" : "";
-  return `${sign}${grouped},${decPart}  €`;
+  return `${sign}${grouped},${decPart} €`;
 }
 
 function titleCase(input: string): string {
@@ -197,7 +214,10 @@ function companyDisplay(p: PdfProfile): string {
 
 function clientDisplay(c: PdfClient): string {
   const full = c.first_name ? `${c.first_name} ${c.name}` : c.name;
-  return titleCase(full);
+  const cased = titleCase(full);
+  // Civility (M./Mme/Mlle) is rendered verbatim — not title-cased — so the
+  // dot stays attached and the casing the user typed is preserved.
+  return c.civility ? `${c.civility.trim()} ${cased}` : cased;
 }
 
 function formatSiret(siret: string | null | undefined): string | null {
@@ -230,11 +250,6 @@ interface StatusDescriptor {
   bg: string;
 }
 
-/**
- * Map a quote status to the pill rendered top-right of the header. Signed
- * statuses adopt the artisan accent — everything else uses neutral signal
- * colours so the eye still parses "this isn't final".
- */
 function statusDescriptor(status: string, accent: string): StatusDescriptor {
   switch (status) {
     case "signed":
@@ -275,15 +290,14 @@ function paymentSchedule(total: number, acomptePercent?: number | null): Payment
 // ─── StyleSheet ────────────────────────────────────────────────────────────
 function buildStyles(accent: string) {
   return StyleSheet.create({
-    // Per-spec 48pt margins all round. paddingBottom is bumped so the fixed
-    // page footer never collides with content.
+    // 48pt margins, with extra paddingBottom for the fixed page footer.
     page: {
-      paddingTop: 48,
+      paddingTop: 44,
       paddingBottom: 64,
-      paddingHorizontal: 48,
-      fontSize: 11,
+      paddingHorizontal: 44,
+      fontSize: 10.5,
       fontFamily: fonts.regular,
-      color: palette.textPrimary,
+      color: palette.text,
       lineHeight: 1.5,
     },
 
@@ -292,70 +306,79 @@ function buildStyles(accent: string) {
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "flex-start",
+      marginBottom: 22,
     },
     headerBrand: {
       maxWidth: "55%",
     },
     headerLogo: {
-      height: 48,
+      maxHeight: 80,
       maxWidth: 200,
       objectFit: "contain",
     },
     headerCompanyText: {
-      fontSize: 24,
+      fontSize: 22,
       fontFamily: fonts.bold,
-      color: palette.textPrimary,
+      color: palette.ink,
       letterSpacing: -0.3,
     },
     headerMeta: {
       alignItems: "flex-end",
     },
-    documentKicker: {
-      fontSize: 9,
+    documentTitle: {
+      fontSize: 32,
       fontFamily: fonts.bold,
-      color: palette.textTertiary,
-      letterSpacing: 2,
+      color: accent,
+      letterSpacing: -0.6,
+      lineHeight: 1,
     },
-    documentNumber: {
-      fontSize: 24,
-      fontFamily: fonts.bold,
-      color: palette.textPrimary,
-      marginTop: 4,
-      letterSpacing: -0.4,
-    },
-    documentDates: {
+    documentNumberBadge: {
       marginTop: 8,
+      paddingVertical: 4,
+      paddingHorizontal: 10,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: palette.hairline,
+      backgroundColor: palette.white,
+    },
+    documentNumberText: {
       fontSize: 10,
-      color: palette.textSecondary,
+      fontFamily: fonts.bold,
+      color: palette.text,
+      letterSpacing: 0.4,
+    },
+    documentDate: {
+      marginTop: 10,
+      fontSize: 9.5,
+      color: palette.textMuted,
       textAlign: "right",
+      lineHeight: 1.4,
     },
     statusPill: {
-      marginTop: 12,
-      paddingVertical: 5,
-      paddingHorizontal: 12,
+      marginTop: 10,
+      paddingVertical: 4,
+      paddingHorizontal: 10,
       borderRadius: 999,
-      // Set per render via inline merge — value here is just a placeholder.
       backgroundColor: accent,
     },
     statusPillText: {
-      fontSize: 9,
+      fontSize: 8.5,
       fontFamily: fonts.bold,
       color: palette.white,
-      letterSpacing: 1.2,
+      letterSpacing: 1,
       textTransform: "uppercase",
     },
     headerDivider: {
       borderBottomWidth: 1,
       borderBottomColor: palette.hairline,
-      marginTop: 20,
-      marginBottom: 24,
+      marginBottom: 22,
     },
 
-    // ── Parties ────────────────────────────────────────────────────────
+    // ── Parties (50/50, low-key labels) ────────────────────────────────
     parties: {
       flexDirection: "row",
-      gap: 32,
-      marginBottom: 28,
+      gap: 24,
+      marginBottom: 26,
     },
     party: {
       flex: 1,
@@ -363,270 +386,321 @@ function buildStyles(accent: string) {
     partyLabel: {
       fontSize: 9,
       fontFamily: fonts.bold,
-      color: palette.textTertiary,
-      letterSpacing: 1.5,
+      color: palette.label,
       textTransform: "uppercase",
       marginBottom: 8,
+      letterSpacing: 0.6,
     },
     partyName: {
       fontSize: 14,
       fontFamily: fonts.bold,
-      color: palette.textPrimary,
-      marginBottom: 6,
+      color: palette.ink,
+      marginBottom: 4,
     },
     partyLine: {
       fontSize: 11,
-      color: palette.textSecondary,
-      lineHeight: 1.6,
+      color: palette.textMuted,
+      lineHeight: 1.55,
     },
     partyMutedNote: {
       fontSize: 9,
-      color: palette.textTertiary,
+      color: palette.label,
       marginTop: 4,
       lineHeight: 1.4,
     },
 
-    // ── Items table ────────────────────────────────────────────────────
+    // ── Items table (indigo header, zebra rows) ─────────────────────────
     table: {
-      marginBottom: 16,
+      marginBottom: 8,
     },
     tableHead: {
       flexDirection: "row",
-      paddingBottom: 12,
-      borderBottomWidth: 1,
-      borderBottomColor: palette.hairline,
+      backgroundColor: accent,
+      paddingVertical: 9,
+      paddingHorizontal: 12,
+      borderTopLeftRadius: 6,
+      borderTopRightRadius: 6,
     },
     th: {
       fontSize: 9,
       fontFamily: fonts.bold,
-      color: palette.textTertiary,
-      letterSpacing: 1.5,
+      color: palette.white,
+      letterSpacing: 0.6,
       textTransform: "uppercase",
     },
     tableRow: {
       flexDirection: "row",
-      paddingVertical: 10,
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: palette.hairline,
     },
     tableRowZebra: {
-      backgroundColor: palette.zebra,
-    },
-    cellDesc: { flex: 1, color: palette.textPrimary, fontSize: 11, paddingRight: 8 },
-    cellQty: { width: 50, textAlign: "center", color: palette.textSecondary, fontSize: 11 },
-    cellUnit: { width: 60, textAlign: "center", color: palette.textSecondary, fontSize: 11 },
-    cellPu: { width: 70, textAlign: "right", color: palette.textSecondary, fontSize: 11 },
-    cellTva: { width: 50, textAlign: "center", color: palette.textSecondary, fontSize: 11 },
-    cellTotal: {
-      width: 80,
-      textAlign: "right",
-      color: palette.textPrimary,
-      fontSize: 11,
-      fontFamily: fonts.bold,
+      backgroundColor: palette.surfaceSoft,
     },
 
-    // ── Totals ─────────────────────────────────────────────────────────
+    // Column widths (sum = 100%):
+    // DESCRIPTION 40 | QTÉ 10 | UNITÉ 10 | PU HT 15 | TVA 10 | TOTAL HT 15
+    cellDesc: { width: "40%", color: palette.ink, fontSize: 10.5, paddingRight: 6 },
+    cellQty: {
+      width: "10%",
+      textAlign: "center",
+      color: palette.text,
+      fontSize: 10,
+      fontFamily: fonts.mono,
+    },
+    cellUnit: {
+      width: "10%",
+      textAlign: "center",
+      color: palette.textMuted,
+      fontSize: 10,
+    },
+    cellPu: {
+      width: "15%",
+      textAlign: "right",
+      color: palette.text,
+      fontSize: 10,
+      fontFamily: fonts.mono,
+    },
+    cellTva: {
+      width: "10%",
+      textAlign: "center",
+      color: palette.textMuted,
+      fontSize: 10,
+      fontFamily: fonts.mono,
+    },
+    cellTotal: {
+      width: "15%",
+      textAlign: "right",
+      color: palette.ink,
+      fontSize: 10,
+      fontFamily: fonts.monoBold,
+    },
+
+    // ── Totals card (bottom-right, 40% width) ──────────────────────────
     totalsWrap: {
-      marginTop: 20,
+      marginTop: 18,
       alignItems: "flex-end",
     },
     totalsBox: {
-      width: 280,
+      width: "42%",
+      backgroundColor: palette.surfaceSoft,
+      borderWidth: 1,
+      borderColor: palette.hairline,
+      borderRadius: 10,
+      padding: 16,
     },
     totalLine: {
       flexDirection: "row",
       justifyContent: "space-between",
-      paddingVertical: 6,
+      alignItems: "baseline",
+      paddingVertical: 4,
     },
     totalLabel: {
       fontSize: 11,
-      color: palette.textSecondary,
+      color: palette.textMuted,
     },
     totalValue: {
       fontSize: 11,
-      color: palette.textPrimary,
-      fontFamily: fonts.bold,
+      color: palette.text,
+      fontFamily: fonts.monoBold,
     },
     totalDivider: {
       borderTopWidth: 1,
       borderTopColor: palette.hairline,
-      marginTop: 4,
+      marginTop: 8,
       marginBottom: 10,
+    },
+    grandTotalRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "baseline",
     },
     grandTotalLabel: {
       fontSize: 10,
       fontFamily: fonts.bold,
-      color: palette.textTertiary,
-      letterSpacing: 2,
+      color: palette.label,
+      letterSpacing: 1,
       textTransform: "uppercase",
     },
     grandTotalValue: {
-      fontSize: 22,
-      fontFamily: fonts.bold,
+      fontSize: 20,
+      fontFamily: fonts.monoBold,
       color: accent,
-      marginTop: 4,
       letterSpacing: -0.4,
     },
 
     // ── Section blocks (Échéancier / Validité / Bank / Notes) ──────────
-    // Apple Cards style: subtle slate-50 surface inside a hairline border
-    // with rounded corners. Each card stays separable visually while still
-    // letting the page read as one continuous document.
     section: {
-      marginTop: 12,
-      backgroundColor: palette.zebra,
-      borderWidth: 1,
-      borderColor: palette.hairline,
-      borderRadius: 12,
-      padding: 18,
-    },
-    sectionTitleRow: {
-      paddingBottom: 10,
-      marginBottom: 12,
-      borderBottomWidth: 1,
-      borderBottomColor: palette.hairline,
+      marginTop: 22,
     },
     sectionTitle: {
-      fontSize: 9,
+      fontSize: 10,
       fontFamily: fonts.bold,
-      color: palette.textTertiary,
-      letterSpacing: 1.5,
+      color: palette.label,
+      letterSpacing: 1,
       textTransform: "uppercase",
+      marginBottom: 10,
     },
     sectionLine: {
       fontSize: 11,
-      color: palette.textPrimary,
-      lineHeight: 1.6,
+      color: palette.text,
+      lineHeight: 1.55,
     },
     sectionLineMuted: {
       fontSize: 10,
-      color: palette.textSecondary,
-      lineHeight: 1.55,
+      color: palette.textMuted,
+      lineHeight: 1.5,
       marginTop: 6,
     },
     paymentRow: {
       flexDirection: "row",
-      justifyContent: "space-between",
+      alignItems: "center",
       paddingVertical: 4,
     },
-    paymentLabel: { fontSize: 11, color: palette.textPrimary },
+    paymentBulletWrap: {
+      width: 12,
+      alignItems: "center",
+    },
+    paymentBullet: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: accent,
+    },
+    paymentPercent: {
+      width: 56,
+      fontSize: 11,
+      fontFamily: fonts.monoBold,
+      color: palette.ink,
+      marginLeft: 4,
+    },
+    paymentLabel: {
+      flex: 1,
+      fontSize: 11,
+      color: palette.text,
+    },
     paymentAmount: {
       fontSize: 11,
-      color: palette.textPrimary,
-      fontFamily: fonts.bold,
+      fontFamily: fonts.monoBold,
+      color: palette.ink,
     },
 
     // ── Signature ──────────────────────────────────────────────────────
-    signature: {
+    signatureWrap: {
       marginTop: 28,
     },
-    signatureHeadRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 8,
-      paddingBottom: 8,
-      borderBottomWidth: 1,
-      borderBottomColor: palette.hairline,
+    signatureTitle: {
+      fontSize: 10,
+      fontFamily: fonts.bold,
+      color: accent,
+      letterSpacing: 1,
+      textTransform: "uppercase",
       marginBottom: 12,
     },
-    signatureTitle: {
+    signatureGrid: {
+      flexDirection: "row",
+      gap: 16,
+    },
+    signatureBox: {
+      flex: 1,
+      borderWidth: 1,
+      borderColor: palette.hairline,
+      borderRadius: 8,
+      padding: 14,
+      minHeight: 110,
+    },
+    signatureBoxLabel: {
       fontSize: 9,
       fontFamily: fonts.bold,
-      letterSpacing: 1.5,
+      color: palette.label,
+      letterSpacing: 0.6,
       textTransform: "uppercase",
-      color: accent,
+      marginBottom: 8,
     },
-    signatureBody: {
+    signatureBoxName: {
+      fontSize: 11,
+      fontFamily: fonts.bold,
+      color: palette.ink,
+      marginBottom: 4,
+    },
+    signatureImage: {
+      width: 140,
+      height: 50,
+      marginBottom: 6,
+      objectFit: "contain",
+    },
+    signaturePlaceholder: {
+      flex: 1,
+      borderTopWidth: 1,
+      borderTopColor: palette.hairline,
+      borderStyle: "dashed",
+      marginTop: 24,
+    },
+    signatureDate: {
+      fontSize: 9.5,
+      color: palette.textMuted,
+      marginTop: 6,
+    },
+    signedBadge: {
       flexDirection: "row",
       alignItems: "center",
-      gap: 10,
+      gap: 6,
+      marginTop: 6,
     },
-    signatureDot: {
+    signedDot: {
       width: 8,
       height: 8,
       borderRadius: 4,
       backgroundColor: accent,
     },
-    signatureDate: {
-      fontSize: 11,
-      color: palette.textPrimary,
-    },
-    signatureName: {
-      fontSize: 13,
-      fontFamily: fonts.bold,
-      color: palette.textPrimary,
-      marginBottom: 4,
-    },
-    signatureRef: {
-      fontSize: 10,
-      color: palette.textTertiary,
-      marginTop: 10,
-    },
-    signatureUnsigned: {
-      marginTop: 28,
-      borderWidth: 1,
-      borderStyle: "dashed",
-      borderColor: palette.hairline,
-      borderRadius: 8,
-      padding: 20,
-    },
-    signatureUnsignedTitle: {
-      fontSize: 9,
-      fontFamily: fonts.bold,
-      letterSpacing: 1.5,
-      textTransform: "uppercase",
-      color: palette.textTertiary,
-      marginBottom: 8,
-    },
-    signatureUnsignedHint: {
-      fontSize: 10,
-      color: palette.textTertiary,
-      fontFamily: fonts.italic,
-      marginBottom: 32,
-    },
-    signatureUnsignedLine: {
-      fontSize: 11,
-      color: palette.textSecondary,
-      lineHeight: 1.6,
-    },
 
-    // ── Legal mentions (always last section of content) ────────────────
+    // ── Legal mentions ─────────────────────────────────────────────────
     mentions: {
       marginTop: 32,
     },
     mentionLine: {
-      fontSize: 9,
-      color: palette.textSecondary,
+      fontSize: 8,
+      color: palette.textMuted,
+      fontFamily: fonts.italic,
       lineHeight: 1.5,
     },
     mentionBullet: {
-      fontSize: 9,
-      color: palette.textSecondary,
+      fontSize: 8,
+      color: palette.textMuted,
+      fontFamily: fonts.italic,
       lineHeight: 1.5,
       marginTop: 2,
     },
 
-    // ── Slim fixed footer (number + page number only) ──────────────────
+    // ── Footer (fixed bottom of every page) ────────────────────────────
     pageFooter: {
       position: "absolute",
       bottom: 24,
-      left: 48,
-      right: 48,
+      left: 44,
+      right: 44,
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "center",
     },
-    pageFooterText: {
+    footerLeft: {
       fontSize: 8,
-      color: palette.textTertiary,
-      letterSpacing: 0.4,
+      color: palette.label,
     },
-
-    // ── Branding footer (last page only) ───────────────────────────────
-    brandingFooter: {
-      marginTop: 24,
+    footerBrandLink: {
       fontSize: 8,
-      fontFamily: fonts.italic,
-      color: palette.textTertiary,
-      textAlign: "center",
+      color: accent,
+      textDecoration: "none",
+    },
+    footerBrandLinkStarter: {
+      fontSize: 9,
+      fontFamily: fonts.bold,
+      color: accent,
+      textDecoration: "none",
+    },
+    footerRight: {
+      fontSize: 8,
+      color: palette.label,
     },
   });
 }
@@ -652,18 +726,18 @@ function PdfHeader(props: {
           )}
         </View>
         <View style={styles.headerMeta}>
-          <Text style={styles.documentKicker}>DEVIS</Text>
-          <Text style={styles.documentNumber}>N° {quote.number}</Text>
-          <Text style={styles.documentDates}>
+          <Text style={styles.documentTitle}>DEVIS</Text>
+          <View style={styles.documentNumberBadge}>
+            <Text style={styles.documentNumberText}>N° {quote.number}</Text>
+          </View>
+          <Text style={styles.documentDate}>
             Émis le {formatDate(quote.created_at)}
             {"\n"}
             {quote.valid_until
               ? `Valable jusqu'au ${formatDate(quote.valid_until)}`
               : "Validité 90 jours"}
           </Text>
-          <View
-            style={[styles.statusPill, { backgroundColor: status.bg }]}
-          >
+          <View style={[styles.statusPill, { backgroundColor: status.bg }]}>
             <Text style={styles.statusPillText}>{status.label}</Text>
           </View>
         </View>
@@ -758,12 +832,12 @@ function LineItemsTable(props: {
   return (
     <View style={styles.table}>
       <View style={styles.tableHead}>
-        <Text style={[styles.th, styles.cellDesc]}>Description</Text>
-        <Text style={[styles.th, styles.cellQty]}>Qté</Text>
-        <Text style={[styles.th, styles.cellUnit]}>Unité</Text>
-        <Text style={[styles.th, styles.cellPu]}>PU HT</Text>
-        <Text style={[styles.th, styles.cellTva]}>TVA</Text>
-        <Text style={[styles.th, styles.cellTotal]}>Total HT</Text>
+        <Text style={[styles.th, { width: "40%" }]}>Description</Text>
+        <Text style={[styles.th, { width: "10%", textAlign: "center" }]}>Qté</Text>
+        <Text style={[styles.th, { width: "10%", textAlign: "center" }]}>Unité</Text>
+        <Text style={[styles.th, { width: "15%", textAlign: "right" }]}>PU HT</Text>
+        <Text style={[styles.th, { width: "10%", textAlign: "center" }]}>TVA</Text>
+        <Text style={[styles.th, { width: "15%", textAlign: "right" }]}>Total HT</Text>
       </View>
       {quote.items.map((line, idx) => {
         const qty = Number(line.quantity || 1);
@@ -773,13 +847,14 @@ function LineItemsTable(props: {
           <View
             key={line.id ?? idx}
             style={[styles.tableRow, zebra ? styles.tableRowZebra : null].filter(Boolean) as Style[]}
+            wrap={false}
           >
             <Text style={styles.cellDesc}>{line.label}</Text>
             <Text style={styles.cellQty}>{qty}</Text>
             <Text style={styles.cellUnit}>{line.unite ?? "—"}</Text>
             <Text style={styles.cellPu}>{formatEuros(line.price)}</Text>
             <Text style={styles.cellTva}>
-              {Number(line.tva ?? quote.tax_rate)} %
+              {Number(line.tva ?? quote.tax_rate)}%
             </Text>
             <Text style={styles.cellTotal}>{formatEuros(ht)}</Text>
           </View>
@@ -816,14 +891,16 @@ function TotalsBlock(props: {
         </View>
 
         {hasMultiTva
-          ? Array.from(grouped.entries()).map(([rate, b]) => (
-              <View key={rate} style={styles.totalLine}>
-                <Text style={styles.totalLabel}>
-                  TVA {rate} % sur {formatEuros(b.base)}
-                </Text>
-                <Text style={styles.totalValue}>{formatEuros(b.tax)}</Text>
-              </View>
-            ))
+          ? Array.from(grouped.entries())
+              .sort((a, b) => a[0] - b[0])
+              .map(([rate, b]) => (
+                <View key={rate} style={styles.totalLine}>
+                  <Text style={styles.totalLabel}>
+                    TVA {rate}% (sur {formatEuros(b.base)})
+                  </Text>
+                  <Text style={styles.totalValue}>{formatEuros(b.tax)}</Text>
+                </View>
+              ))
           : (() => {
               const onlyRate =
                 grouped.size === 1 ? Array.from(grouped.entries())[0] : null;
@@ -831,7 +908,7 @@ function TotalsBlock(props: {
               const tax = onlyRate ? onlyRate[1].tax : quote.tax_amount;
               return (
                 <View style={styles.totalLine}>
-                  <Text style={styles.totalLabel}>TVA {rate} %</Text>
+                  <Text style={styles.totalLabel}>TVA {rate}%</Text>
                   <Text style={styles.totalValue}>{formatEuros(tax)}</Text>
                 </View>
               );
@@ -839,7 +916,7 @@ function TotalsBlock(props: {
 
         <View style={styles.totalDivider} />
 
-        <View>
+        <View style={styles.grandTotalRow}>
           <Text style={styles.grandTotalLabel}>Total TTC</Text>
           <Text style={styles.grandTotalValue}>{formatEuros(quote.total)}</Text>
         </View>
@@ -855,10 +932,8 @@ function PaymentScheduleBlock(props: {
   const { styles, quote } = props;
   const schedule = paymentSchedule(quote.total, quote.acompte_percent);
   return (
-    <View style={styles.section}>
-      <View style={styles.sectionTitleRow}>
-        <Text style={styles.sectionTitle}>Échéancier</Text>
-      </View>
+    <View style={styles.section} wrap={false}>
+      <Text style={styles.sectionTitle}>Échéancier</Text>
       {quote.payment_terms ? (
         quote.payment_terms
           .split(/\r?\n/)
@@ -872,12 +947,12 @@ function PaymentScheduleBlock(props: {
         <>
           {schedule.map((stage) => (
             <View key={stage.label} style={styles.paymentRow}>
-              <Text style={styles.paymentLabel}>
-                {stage.label} ({stage.percent} %)
-              </Text>
-              <Text style={styles.paymentAmount}>
-                {formatEuros(stage.amount)}
-              </Text>
+              <View style={styles.paymentBulletWrap}>
+                <View style={styles.paymentBullet} />
+              </View>
+              <Text style={styles.paymentPercent}>{stage.percent}%</Text>
+              <Text style={styles.paymentLabel}>{stage.label}</Text>
+              <Text style={styles.paymentAmount}>{formatEuros(stage.amount)}</Text>
             </View>
           ))}
           <Text style={styles.sectionLineMuted}>
@@ -890,28 +965,24 @@ function PaymentScheduleBlock(props: {
   );
 }
 
-function ValidityBlock(props: {
+function ValidityNotesBlock(props: {
   styles: ReturnType<typeof buildStyles>;
   quote: PdfQuote;
   hasDecennale: boolean;
 }) {
   const { styles, quote, hasDecennale } = props;
+  if (!quote.notes && !hasDecennale && !quote.valid_until) return null;
   return (
-    <View style={styles.section}>
-      <View style={styles.sectionTitleRow}>
-        <Text style={styles.sectionTitle}>Validité</Text>
-      </View>
+    <View style={styles.section} wrap={false}>
+      <Text style={styles.sectionTitle}>Validité & conditions</Text>
       <Text style={styles.sectionLine}>
         {quote.valid_until
-          ? `Jusqu'au ${formatDate(quote.valid_until)}`
-          : "90 jours à compter de l'émission"}
-      </Text>
-      <Text style={styles.sectionLineMuted}>
-        Délai d'intervention : à confirmer après signature du devis.
+          ? `Devis valable jusqu'au ${formatDate(quote.valid_until)}.`
+          : "Devis valable 90 jours à compter de l'émission."}
         {hasDecennale ? " Garantie décennale incluse." : ""}
       </Text>
       {quote.notes ? (
-        <Text style={[styles.sectionLineMuted, { marginTop: 8 }]}>
+        <Text style={[styles.sectionLineMuted, { marginTop: 6 }]}>
           {quote.notes}
         </Text>
       ) : null}
@@ -927,12 +998,10 @@ function BankBlock(props: {
   const { styles, profile, companyName } = props;
   if (!profile.iban && !profile.bic) return null;
   return (
-    <View style={styles.section}>
-      <View style={styles.sectionTitleRow}>
-        <Text style={styles.sectionTitle}>
-          Coordonnées bancaires (règlement par virement)
-        </Text>
-      </View>
+    <View style={styles.section} wrap={false}>
+      <Text style={styles.sectionTitle}>
+        Coordonnées bancaires (règlement par virement)
+      </Text>
       <Text style={styles.sectionLine}>Bénéficiaire : {companyName}</Text>
       {profile.iban && (
         <Text style={styles.sectionLine}>IBAN : {formatIban(profile.iban)}</Text>
@@ -949,9 +1018,12 @@ function BankBlock(props: {
 
 function SignatureBlock(props: {
   styles: ReturnType<typeof buildStyles>;
+  profile: PdfProfile;
   quote: PdfQuote;
+  companyName: string;
+  client: PdfClient;
 }) {
-  const { styles, quote } = props;
+  const { styles, profile, quote, companyName, client } = props;
   const sig = quote.signature_data ?? null;
   const signedAt =
     quote.signed_at ?? (sig && typeof sig === "object" && (sig.signed_at as string)) ?? null;
@@ -959,58 +1031,64 @@ function SignatureBlock(props: {
     quote.signed_by ??
     (sig && typeof sig === "object" && ((sig.name as string) || (sig.signer as string))) ??
     null;
-  const signatureImage =
+  const clientSignatureImage =
     sig && typeof sig === "object" && (sig.signature_image_url as string)
       ? (sig.signature_image_url as string)
       : null;
-
+  const artisanSignatureImage = profile.signature_url ?? null;
   const showSigned = isSignedStatus(quote.status) && (signedAt || signedBy);
 
-  if (showSigned) {
-    return (
-      <View style={styles.signature}>
-        <View style={styles.signatureHeadRow}>
-          <Text style={styles.signatureTitle}>
-            Signature électronique validée
+  return (
+    <View style={styles.signatureWrap} wrap={false}>
+      <Text style={styles.signatureTitle}>Bon pour accord</Text>
+      <View style={styles.signatureGrid}>
+        {/* Artisan side */}
+        <View style={styles.signatureBox}>
+          <Text style={styles.signatureBoxLabel}>L'entreprise</Text>
+          <Text style={styles.signatureBoxName}>{companyName}</Text>
+          {artisanSignatureImage ? (
+            <Image src={artisanSignatureImage} style={styles.signatureImage} />
+          ) : (
+            <View style={styles.signaturePlaceholder} />
+          )}
+          <Text style={styles.signatureDate}>
+            Date : {formatDateShort(quote.created_at)}
           </Text>
         </View>
-        {signedBy && <Text style={styles.signatureName}>{signedBy}</Text>}
-        {signedAt && (
-          <View style={styles.signatureBody}>
-            <View style={styles.signatureDot} />
+
+        {/* Client side */}
+        <View style={styles.signatureBox}>
+          <Text style={styles.signatureBoxLabel}>Le client</Text>
+          <Text style={styles.signatureBoxName}>
+            {showSigned && signedBy ? signedBy : clientDisplay(client)}
+          </Text>
+          {showSigned && clientSignatureImage ? (
+            <Image src={clientSignatureImage} style={styles.signatureImage} />
+          ) : showSigned ? (
+            <View style={styles.signedBadge}>
+              <View style={styles.signedDot} />
+              <Text style={styles.signatureDate}>Signature électronique validée</Text>
+            </View>
+          ) : (
+            <>
+              <View style={styles.signaturePlaceholder} />
+              <Text style={[styles.signatureDate, { fontFamily: fonts.italic }]}>
+                Précédée de la mention « Bon pour travaux »
+              </Text>
+            </>
+          )}
+          {showSigned && signedAt && (
             <Text style={styles.signatureDate}>
               Le {formatDateTimeFr(signedAt)}
             </Text>
-          </View>
-        )}
-        {signatureImage && (
-          <Image
-            src={signatureImage}
-            style={{ width: 180, height: 60, marginTop: 10 }}
-          />
-        )}
-        <Text style={styles.signatureRef}>
-          Référence : {quote.number}
-          {quote.signature_token
-            ? ` · Token ••••${quote.signature_token.slice(-4).toUpperCase()}`
-            : ""}
-        </Text>
+          )}
+          {showSigned && quote.signature_token && (
+            <Text style={[styles.signatureDate, { marginTop: 2 }]}>
+              Réf. ••••{quote.signature_token.slice(-4).toUpperCase()}
+            </Text>
+          )}
+        </View>
       </View>
-    );
-  }
-
-  return (
-    <View style={styles.signatureUnsigned}>
-      <Text style={styles.signatureUnsignedTitle}>Bon pour accord</Text>
-      <Text style={styles.signatureUnsignedHint}>
-        Date et signature précédées de la mention « Bon pour travaux »
-      </Text>
-      <Text style={styles.signatureUnsignedLine}>
-        Date : ______________________
-      </Text>
-      <Text style={[styles.signatureUnsignedLine, { marginTop: 8 }]}>
-        Signature :
-      </Text>
     </View>
   );
 }
@@ -1024,9 +1102,6 @@ function LegalMentions(props: {
   const { styles, profile, companyName, mentions } = props;
   return (
     <View style={styles.mentions} wrap={false}>
-      <View style={styles.sectionTitleRow}>
-        <Text style={styles.sectionTitle}>Mentions légales</Text>
-      </View>
       <Text style={styles.mentionLine}>
         {companyName}
         {profile.legal_status ? ` — ${profile.legal_status}` : ""}
@@ -1096,6 +1171,10 @@ export function QuotePdfDocument({
 
   const companyName = companyDisplay(profile);
   const showBranding = shouldShowBranding(profile.plan, profile.hide_branding);
+  // Pro = subtle footer link; Starter/Free = slightly louder but still
+  // restrained. The boolean tells us whether to show it at all; here we
+  // choose the visual weight.
+  const isViralPlan = profile.plan === "free" || profile.plan === "starter";
 
   return (
     <Document
@@ -1127,7 +1206,7 @@ export function QuotePdfDocument({
 
         <PaymentScheduleBlock styles={styles} quote={quote} />
 
-        <ValidityBlock
+        <ValidityNotesBlock
           styles={styles}
           quote={quote}
           hasDecennale={Boolean(profile.decennale_number)}
@@ -1135,7 +1214,13 @@ export function QuotePdfDocument({
 
         <BankBlock styles={styles} profile={profile} companyName={companyName} />
 
-        <SignatureBlock styles={styles} quote={quote} />
+        <SignatureBlock
+          styles={styles}
+          profile={profile}
+          quote={quote}
+          companyName={companyName}
+          client={client}
+        />
 
         <LegalMentions
           styles={styles}
@@ -1144,19 +1229,21 @@ export function QuotePdfDocument({
           mentions={mentions}
         />
 
-        {showBranding && (
-          <Text style={styles.brandingFooter}>
-            Devis créé avec Quovi · quovi.fr
-          </Text>
-        )}
-
-        {/* Page footer — ONLY the quote number + pagination. The previous
-            "Devis X · Company · Généré avec Quovi" trio was pollution and
-            is intentionally gone. */}
+        {/* Fixed page footer — quote number left, branding center, page X/Y right. */}
         <View style={styles.pageFooter} fixed>
-          <Text style={styles.pageFooterText}>{quote.number}</Text>
+          <Text style={styles.footerLeft}>{quote.number}</Text>
+          {showBranding ? (
+            <Link
+              src="https://quovi.fr"
+              style={isViralPlan ? styles.footerBrandLinkStarter : styles.footerBrandLink}
+            >
+              Devis créé avec Quovi · quovi.fr
+            </Link>
+          ) : (
+            <Text> </Text>
+          )}
           <Text
-            style={styles.pageFooterText}
+            style={styles.footerRight}
             render={({ pageNumber, totalPages }) =>
               `Page ${pageNumber} / ${totalPages}`
             }

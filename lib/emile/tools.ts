@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { executeSendQuote } from "@/lib/quotes/send";
 import { nextQuoteNumber, bumpQuoteNumber } from "@/lib/quotes/numbering";
+import { autoTitleConversation } from "@/lib/conversations/auto-title";
 
 export interface EmileToolContext {
   supabase: SupabaseClient;
@@ -159,46 +160,15 @@ async function maybeAutoNameConversation(
   clientId: string | null | undefined,
   fallbackNumber: string,
 ): Promise<void> {
-  if (!conversationId) return;
-  try {
-    const { data: conv } = await supabase
-      .from("conversations")
-      .select("title")
-      .eq("id", conversationId)
-      .maybeSingle();
-    if (!conv || conv.title) return;
-
-    let clientLabel = "";
-    if (clientId) {
-      const { data: c } = await supabase
-        .from("clients")
-        .select("first_name, name")
-        .eq("id", clientId)
-        .maybeSingle();
-      if (c) {
-        clientLabel = c.first_name
-          ? `${c.first_name} ${c.name}`.trim()
-          : c.name;
-      }
-    }
-
-    const prestation = lines[0]?.libelle?.trim();
-    const title =
-      prestation && clientLabel
-        ? `${prestation} — ${clientLabel}`
-        : prestation
-          ? prestation
-          : clientLabel
-            ? `Devis ${clientLabel}`
-            : `Devis ${fallbackNumber}`;
-
-    await supabase
-      .from("conversations")
-      .update({ title: title.slice(0, 80) })
-      .eq("id", conversationId);
-  } catch {
-    // best-effort
-  }
+  // Delegate to the shared helper. The previous in-file implementation locked
+  // the title as soon as ANY title existed, which let the bulk-import flow
+  // freeze "Ligne importée 1 — …" in place; the helper detects those
+  // placeholder titles and re-titles cleanly.
+  await autoTitleConversation(supabase, conversationId, {
+    clientId: clientId ?? null,
+    fallbackPrestation: lines[0]?.libelle?.trim() ?? null,
+    fallbackNumber,
+  });
 }
 
 export function createEmileTools(ctx: EmileToolContext) {

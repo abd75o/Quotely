@@ -7,6 +7,7 @@ import {
   normalizeQuoteItem,
   type QuoteItem,
 } from "@/lib/quotes/items";
+import { autoTitleConversation } from "@/lib/conversations/auto-title";
 
 export const runtime = "nodejs";
 
@@ -150,11 +151,20 @@ export async function POST(req: NextRequest) {
       })
       .eq("id", targetQuoteId)
       .eq("user_id", user.id)
-      .select("id, number, items, subtotal, tax_rate, tax_amount, total")
+      .select("id, number, client_id, items, subtotal, tax_rate, tax_amount, total")
       .single();
     if (updErr) {
       return Response.json({ error: updErr.message }, { status: 500 });
     }
+
+    // Title the conversation now that we have meaningful content. We pass the
+    // FIRST imported line as fallback prestation (the merged[0] could be a
+    // pre-existing line); the helper skips placeholder labels anyway.
+    await autoTitleConversation(supabase, conversationId, {
+      clientId: clientId ?? (updated.client_id as string | null) ?? null,
+      fallbackPrestation: newItems[0]?.label ?? null,
+      fallbackNumber: updated.number as string,
+    });
 
     return Response.json({
       quote: updated,
@@ -214,9 +224,18 @@ export async function POST(req: NextRequest) {
   if (conversationId) {
     await supabase
       .from("conversations")
-      .update({ related_quote_id: created.id })
+      .update({
+        related_quote_id: created.id,
+        ...(clientId ? { related_client_id: clientId } : {}),
+      })
       .eq("id", conversationId)
       .eq("user_id", user.id);
+
+    await autoTitleConversation(supabase, conversationId, {
+      clientId: clientId ?? null,
+      fallbackPrestation: newItems[0]?.label ?? null,
+      fallbackNumber: created.number,
+    });
   }
 
   return Response.json({

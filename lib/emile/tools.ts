@@ -721,6 +721,52 @@ export function createEmileTools(ctx: EmileToolContext) {
       },
     }),
 
+    clearQuoteLines: tool({
+      description:
+        "Vide TOUTES les lignes du devis en cours (items = []), sans supprimer le devis. À utiliser quand l'artisan dit 'recommence', 'repars de zéro', 'efface tout et refais', 'recrée le devis' ou équivalent. APRÈS clearQuoteLines, appelle saveQuoteDraft avec les nouvelles lignes pour repeupler le devis. Refuse l'opération si le devis est déjà envoyé/signé (status !== 'draft'). Retourne { ok, quoteId, cleared } ou { ok: false, error }.",
+      inputSchema: z.object({
+        quoteId: z
+          .string()
+          .uuid()
+          .describe(
+            "UUID du devis à vider (celui retourné par saveQuoteDraft, pas le numéro QTL-…).",
+          ),
+      }),
+      execute: async ({ quoteId }) => {
+        try {
+          const { data: existing, error: fetchErr } = await supabase
+            .from("quotes")
+            .select("id, status")
+            .eq("id", quoteId)
+            .eq("user_id", userId)
+            .maybeSingle();
+          if (fetchErr) return err(fetchErr.message);
+          if (!existing) return err("Devis introuvable.");
+          const status = (existing.status as string | null) ?? "draft";
+          if (status !== "draft") {
+            return err(
+              `Devis déjà ${status} — impossible d'effacer les lignes. Crée un nouveau devis si besoin.`,
+            );
+          }
+          const { error: updErr } = await supabase
+            .from("quotes")
+            .update({
+              items: [],
+              subtotal: 0,
+              tax_amount: 0,
+              tax_breakdown: {},
+              total: 0,
+            })
+            .eq("id", quoteId)
+            .eq("user_id", userId);
+          if (updErr) return err(updErr.message);
+          return ok({ quoteId, cleared: true });
+        } catch (e) {
+          return err((e as Error).message ?? "Erreur inconnue");
+        }
+      },
+    }),
+
     sendQuote: tool({
       description:
         "Envoie le devis au client par email (avec PDF en pièce jointe). À appeler UNIQUEMENT après confirmation explicite de l'artisan via le récap OU shortcut 'envoie direct'. NE PAS appeler sans validation. Retourne { ok, messageId, signLink } ou { ok: false, error, missing? }.",

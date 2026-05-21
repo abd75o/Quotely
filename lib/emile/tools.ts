@@ -425,6 +425,23 @@ export function createEmileTools(ctx: EmileToolContext) {
       }),
       execute: async ({ quoteId, clientId, lines, conditions }) => {
         try {
+          // Guard against the bulk-import regression: after a [SYSTEM] import
+          // en masse notification, the LLM sometimes calls saveQuoteDraft with
+          // a single aggregate row ("Import masse - 99 lignes") that wipes the
+          // 99 real items already in DB. Reject any payload whose single line
+          // looks like a summary — the system prompt forbids it, but we don't
+          // trust prompts to be load-bearing for data integrity.
+          const looksLikeSummary =
+            lines.length === 1 &&
+            /import\s*(en\s*)?masse|^\s*\d+\s*lignes?\s*$|résum[ée]\s*(?:du\s*)?devis|\bx\s*lignes?\b/i.test(
+              lines[0].libelle ?? "",
+            );
+          if (looksLikeSummary) {
+            return err(
+              "Refus : tu tentes d'écraser le devis avec UNE ligne récapitulative ('Import masse / X lignes'). Les lignes du bulk import sont déjà en DB — n'appelle PAS saveQuoteDraft après un [SYSTEM] import en masse. Si l'artisan veut modifier une ligne précise, repasse TOUTES les lignes existantes plus la modif.",
+            );
+          }
+
           const items = lines.map((l, idx) => ({
             id: `l-${Date.now().toString(36)}-${idx}`,
             label: l.libelle,

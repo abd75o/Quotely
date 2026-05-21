@@ -108,12 +108,18 @@ export async function GET(
   };
 
   const profileForPdf: PdfProfile = (profile ?? {}) as PdfProfile;
+  // No "Client" string fallback: shipping a PDF where the recipient block reads
+  // "Client" instead of the real person is a legal hole (devis nominatif), so
+  // we surface an empty name and let the upstream caller — sendQuote already
+  // 422s on missing client — be the one to refuse.
   const clientForPdf: PdfClient = clientRow
     ? {
-        name: String(clientRow.name ?? "Client"),
+        name: String(clientRow.name ?? ""),
         first_name: (clientRow.first_name as string | null) ?? null,
+        company_name: (clientRow.company_name as string | null) ?? null,
         email: (clientRow.email as string | null) ?? null,
         phone: (clientRow.phone as string | null) ?? null,
+        telephone: (clientRow.telephone as string | null) ?? null,
         address: (clientRow.address as string | null) ?? null,
         postal_code: (clientRow.postal_code as string | null) ?? null,
         city: (clientRow.city as string | null) ?? null,
@@ -121,8 +127,9 @@ export async function GET(
           (clientRow.type_client as "particulier" | "professionnel" | null) ??
           null,
         siret: (clientRow.siret as string | null) ?? null,
+        civility: (clientRow.civility as string | null) ?? null,
       }
-    : { name: "Client" };
+    : { name: "" };
 
   let buffer: Buffer;
   try {

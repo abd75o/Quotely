@@ -156,10 +156,12 @@ export async function executeSendQuote(
   } as PdfProfile;
 
   const clientForPdf: PdfClient & { email: string } = {
-    name: String(clientRow.name ?? "Client"),
+    name: String(clientRow.name ?? ""),
     first_name: (clientRow.first_name as string | null) ?? null,
+    company_name: (clientRow.company_name as string | null) ?? null,
     email: String(clientRow.email),
     phone: (clientRow.phone as string | null) ?? null,
+    telephone: (clientRow.telephone as string | null) ?? null,
     address: (clientRow.address as string | null) ?? null,
     postal_code: (clientRow.postal_code as string | null) ?? null,
     city: (clientRow.city as string | null) ?? null,
@@ -167,6 +169,7 @@ export async function executeSendQuote(
       (clientRow.type_client as "particulier" | "professionnel" | null) ??
       null,
     siret: (clientRow.siret as string | null) ?? null,
+    civility: (clientRow.civility as string | null) ?? null,
   };
 
   const signLink = `${appUrl}/sign/${quote.signature_token}`;

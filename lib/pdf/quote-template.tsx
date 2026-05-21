@@ -203,18 +203,25 @@ function titleCase(input: string): string {
 }
 
 function companyDisplay(p: PdfProfile): string {
+  // No "Prestataire" fallback: if every identifying field is empty the profile
+  // is broken upstream and we surface the empty string so the PDF reviewer
+  // immediately spots the data hole instead of shipping a generic label.
   const raw =
     p.company_name ||
     p.company ||
     [p.first_name, p.last_name].filter(Boolean).join(" ") ||
     p.email ||
-    "Prestataire";
-  return titleCase(raw);
+    "";
+  return raw ? titleCase(raw) : "";
 }
 
 function clientDisplay(c: PdfClient): string {
-  const full = c.first_name ? `${c.first_name} ${c.name}` : c.name;
-  const cased = titleCase(full);
+  // Same no-fallback policy as companyDisplay — a generic "Client" on a legal
+  // document hides a real bug (broken embed / missing client_id) so we let
+  // the empty string render and force a fix upstream.
+  const base = c.first_name ? `${c.first_name} ${c.name ?? ""}`.trim() : (c.name ?? "");
+  if (!base) return "";
+  const cased = titleCase(base);
   // Civility (M./Mme/Mlle) is rendered verbatim — not title-cased — so the
   // dot stays attached and the casing the user typed is preserved.
   return c.civility ? `${c.civility.trim()} ${cased}` : cased;

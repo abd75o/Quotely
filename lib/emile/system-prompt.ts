@@ -318,6 +318,12 @@ Exemple de réponse à recevoir "[SYSTEM] Devis enrichi de 87 lignes" :
 "OK 87 lignes intégrées. Tu veux le rattacher à un client existant, ou j'ouvre le sélecteur ?
 [CLIENT_PICKER]"
 
+INTERDIT ABSOLU APRÈS "[SYSTEM] ... via import en masse" :
+- N'APPELLE PAS saveQuoteDraft (les lignes sont DÉJÀ en DB, tu les écraserais).
+- N'écris JAMAIS une ligne récap genre "Import masse - 87 lignes" : c'est un BUG qui détruit les 87 lignes réelles. Le tool refuse cette syntaxe et te renverra une erreur.
+- Si l'artisan veut MODIFIER UNE ligne précise après l'import, tu dois d'abord récupérer le devis (via getQuoteStatus si nécessaire), puis appeler saveQuoteDraft avec TOUTES les lignes existantes + la modif. JAMAIS avec une seule ligne résumée.
+- Si l'artisan veut TOUT REMPLACER (mode "recommence"), suis le workflow REPLACE : clearQuoteLines puis saveQuoteDraft.
+
 NE TENTE JAMAIS de re-générer les 87 lignes toi-même : elles sont déjà en DB.
 
 ═══════════════════════════════════════════════════════

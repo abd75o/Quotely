@@ -20,10 +20,30 @@ export interface CreatedClient {
   siret?: string | null;
 }
 
+/**
+ * When provided, the modal switches to EDIT mode:
+ *  - Title becomes "Mettre à jour le client" + the existing values pre-fill.
+ *  - Submit hits PUT /api/clients/[id] instead of POST /api/clients.
+ *  - `onCreated` is still the success callback (it's effectively
+ *    "onSaved"), reusing the same downstream wiring the chat already has.
+ *
+ * The `missingFields` array lets callers (e.g. Émile's sendQuote
+ * client_incomplete flow) highlight precisely which legal-required
+ * fields the artisan must complete before the devis can ship.
+ */
+export interface EditClientInitial extends Partial<CreatedClient> {
+  id: string;
+  name: string;
+  email: string;
+  type_client: "particulier" | "professionnel";
+}
+
 interface NewClientModalProps {
   open: boolean;
   onClose: () => void;
   onCreated: (client: CreatedClient) => void;
+  initialData?: EditClientInitial | null;
+  missingFields?: string[];
 }
 
 interface FormState {
@@ -50,18 +70,97 @@ const EMPTY: FormState = {
   siret: "",
 };
 
-export function NewClientModal({ open, onClose, onCreated }: NewClientModalProps) {
-  const [form, setForm] = useState<FormState>(EMPTY);
+function initialFromData(data: EditClientInitial | null | undefined): FormState {
+  if (!data) return EMPTY;
+  return {
+    type: data.type_client,
+    firstName: data.first_name ?? "",
+    name: data.name,
+    email: data.email,
+    phone: data.phone ?? "",
+    address: data.address ?? "",
+    postalCode: data.postal_code ?? "",
+    city: data.city ?? "",
+    siret: data.siret ?? "",
+  };
+}
+
+interface FieldErrors {
+  firstName?: string;
+  name?: string;
+  email?: string;
+  address?: string;
+  postalCode?: string;
+  city?: string;
+  siret?: string;
+}
+
+const POSTAL_RE = /^\d{5}$/;
+const SIRET_RE = /^\d{14}$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function validate(form: FormState): FieldErrors {
+  const errs: FieldErrors = {};
+
+  if (form.type === "particulier" && !form.firstName.trim()) {
+    errs.firstName = "Prénom requis.";
+  }
+  if (!form.name.trim()) {
+    errs.name =
+      form.type === "professionnel"
+        ? "Raison sociale requise."
+        : "Nom requis.";
+  }
+  if (!EMAIL_RE.test(form.email.trim())) {
+    errs.email = "Email invalide.";
+  }
+  // Address / CP / Ville are legally required on a devis (devis nominatif
+  // avec adresse du client). Block creation upstream so we never ship a
+  // PDF with an incomplete recipient block.
+  if (!form.address.trim()) {
+    errs.address = "Adresse requise (devis légal).";
+  }
+  if (!POSTAL_RE.test(form.postalCode.trim())) {
+    errs.postalCode = "Code postal requis (5 chiffres).";
+  }
+  if (!form.city.trim()) {
+    errs.city = "Ville requise.";
+  }
+  if (form.type === "professionnel") {
+    const siret = form.siret.replace(/\s+/g, "");
+    if (siret && !SIRET_RE.test(siret)) {
+      errs.siret = "SIRET invalide (14 chiffres attendus).";
+    }
+  }
+  return errs;
+}
+
+export function NewClientModal({
+  open,
+  onClose,
+  onCreated,
+  initialData,
+  missingFields,
+}: NewClientModalProps) {
+  const isEdit = !!initialData;
+  const [form, setForm] = useState<FormState>(initialFromData(initialData));
   const [submitting, setSubmitting] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
+  // Show inline errors only after a first submit attempt — keeps the modal
+  // from screaming red on every empty field while the artisan is still
+  // typing.
+  const [touched, setTouched] = useState(false);
 
-  // Reset form when reopened
+  // Re-seed the form whenever the modal opens (or the initialData changes
+  // while open — happens when the edit modal is reopened for a different
+  // client right after the previous one closed).
   useEffect(() => {
     if (open) {
-      setForm(EMPTY);
+      setForm(initialFromData(initialData));
       setConfirmClose(false);
+      setTouched(false);
     }
-  }, [open]);
+  }, [open, initialData]);
 
   // ESC handler
   useEffect(() => {
@@ -79,18 +178,33 @@ export function NewClientModal({ open, onClose, onCreated }: NewClientModalProps
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, form]);
 
-  const dirty = useMemo(() => JSON.stringify(form) !== JSON.stringify(EMPTY), [form]);
+  const dirty = useMemo(() => {
+    const base = initialFromData(initialData);
+    return JSON.stringify(form) !== JSON.stringify(base);
+  }, [form, initialData]);
 
-  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim());
-  const siretValid =
-    form.type === "particulier" ||
-    !form.siret ||
-    /^\d{14}$/.test(form.siret.replace(/\s+/g, ""));
-  const valid =
-    form.name.trim().length > 0 &&
-    emailValid &&
-    (form.type === "professionnel" || form.firstName.trim().length > 0) &&
-    siretValid;
+  const errors = useMemo(() => validate(form), [form]);
+  const valid = Object.keys(errors).length === 0;
+
+  // After a missing-field flow, the caller passes the snake_case codes the
+  // tool refused. Map them to our form keys so we can highlight precisely
+  // those fields even before the artisan touches anything.
+  const forcedMissing = useMemo<FieldErrors>(() => {
+    if (!missingFields || missingFields.length === 0) return {};
+    const m: FieldErrors = {};
+    for (const f of missingFields) {
+      if (f === "address" && errors.address) m.address = errors.address;
+      else if (f === "postal_code" && errors.postalCode) m.postalCode = errors.postalCode;
+      else if (f === "city" && errors.city) m.city = errors.city;
+      else if (f === "name" && errors.name) m.name = errors.name;
+    }
+    return m;
+  }, [missingFields, errors]);
+
+  function shownError(key: keyof FieldErrors): string | undefined {
+    if (touched) return errors[key];
+    return forcedMissing[key];
+  }
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((p) => ({ ...p, [key]: value }));
@@ -106,38 +220,57 @@ export function NewClientModal({ open, onClose, onCreated }: NewClientModalProps
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setTouched(true);
     if (!valid || submitting) return;
     setSubmitting(true);
     try {
-      const res = await fetch("/api/clients", {
-        method: "POST",
+      const payload = {
+        name: form.name.trim(),
+        first_name: form.firstName.trim() || null,
+        email: form.email.trim(),
+        phone: form.phone.trim() || null,
+        address: form.address.trim() || null,
+        postal_code: form.postalCode.trim() || null,
+        city: form.city.trim() || null,
+        type_client: form.type,
+        siret:
+          form.type === "professionnel"
+            ? form.siret.replace(/\s+/g, "") || null
+            : null,
+      };
+      const url = isEdit
+        ? `/api/clients/${initialData!.id}`
+        : "/api/clients";
+      const res = await fetch(url, {
+        method: isEdit ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: form.name.trim(),
-          first_name: form.firstName.trim() || null,
-          email: form.email.trim(),
-          phone: form.phone.trim() || null,
-          address: form.address.trim() || null,
-          postal_code: form.postalCode.trim() || null,
-          city: form.city.trim() || null,
-          type_client: form.type,
-          siret:
-            form.type === "professionnel"
-              ? form.siret.replace(/\s+/g, "") || null
-              : null,
-        }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw body;
       }
       const json = (await res.json()) as { client: CreatedClient };
-      toastSuccess(`Client ${displayName(form)} créé.`);
+      toastSuccess(
+        isEdit
+          ? `Client ${displayName(form)} mis à jour.`
+          : `Client ${displayName(form)} créé.`,
+      );
       onCreated(json.client);
       onClose();
     } catch (err) {
-      console.error("[NewClientModal] create failed:", err);
-      toastError(humanizeError(err, "Impossible de créer le client."));
+      console.error(
+        `[${isEdit ? "EditClientModal" : "NewClientModal"}] save failed:`,
+        err,
+      );
+      toastError(
+        humanizeError(
+          err,
+          isEdit
+            ? "Impossible de mettre à jour le client."
+            : "Impossible de créer le client.",
+        ),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -149,7 +282,7 @@ export function NewClientModal({ open, onClose, onCreated }: NewClientModalProps
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Nouveau client"
+      aria-label={isEdit ? "Mettre à jour le client" : "Nouveau client"}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6"
       onClick={(e) => {
         if (e.target === e.currentTarget) attemptClose();
@@ -159,10 +292,12 @@ export function NewClientModal({ open, onClose, onCreated }: NewClientModalProps
         <header className="flex items-center justify-between border-b border-[var(--border)] bg-white px-6 py-4">
           <div>
             <h2 className="font-fraunces text-lg font-bold text-[var(--text-primary)]">
-              Nouveau client
+              {isEdit ? "Mettre à jour le client" : "Nouveau client"}
             </h2>
             <p className="text-[11px] text-[var(--text-muted)]">
-              Ajoute un client à ton carnet d&apos;adresses.
+              {isEdit
+                ? "Complète les infos manquantes pour rendre le devis légalement conforme."
+                : "Ajoute un client à ton carnet d'adresses."}
             </p>
           </div>
           <button
@@ -179,6 +314,13 @@ export function NewClientModal({ open, onClose, onCreated }: NewClientModalProps
           onSubmit={handleSubmit}
           className="min-h-0 flex-1 overflow-y-auto px-6 py-5"
         >
+          {missingFields && missingFields.length > 0 && !touched && (
+            <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-900">
+              Champs à compléter avant l&apos;envoi du devis :{" "}
+              <strong>{missingFields.join(", ")}</strong>.
+            </div>
+          )}
+
           <fieldset className="mb-5">
             <legend className="mb-2 text-sm font-semibold text-[var(--text-primary)]">
               Type de client
@@ -189,12 +331,14 @@ export function NewClientModal({ open, onClose, onCreated }: NewClientModalProps
                 onChange={() => update("type", "particulier")}
                 icon={Home}
                 label="Particulier"
+                disabled={isEdit}
               />
               <TypeRadio
                 checked={form.type === "professionnel"}
                 onChange={() => update("type", "professionnel")}
                 icon={Building2}
                 label="Professionnel"
+                disabled={isEdit}
               />
             </div>
           </fieldset>
@@ -207,8 +351,9 @@ export function NewClientModal({ open, onClose, onCreated }: NewClientModalProps
                 value={form.firstName}
                 onChange={(e) => update("firstName", e.target.value)}
                 placeholder="Marie"
-                autoFocus
+                autoFocus={!isEdit}
                 required
+                error={shownError("firstName")}
               />
             )}
             <TextField
@@ -219,6 +364,7 @@ export function NewClientModal({ open, onClose, onCreated }: NewClientModalProps
               placeholder={form.type === "particulier" ? "Dupont" : "ACME SAS"}
               required
               className={form.type === "professionnel" ? "sm:col-span-2" : undefined}
+              error={shownError("name")}
             />
           </div>
 
@@ -230,11 +376,7 @@ export function NewClientModal({ open, onClose, onCreated }: NewClientModalProps
               value={form.email}
               onChange={(e) => update("email", e.target.value)}
               placeholder="marie@example.fr"
-              error={
-                form.email.length > 0 && !emailValid
-                  ? "Email invalide"
-                  : undefined
-              }
+              error={shownError("email")}
               required
             />
             <TextField
@@ -251,17 +393,13 @@ export function NewClientModal({ open, onClose, onCreated }: NewClientModalProps
             <div className="mt-4">
               <TextField
                 id="client-siret"
-                label="SIRET"
+                label="SIRET (recommandé)"
                 value={form.siret}
                 onChange={(e) => update("siret", e.target.value)}
-                placeholder="14 chiffres (optionnel)"
+                placeholder="14 chiffres"
                 inputMode="numeric"
                 maxLength={17}
-                error={
-                  !siretValid && form.siret.length > 0
-                    ? "SIRET invalide (14 chiffres attendus)"
-                    : undefined
-                }
+                error={shownError("siret")}
               />
             </div>
           )}
@@ -271,7 +409,7 @@ export function NewClientModal({ open, onClose, onCreated }: NewClientModalProps
               htmlFor="client-address"
               className="text-sm font-semibold text-[var(--text-primary)]"
             >
-              Adresse
+              Adresse *
             </label>
             <textarea
               id="client-address"
@@ -279,14 +417,24 @@ export function NewClientModal({ open, onClose, onCreated }: NewClientModalProps
               onChange={(e) => update("address", e.target.value)}
               placeholder="12 rue de la République"
               rows={2}
-              className="mt-1.5 w-full rounded-xl border border-[var(--border)] bg-white px-3.5 py-2.5 text-sm outline-none transition-all placeholder:text-[var(--text-muted)] focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20"
+              className={cn(
+                // text-base = 16px so iOS Safari does not auto-zoom on focus.
+                "mt-1.5 w-full rounded-xl border bg-white px-3.5 py-2.5 text-base outline-none transition-all placeholder:text-[var(--text-muted)] focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 sm:text-sm",
+                shownError("address")
+                  ? "border-red-300 focus:border-red-500 focus:ring-red-200"
+                  : "border-[var(--border)]",
+              )}
+              required
             />
+            {shownError("address") && (
+              <p className="mt-1 text-xs text-red-600">{shownError("address")}</p>
+            )}
           </div>
 
           <div className="mt-4 grid grid-cols-3 gap-3">
             <TextField
               id="client-postal"
-              label="Code postal"
+              label="Code postal *"
               value={form.postalCode}
               onChange={(e) =>
                 update("postalCode", e.target.value.replace(/\D/g, "").slice(0, 5))
@@ -295,23 +443,27 @@ export function NewClientModal({ open, onClose, onCreated }: NewClientModalProps
               inputMode="numeric"
               maxLength={5}
               className="col-span-1"
+              error={shownError("postalCode")}
+              required
             />
             <TextField
               id="client-city"
-              label="Ville"
+              label="Ville *"
               value={form.city}
               onChange={(e) => update("city", e.target.value)}
               placeholder="Paris"
               className="col-span-2"
+              error={shownError("city")}
+              required
             />
           </div>
         </form>
 
-        <footer className="flex items-center justify-end gap-3 border-t border-[var(--border)] bg-white px-6 py-3">
+        <footer className="sticky bottom-0 flex items-center justify-end gap-3 border-t border-[var(--border)] bg-white px-6 py-3">
           <button
             type="button"
             onClick={attemptClose}
-            className="rounded-xl border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--text-secondary)] transition-colors hover:bg-gray-50"
+            className="min-h-[44px] rounded-xl border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--text-secondary)] transition-colors hover:bg-gray-50"
           >
             Annuler
           </button>
@@ -319,10 +471,10 @@ export function NewClientModal({ open, onClose, onCreated }: NewClientModalProps
             type="submit"
             onClick={handleSubmit}
             disabled={!valid || submitting}
-            className="inline-flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[var(--primary-dark)] disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[var(--primary-dark)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-            Enregistrer le client
+            {isEdit ? "Enregistrer les changements" : "Enregistrer le client"}
           </button>
         </footer>
       </div>
@@ -345,16 +497,19 @@ function TypeRadio({
   onChange,
   icon: Icon,
   label,
+  disabled,
 }: {
   checked: boolean;
   onChange: () => void;
   icon: typeof Home;
   label: string;
+  disabled?: boolean;
 }) {
   return (
     <label
       className={cn(
-        "flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-colors",
+        "flex items-center gap-3 rounded-xl border p-3 transition-colors",
+        disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer",
         checked
           ? "border-[var(--primary)] bg-[var(--primary-bg)]"
           : "border-[var(--border)] bg-white hover:bg-gray-50",
@@ -364,6 +519,7 @@ function TypeRadio({
         type="radio"
         checked={checked}
         onChange={onChange}
+        disabled={disabled}
         className="sr-only"
       />
       <div

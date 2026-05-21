@@ -16,11 +16,16 @@ import { TypingIndicator } from "./TypingIndicator";
 import {
   QuickReplies,
   hasOpenQuoteLineModal,
+  parseOpenClientEditModal,
   parseOpenProfileModal,
 } from "./QuickReplies";
 import { EmileInput } from "./EmileInput";
 import { EmileEmptyState } from "./EmileEmptyState";
-import { NewClientModal, type CreatedClient } from "./NewClientModal";
+import {
+  NewClientModal,
+  type CreatedClient,
+  type EditClientInitial,
+} from "./NewClientModal";
 import { NewQuoteLineModal } from "./NewQuoteLineModal";
 import {
   ClientSelectorModal,
@@ -115,6 +120,14 @@ export function EmileChat({
   // regurgitating the same lines into a tool call argument).
   const [bulkImportOpen, setBulkImportOpen] = useState(false);
   const [bulkRawText, setBulkRawText] = useState("");
+  // Edit-client flow triggered by sendQuote's client_incomplete branch.
+  // `initial` is fetched from /api/clients/[id] before we open the modal so
+  // the existing values pre-fill and the artisan only has to add what's
+  // missing (highlighted via `missing`).
+  const [editClientInitial, setEditClientInitial] =
+    useState<EditClientInitial | null>(null);
+  const [editClientMissing, setEditClientMissing] = useState<string[]>([]);
+  const [editClientOpen, setEditClientOpen] = useState(false);
 
   useEffect(() => {
     if (conversationId && loadedRef.current !== conversationId) {
@@ -137,6 +150,9 @@ export function EmileChat({
     setProfileMissing([]);
     setBulkImportOpen(false);
     setBulkRawText("");
+    setEditClientOpen(false);
+    setEditClientInitial(null);
+    setEditClientMissing([]);
     autoSeededRef.current = null;
   }, [conversationId]);
 
@@ -255,6 +271,26 @@ export function EmileChat({
         validMissing.length > 0 ? validMissing : ALL_PROFILE_FIELDS,
       );
       setProfileModalOpen(true);
+    }
+    const clientEditMarker = parseOpenClientEditModal(text);
+    if (clientEditMarker.found && clientEditMarker.clientId) {
+      triggered.add(lastMessage.id);
+      const clientId = clientEditMarker.clientId;
+      const missing = clientEditMarker.missing;
+      // Pre-fetch the row so the modal opens already populated. Failing the
+      // fetch is non-fatal — we toast + skip silently rather than open a
+      // blank modal that would confuse the artisan into rewriting from
+      // scratch (and losing the row's email/phone/SIRET).
+      void fetch(`/api/clients/${clientId}`)
+        .then((res) => (res.ok ? res.json() : Promise.reject(res)))
+        .then((json: { client: EditClientInitial }) => {
+          setEditClientInitial(json.client);
+          setEditClientMissing(missing);
+          setEditClientOpen(true);
+        })
+        .catch((err) => {
+          console.error("[OPEN_CLIENT_EDIT_MODAL] fetch failed", err);
+        });
     }
   }, [lastMessage]);
 
@@ -442,6 +478,35 @@ export function EmileChat({
     // the thread for a flow the user may have triggered by accident.
   }, []);
 
+  const handleEditClientSaved = useCallback(
+    (client: CreatedClient) => {
+      justHandledModalRef.current = true;
+      const fullName =
+        [client.first_name, client.name].filter(Boolean).join(" ").trim() ||
+        client.name;
+      // [SYSTEM] message so Émile knows it can retry sendQuote.
+      void sendMessage(
+        `[SYSTEM] Client mis à jour — ${fullName} — id:${client.id}. Reprends l'envoi du devis.`,
+      );
+    },
+    [sendMessage],
+  );
+
+  const handleEditClientClose = useCallback(() => {
+    setEditClientOpen(false);
+    if (justHandledModalRef.current) {
+      justHandledModalRef.current = false;
+      setEditClientInitial(null);
+      setEditClientMissing([]);
+      return;
+    }
+    setEditClientInitial(null);
+    setEditClientMissing([]);
+    void sendMessage(
+      "[SYSTEM] Mise à jour client annulée. Demande à l'artisan s'il veut compléter ces infos ou renoncer à l'envoi.",
+    );
+  }, [sendMessage]);
+
   const activeToolName = useMemo(() => {
     if (!isLoading) return null;
     if (!lastMessage || lastMessage.role !== "assistant") return null;
@@ -570,6 +635,14 @@ export function EmileChat({
         existingQuoteNumber={activeQuoteNumber ?? null}
         onClose={handleBulkImportClose}
         onImported={handleBulkImported}
+      />
+
+      <NewClientModal
+        open={editClientOpen}
+        initialData={editClientInitial}
+        missingFields={editClientMissing}
+        onClose={handleEditClientClose}
+        onCreated={handleEditClientSaved}
       />
     </div>
   );

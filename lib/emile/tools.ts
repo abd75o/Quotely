@@ -812,7 +812,22 @@ export function createEmileTools(ctx: EmileToolContext) {
               quoteId,
               error: result.error,
               missing: result.missing,
+              clientIncomplete: result.clientIncomplete,
             });
+            // Surface clientIncomplete as a top-level status so the system
+            // prompt branch ("client_incomplete → ask + open edit modal")
+            // is easy to match without the LLM peeking at nested fields.
+            if (result.clientIncomplete) {
+              return {
+                ok: false,
+                status: "client_incomplete",
+                error: result.error,
+                client_id: result.clientIncomplete.clientId,
+                missing_fields: result.clientIncomplete.missingFields,
+                reason:
+                  "Client incomplet, impossible d'envoyer un devis légalement conforme.",
+              };
+            }
             return {
               ok: false,
               error: result.error,

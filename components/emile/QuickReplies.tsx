@@ -22,6 +22,14 @@ const OPEN_QUOTE_LINE_MODAL_REGEX = /\[OPEN_QUOTE_LINE_MODAL\]/i;
 const OPEN_PROFILE_MODAL_REGEX = /\[OPEN_PROFILE_MODAL(?::\s*([\s\S]+?))?\]/i;
 // Legacy marker (auto-open) — kept stripped so any stale BDD message stays clean.
 const OPEN_CLIENT_MODAL_REGEX = /\[OPEN_CLIENT_MODAL\]/i;
+// Edit-existing-client marker. Format:
+//   [OPEN_CLIENT_EDIT_MODAL: "<client_id>", "<missing_field_1>", "<missing_field_2>"]
+// First arg = the client_id returned by sendQuote's client_incomplete branch,
+// remaining args = the snake_case missing field codes (address, postal_code,
+// city, name). The frontend fetches the client by id, opens NewClientModal
+// in EDIT mode pre-filled, and highlights the listed missing fields.
+const OPEN_CLIENT_EDIT_MODAL_REGEX =
+  /\[OPEN_CLIENT_EDIT_MODAL(?::\s*([\s\S]+?))?\]/i;
 
 export function parseQuickReplies(text: string): {
   cleaned: string;
@@ -42,7 +50,29 @@ export function parseQuickReplies(text: string): {
   cleaned = cleaned.replace(OPEN_CLIENT_MODAL_REGEX, "").trim();
   cleaned = cleaned.replace(OPEN_QUOTE_LINE_MODAL_REGEX, "").trim();
   cleaned = cleaned.replace(OPEN_PROFILE_MODAL_REGEX, "").trim();
+  cleaned = cleaned.replace(OPEN_CLIENT_EDIT_MODAL_REGEX, "").trim();
   return { cleaned, replies };
+}
+
+export function parseOpenClientEditModal(
+  text: string,
+): { found: boolean; clientId: string | null; missing: string[] } {
+  const m = text.match(OPEN_CLIENT_EDIT_MODAL_REGEX);
+  if (!m) return { found: false, clientId: null, missing: [] };
+  if (!m[1]) return { found: true, clientId: null, missing: [] };
+  const parts = m[1]
+    .split(",")
+    .map((s) => s.trim().replace(/^["']|["']$/g, "").trim())
+    .filter(Boolean);
+  if (parts.length === 0) {
+    return { found: true, clientId: null, missing: [] };
+  }
+  const [first, ...rest] = parts;
+  // The model occasionally drops the "client_id=" prefix; tolerate both.
+  const clientId = first.replace(/^client_id\s*=\s*/i, "");
+  // Same for the missing fields (some completions wrap them in `missing="..."`).
+  const missing = rest.map((p) => p.replace(/^missing\s*=\s*/i, ""));
+  return { found: true, clientId: clientId || null, missing };
 }
 
 export function parseOpenProfileModal(

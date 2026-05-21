@@ -7,6 +7,11 @@ import type {
   PdfQuote,
 } from "@/lib/pdf/quote-template";
 
+function toStr(v: unknown): string {
+  if (v === null || v === undefined) return "";
+  return String(v).trim();
+}
+
 interface QuoteItemRaw {
   id?: string;
   label?: string;
@@ -32,6 +37,16 @@ export type SendQuoteResult =
       status: number;
       error: string;
       missing?: string[];
+      /**
+       * Set when the failure is due to an incomplete CLIENT (vs. artisan
+       * profile). Lets the caller — Émile's sendQuote tool wrapper — open
+       * the client edit modal with the right pre-fills instead of bouncing
+       * the artisan to /dashboard/parametres for a profile fix.
+       */
+      clientIncomplete?: {
+        clientId: string;
+        missingFields: string[];
+      };
     };
 
 export async function executeSendQuote(
@@ -96,6 +111,35 @@ export async function executeSendQuote(
       status: 422,
       error:
         "Le client n'a pas d'adresse email. Ajoute l'email avant l'envoi.",
+    };
+  }
+
+  // Legal-conformity gate. A French devis must carry the recipient's full
+  // address; for B2B it must also include the raison sociale (DB column
+  // `name` for pros) and SIRET is strongly recommended. We block here
+  // rather than at PDF render time so the artisan gets a structured
+  // missing_fields list instead of a silently broken document.
+  const clientType = clientRow.type_client as
+    | "particulier"
+    | "professionnel"
+    | null
+    | undefined;
+  const clientMissing: string[] = [];
+  if (!toStr(clientRow.address)) clientMissing.push("address");
+  if (!toStr(clientRow.postal_code)) clientMissing.push("postal_code");
+  if (!toStr(clientRow.city)) clientMissing.push("city");
+  if (clientType === "professionnel") {
+    if (!toStr(clientRow.name)) clientMissing.push("name");
+  }
+  if (clientMissing.length > 0) {
+    return {
+      ok: false,
+      status: 422,
+      error: `Client incomplet (${clientMissing.join(", ")}). Complète les infos avant l'envoi.`,
+      clientIncomplete: {
+        clientId: String(clientRow.id ?? quote.client_id),
+        missingFields: clientMissing,
+      },
     };
   }
 

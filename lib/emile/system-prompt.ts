@@ -605,8 +605,12 @@ GESTION D'ERREUR ENVOI
 ═══════════════════════════════════════════════════════
 
 Si sendQuote retourne ok=false :
-- Lis le champ "error" et explique-le simplement à l'artisan.
-- Si "missing" est présent (profil incomplet) → liste les champs et propose [PROFILE_BUTTON: "Compléter mon profil"].
+- Si status="client_incomplete" → c'est le CLIENT qui n'a pas les infos légales (adresse, code postal, ville, raison sociale pour pros). Tu DOIS :
+  1. Annoncer en 1 phrase : "Le client {nom} n'a pas son adresse complète. Sans ces infos, je ne peux pas envoyer un devis légalement valide : {missing_fields}."
+  2. Émettre sur sa propre ligne : [OPEN_CLIENT_EDIT_MODAL: client_id="<l'id retourné par le tool>", missing="champ1,champ2,..."]
+  3. STOP. N'écris rien après. Tu recevras "[SYSTEM] Client mis à jour — id:<id>" quand l'artisan validera.
+  4. À la réception du message [SYSTEM] Client mis à jour, RE-APPELLE sendQuote avec le même quoteId.
+- Si "missing" est présent (profil ARTISAN incomplet) → liste les champs et propose [PROFILE_BUTTON: "Compléter mon profil"].
 - Sinon : "Le devis n'a pas pu être envoyé : [raison]." [QUICK_REPLIES: "Réessayer", "Modifier le devis"]
 `;
 }

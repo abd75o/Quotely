@@ -437,13 +437,152 @@ export function BulkImportModal({
             onCancel={attemptClose}
           />
         ) : (
-        <div className="min-h-0 flex-1 overflow-auto px-6 py-4">
+        <div className="min-h-0 flex-1 overflow-auto px-4 py-4 sm:px-6">
           {rows.length === 0 ? (
             <p className="py-10 text-center text-sm text-[var(--text-muted)]">
               Aucune ligne détectée. Ajoutes-en une manuellement.
             </p>
           ) : (
-            <table className="w-full text-[13px]">
+            <>
+            {/* Mobile (<md): one card per row. Labels are full-width text
+                and selectors get real touch-targets. The desktop table sits
+                immediately below behind a `hidden md:table` so it never
+                renders on small screens. */}
+            <div className="md:hidden space-y-3">
+              {rows.map((r, idx) => {
+                const errs = errorsByRowId.get(r.id);
+                const hasErr = !!errs;
+                return (
+                  <div
+                    key={r.id}
+                    className={cn(
+                      "rounded-xl border bg-white p-3 shadow-sm",
+                      hasErr
+                        ? "border-red-200 bg-red-50/30"
+                        : "border-[var(--border)]",
+                    )}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">
+                        Ligne {idx + 1}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => removeRow(r.id)}
+                        aria-label="Supprimer la ligne"
+                        className="flex h-9 w-9 items-center justify-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-red-50 hover:text-red-600"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <label className="mt-2 block text-[11px] font-semibold text-[var(--text-secondary)]">
+                      Désignation *
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={r.label}
+                      onChange={(e) => update(r.id, { label: e.target.value })}
+                      className={cn(
+                        "mt-1 w-full resize-y rounded-lg border bg-white px-2.5 py-2 text-base outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20",
+                        errs?.label
+                          ? "border-red-300"
+                          : "border-[var(--border)]",
+                      )}
+                    />
+                    {errs?.label && (
+                      <p className="mt-1 text-[11px] text-red-600">{errs.label}</p>
+                    )}
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-[var(--text-secondary)]">
+                          Qté *
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={r.quantity}
+                          onChange={(e) =>
+                            update(r.id, { quantity: e.target.value })
+                          }
+                          className={cn(
+                            "mt-1 w-full rounded-lg border bg-white px-2.5 py-2 text-base text-right outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20",
+                            errs?.quantity
+                              ? "border-red-300"
+                              : "border-[var(--border)]",
+                          )}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-[var(--text-secondary)]">
+                          Unité
+                        </label>
+                        <select
+                          value={r.unite}
+                          onChange={(e) =>
+                            update(r.id, { unite: e.target.value })
+                          }
+                          className="mt-1 w-full rounded-lg border border-[var(--border)] bg-white px-2.5 py-2 text-base outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20"
+                        >
+                          {UNITS.map((u) => (
+                            <option key={u.value} value={u.value}>
+                              {u.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-[var(--text-secondary)]">
+                          Prix HT *
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={r.price}
+                          onChange={(e) =>
+                            update(r.id, { price: e.target.value })
+                          }
+                          className={cn(
+                            "mt-1 w-full rounded-lg border bg-white px-2.5 py-2 text-base text-right outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20",
+                            errs?.price
+                              ? "border-red-300"
+                              : "border-[var(--border)]",
+                          )}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-[var(--text-secondary)]">
+                          TVA
+                        </label>
+                        <select
+                          value={r.tva}
+                          onChange={(e) =>
+                            update(r.id, { tva: Number(e.target.value) })
+                          }
+                          className="mt-1 w-full rounded-lg border border-[var(--border)] bg-white px-2.5 py-2 text-base outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20"
+                        >
+                          {TVA_OPTIONS.map((t) => (
+                            <option key={t.value} value={t.value}>
+                              {t.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex items-center justify-between border-t border-[var(--border)] pt-2 text-[12px]">
+                      <span className="text-[var(--text-muted)]">Total HT</span>
+                      <span className="font-semibold text-[var(--text-primary)]">
+                        {EUR.format(rowTotalHT(r))}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop (≥md): keep the dense table. */}
+            <table className="hidden md:table w-full text-[13px]">
               <thead>
                 <tr className="border-b border-[var(--border)] text-[11px] uppercase tracking-wider text-[var(--text-muted)]">
                   <th className="py-2 pr-2 text-left">Désignation *</th>
@@ -567,6 +706,7 @@ export function BulkImportModal({
                 })}
               </tbody>
             </table>
+            </>
           )}
 
           <button
@@ -588,7 +728,10 @@ export function BulkImportModal({
         )}
 
         {mode !== null && (
-        <footer className="flex items-center justify-between gap-3 border-t border-[var(--border)] bg-white px-6 py-3">
+        // Sticky footer so the total + actions stay reachable on a 100-row
+        // import without scrolling the modal back up. min-h-[44px] on the
+        // buttons hits the Apple HIG touch-target guideline.
+        <footer className="sticky bottom-0 flex flex-col gap-3 border-t border-[var(--border)] bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div className="flex flex-col text-[13px] text-[var(--text-secondary)]">
             <span>
               Total HT :{" "}
@@ -610,7 +753,7 @@ export function BulkImportModal({
             <button
               type="button"
               onClick={attemptClose}
-              className="rounded-xl border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--text-secondary)] transition-colors hover:bg-gray-50"
+              className="min-h-[44px] flex-1 rounded-xl border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--text-secondary)] transition-colors hover:bg-gray-50 sm:flex-none"
             >
               Annuler
             </button>
@@ -618,7 +761,7 @@ export function BulkImportModal({
               type="button"
               onClick={handleSubmit}
               disabled={!allValid || submitting}
-              className="inline-flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[var(--primary-dark)] disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[var(--primary-dark)] disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
             >
               {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
               {submitLabel(mode, rows.length)}

@@ -255,6 +255,32 @@ body {
 .dashboard-card:nth-of-type(5) { animation-delay: 240ms; }
 .dashboard-card:nth-of-type(6) { animation-delay: 300ms; }
 
+/* iOS Safari auto-zooms any input/textarea whose font-size is < 16px when
+   the user taps to focus it. The zoom is jarring, doesn't return when the
+   field loses focus, and is not reachable from JS. The only reliable cure
+   is to ensure every form control renders at >= 16px on small viewports.
+   Keep this scoped to <= 640px so the desktop's 13-14px form density is
+   preserved.
+
+   Components that already explicitly opt back into a smaller size via a
+   Tailwind class (e.g. `text-[13px]`) on a non-mobile breakpoint are
+   unaffected; this rule only raises the floor. */
+@media (max-width: 640px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+  /* Same defensive default for the tap-delay / accidental zoom-on-double-tap
+     pair. Buttons keep their own touch-action (some menus animate). */
+  input,
+  textarea,
+  select,
+  a[role="button"] {
+    touch-action: manipulation;
+  }
+}
+
 /* Reduced motion — neutralise toute animation et transition */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

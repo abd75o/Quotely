@@ -102,7 +102,12 @@ export function EmileInput({
             (isLoading ? "Émile réfléchit…" : "Décris ton chantier à Émile…")
           }
           disabled={isLoading}
-          className="max-h-32 min-h-[36px] flex-1 resize-none rounded-xl border border-[var(--border)] bg-gray-50 px-3.5 py-2 text-[13px] outline-none transition-all placeholder:text-[var(--text-muted)] focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 disabled:opacity-60"
+          // text-base = 16px on mobile keeps iOS Safari from auto-zooming on
+          // focus (the trigger is any input/textarea < 16px). We bump back
+          // down to 13px at sm: so desktop keeps its compact density.
+          // touch-action: manipulation removes the 300ms tap delay and the
+          // double-tap-to-zoom gesture on the textarea itself.
+          className="max-h-32 min-h-[36px] flex-1 resize-none rounded-xl border border-[var(--border)] bg-gray-50 px-3.5 py-2 text-base outline-none transition-all touch-manipulation placeholder:text-[var(--text-muted)] focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 disabled:opacity-60 sm:text-[13px]"
         />
         {isLoading && onAbort ? (
           <button

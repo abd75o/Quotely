@@ -52,6 +52,45 @@ function asNumber(v: unknown, fallback: number): number {
   return Number.isFinite(n) ? n : fallback;
 }
 
+/**
+ * Authoritative list of French VAT rates (2026):
+ *   - 20   : taux normal (B2B, neuf, prestations standards)
+ *   - 10   : rénovation logement >2 ans
+ *   - 5.5  : amélioration énergétique
+ *   - 2.1  : presse + médicaments remboursés (edge case, kept for completeness)
+ *   - 0    : auto-entrepreneur franchise / TVA non applicable
+ *
+ * Snap any incoming rate to the nearest valid value. We had a 21% (Belgian)
+ * surfacing on a freshly bulk-imported first line — most likely the LLM
+ * mistyping or a stray edit through the per-line EditableField — so every
+ * write boundary now runs values through this helper.
+ */
+export const FRENCH_VAT_RATES = [0, 2.1, 5.5, 10, 20] as const;
+
+export function normalizeFrTva(value: unknown, fallback: number = 20): number {
+  const raw = Number(value);
+  if (!Number.isFinite(raw)) return fallback;
+  // Exact match (covers the happy path where the writer already passed a
+  // canonical rate; avoids floating-point comparisons further down).
+  for (const rate of FRENCH_VAT_RATES) {
+    if (Math.abs(raw - rate) < 0.01) return rate;
+  }
+  // Off-spec: snap to the closest valid French rate. 21 → 20, 19.6 → 20,
+  // 5.6 → 5.5. We cap at 20 below by construction (FRENCH_VAT_RATES max).
+  // `best` is typed as plain number so the reassignment from a literal
+  // FRENCH_VAT_RATES entry compiles under the `as const` array.
+  let best: number = FRENCH_VAT_RATES[0];
+  let bestDelta = Math.abs(raw - best);
+  for (const rate of FRENCH_VAT_RATES) {
+    const delta = Math.abs(raw - rate);
+    if (delta < bestDelta) {
+      best = rate;
+      bestDelta = delta;
+    }
+  }
+  return best;
+}
+
 function mintId(idx: number): string {
   return `l-${Date.now().toString(36)}-${idx}-${Math.floor(Math.random() * 1000)}`;
 }
@@ -65,8 +104,11 @@ function mintId(idx: number): string {
 export function normalizeQuoteItem(
   raw: RawItem,
   idx: number,
-  defaultTva: number = 20,
+  defaultTvaRaw: number = 20,
 ): QuoteItem {
+  // The defaultTva parameter is the per-quote fallback — also snap it so a
+  // caller passing 21 here doesn't poison every line that omitted its rate.
+  const defaultTva = normalizeFrTva(defaultTvaRaw, 20);
   const label =
     asString(raw.label) ??
     asString(raw.libelle) ??
@@ -76,7 +118,9 @@ export function normalizeQuoteItem(
   const description = asString(raw.description);
   const quantity = asNumber(raw.quantity ?? raw.quantite, 1);
   const price = asNumber(raw.price ?? raw.unitPrice ?? raw.prixHT, 0);
-  const tva = asNumber(raw.tva ?? raw.tauxTVA, defaultTva);
+  // Snap to a valid French rate so a stray 21 / 19.6 / 5.6 from the LLM
+  // or the per-line editor never lands in the JSONB column.
+  const tva = normalizeFrTva(raw.tva ?? raw.tauxTVA, defaultTva);
 
   // unite/unit: prefer canonical key, fall back to legacy `unit`, null when
   // neither given (PDF renders "—" in that case).
@@ -111,7 +155,11 @@ export function normalizeQuoteItems(
   defaultTva: number = 20,
 ): QuoteItem[] {
   if (!Array.isArray(raw)) return [];
-  return (raw as RawItem[]).map((it, idx) => normalizeQuoteItem(it, idx, defaultTva));
+  // normalizeQuoteItem snaps the default itself; passing the raw value
+  // through is fine and keeps a single source of truth for the snapping.
+  return (raw as RawItem[]).map((it, idx) =>
+    normalizeQuoteItem(it, idx, defaultTva),
+  );
 }
 
 /**

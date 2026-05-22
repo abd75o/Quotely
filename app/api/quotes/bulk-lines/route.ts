@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { nextQuoteNumber, bumpQuoteNumber } from "@/lib/quotes/numbering";
 import {
   computeQuoteTotals,
+  normalizeFrTva,
   normalizeQuoteItem,
   type QuoteItem,
 } from "@/lib/quotes/items";
@@ -54,19 +55,24 @@ const BodySchema = z.object({
 type Line = z.infer<typeof LineSchema>;
 
 function toQuoteItems(lines: Line[], startIdx: number): QuoteItem[] {
-  return lines.map((l, i) =>
-    normalizeQuoteItem(
+  return lines.map((l, i) => {
+    // Snap the rate at the API boundary so a stray 21 / 19.6 from the
+    // modal (the dropdown is restricted but a paste-and-edit could slip
+    // through) never reaches the JSONB column. normalizeQuoteItem snaps
+    // again as a defence-in-depth.
+    const safeTva = normalizeFrTva(l.tva, 20);
+    return normalizeQuoteItem(
       {
         label: l.label,
         quantity: l.quantity,
         unite: l.unite,
         price: l.price,
-        tva: l.tva,
+        tva: safeTva,
       },
       startIdx + i,
-      l.tva,
-    ),
-  );
+      safeTva,
+    );
+  });
 }
 
 export async function POST(req: NextRequest) {

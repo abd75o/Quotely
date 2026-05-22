@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { EditableField } from "./EditableField";
 import { LockedField } from "./LockedField";
+import { normalizeFrTva } from "@/lib/quotes/items";
 import type {
   EmileQuoteDraft,
   EmileQuoteLine,
@@ -208,7 +209,9 @@ export function QuotePreview({
                   onSave={(v) => {
                     const n = Number(v);
                     if (!Number.isNaN(n) && n >= 0) {
-                      onUpdate({ ...quote, tva: n });
+                      // Snap to a valid French rate so typing 21 / 19.6
+                      // doesn't propagate into the JSONB on auto-save.
+                      onUpdate({ ...quote, tva: normalizeFrTva(n, quote.tva) });
                     }
                   }}
                   type="number"
@@ -399,7 +402,9 @@ function LineRow({
           value={`${tva}`}
           onSave={(v) => {
             const n = Number(v);
-            if (!Number.isNaN(n) && n >= 0) onChange({ tva: n });
+            if (!Number.isNaN(n) && n >= 0) {
+              onChange({ tva: normalizeFrTva(n, defaultTva) });
+            }
           }}
           type="number"
           label="Taux TVA"

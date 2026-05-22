@@ -5,6 +5,7 @@ import { executeSendQuote } from "@/lib/quotes/send";
 import { nextQuoteNumber, bumpQuoteNumber } from "@/lib/quotes/numbering";
 import { autoTitleConversation } from "@/lib/conversations/auto-title";
 import { resolveQuoteId } from "@/lib/quotes/resolve-id";
+import { normalizeFrTva } from "@/lib/quotes/items";
 
 export interface EmileToolContext {
   supabase: SupabaseClient;
@@ -449,7 +450,10 @@ export function createEmileTools(ctx: EmileToolContext) {
             price: l.prixHT,
             quantity: l.quantite,
             unite: l.unite ?? null,
-            tva: l.tauxTVA,
+            // Snap any LLM-emitted rate to a valid French value (0, 2.1,
+            // 5.5, 10, 20). Sonnet has been seen typing 21 (Belgian rate)
+            // when re-emitting a quote post-import.
+            tva: normalizeFrTva(l.tauxTVA, 20),
           }));
           const subtotal = +items
             .reduce((s, it) => s + it.price * it.quantity, 0)

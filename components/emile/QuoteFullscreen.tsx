@@ -8,6 +8,7 @@ import {
   computeQuoteTotals,
   formatEuros,
 } from "./QuotePreview";
+import { normalizeFrTva } from "@/lib/quotes/items";
 import type { EmileQuoteDraft, EmileQuoteLine } from "./types";
 
 interface QuoteFullscreenProps {
@@ -249,7 +250,9 @@ export function QuoteFullscreen({
                           onSave={(v) => {
                             const n = Number(v);
                             if (!Number.isNaN(n) && n >= 0)
-                              updateLine(line.id, { tva: n });
+                              updateLine(line.id, {
+                                tva: normalizeFrTva(n, quote.tva),
+                              });
                           }}
                           type="number"
                           label="Taux TVA"

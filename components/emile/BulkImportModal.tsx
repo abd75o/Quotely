@@ -66,6 +66,19 @@ export interface BulkImportSuccess {
     price: number;
     tva: number;
   }>;
+  /**
+   * Client linked to the (created or updated) quote. The API hydrates this
+   * from the conversation's related_client_id when the caller didn't pass an
+   * explicit clientId, so mode="new" imports show the right name in the
+   * right-panel preview without waiting for a reload.
+   */
+  client?: {
+    id: string;
+    name: string;
+    first_name: string | null;
+    email: string | null;
+    phone: string | null;
+  } | null;
 }
 
 interface BulkImportModalProps {
@@ -354,7 +367,12 @@ export function BulkImportModal({
         throw body;
       }
       const json = (await res.json()) as {
-        quote: { id: string; number: string; total: number };
+        quote: {
+          id: string;
+          number: string;
+          total: number;
+          client?: BulkImportSuccess["client"];
+        };
         items: BulkImportSuccess["items"];
         addedCount: number;
         totalLines: number;
@@ -383,6 +401,7 @@ export function BulkImportModal({
         total: json.quote.total,
         items: json.items ?? [],
         mode: json.mode ?? mode,
+        client: json.quote.client ?? null,
       });
       onClose();
     } catch (err) {

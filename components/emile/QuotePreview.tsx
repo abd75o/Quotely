@@ -8,6 +8,7 @@ import {
   Plus,
   Send,
   Trash2,
+  UserPlus,
   X,
 } from "lucide-react";
 import { EditableField } from "./EditableField";
@@ -34,6 +35,13 @@ interface QuotePreviewProps {
    * open a proper modal with TVA / unit / price fields.
    */
   onOpenAddLine?: () => void;
+  /**
+   * When provided AND the quote has no client yet, the "Aucun client" field
+   * turns into a "Sélectionner un client" button that delegates to the
+   * parent (which owns the selector modal + the PATCH to /api/quotes/:id).
+   * Omit to keep the locked-field behaviour (e.g. once a client is set).
+   */
+  onPickClient?: () => void;
 }
 
 const LOCK_REASONS: Record<string, string> = {
@@ -52,6 +60,7 @@ export function QuotePreview({
   onResend,
   onOpenFullscreen,
   onOpenAddLine,
+  onPickClient,
 }: QuotePreviewProps) {
   const isSigned = quote.status === "signed";
   const isSentOrLater =
@@ -147,11 +156,28 @@ export function QuotePreview({
                 />
               </Field>
               <Field label="Client">
-                <LockedField
-                  value={quote.client?.name ?? "—"}
-                  lockReason={LOCK_REASONS.client}
-                  onClick={handleLockedClick}
-                />
+                {quote.client?.name ? (
+                  <LockedField
+                    value={quote.client.name}
+                    lockReason={LOCK_REASONS.client}
+                    onClick={handleLockedClick}
+                  />
+                ) : onPickClient && !validated ? (
+                  <button
+                    type="button"
+                    onClick={onPickClient}
+                    className="inline-flex items-center gap-1.5 self-start rounded-lg border border-dashed border-[var(--primary)]/40 bg-[var(--primary-bg)] px-2.5 py-1 text-[12px] font-semibold text-[var(--primary)] transition-colors hover:border-[var(--primary)] hover:bg-[var(--primary-bg)]/70"
+                  >
+                    <UserPlus className="h-3.5 w-3.5" />
+                    Sélectionner un client
+                  </button>
+                ) : (
+                  <LockedField
+                    value="—"
+                    lockReason={LOCK_REASONS.client}
+                    onClick={handleLockedClick}
+                  />
+                )}
               </Field>
               <Field label="Date">
                 <EditableField

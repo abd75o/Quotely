@@ -57,6 +57,18 @@ export async function PUT(
   const validUntilRaw = body.validUntil ?? body.valid_until;
   if (validUntilRaw !== undefined) update.valid_until = validUntilRaw;
 
+  // Manual client (re)assignment from the right-panel "Sélectionner un client"
+  // button. Accept the camelCase alias the AI SDK / front-end already uses for
+  // other fields, plus the snake_case form for symmetry with the DB column.
+  const clientIdRaw = body.clientId ?? body.client_id;
+  if (clientIdRaw !== undefined) {
+    if (clientIdRaw === null || clientIdRaw === "") {
+      update.client_id = null;
+    } else if (typeof clientIdRaw === "string") {
+      update.client_id = clientIdRaw;
+    }
+  }
+
   if (body.items && Array.isArray(body.items)) {
     // Accept either legacy {description, unitPrice, total} or canonical
     // {label, price, quantity, unite, tva}. The normalizer stores the
@@ -83,7 +95,7 @@ export async function PUT(
       .from("quotes")
       .update(update)
       .eq("id", id)
-      .select()
+      .select("*, client:clients(*)")
       .single();
 
     if (error) throw error;

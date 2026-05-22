@@ -101,21 +101,31 @@ export async function POST(req: NextRequest) {
   // linked draft, we create a fresh one and re-point the conversation.
   // Otherwise resolve target the same way as saveQuoteDraft: explicit
   // quoteId > conversation.related_quote_id > none.
+  //
+  // We also pull the conversation's related_client_id so the freshly
+  // created draft inherits the client the user has been talking about.
+  // Without this, mode="new" produced "Client non défini" devis even when
+  // the conversation clearly had a selected client (the reported bug).
   let targetQuoteId: string | null = null;
-  if (mode !== "new") {
-    targetQuoteId = quoteId ?? null;
-    if (!targetQuoteId && conversationId) {
-      const { data: conv } = await supabase
-        .from("conversations")
-        .select("related_quote_id")
-        .eq("id", conversationId)
-        .eq("user_id", user.id)
-        .maybeSingle();
-      if (conv?.related_quote_id) {
+  let convClientId: string | null = null;
+  if (conversationId) {
+    const { data: conv } = await supabase
+      .from("conversations")
+      .select("related_quote_id, related_client_id")
+      .eq("id", conversationId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (conv) {
+      if (mode !== "new" && !quoteId && conv.related_quote_id) {
         targetQuoteId = conv.related_quote_id as string;
       }
+      convClientId = (conv.related_client_id as string | null) ?? null;
     }
   }
+  if (mode !== "new" && quoteId) {
+    targetQuoteId = quoteId;
+  }
+  const effectiveClientId = clientId ?? convClientId;
 
   // ─── Append / replace path ───────────────────────────────────────────────
   if (targetQuoteId) {
@@ -178,6 +188,10 @@ export async function POST(req: NextRequest) {
         tax_amount: totals.taxAmount,
         tax_breakdown: totals.taxBreakdown,
         total: totals.total,
+        // Only overwrite client_id on append/replace when the caller explicitly
+        // passed one. The conversation's related_client_id is a fallback for
+        // the create path; on an existing quote we don't want to silently
+        // overwrite a client the user may have already linked.
         ...(clientId ? { client_id: clientId } : {}),
       })
       .eq("id", targetQuoteId)
@@ -193,7 +207,8 @@ export async function POST(req: NextRequest) {
     // labels anyway. On a replace, this is the first NEW line — exactly what
     // the user just typed.
     await autoTitleConversation(supabase, conversationId, {
-      clientId: clientId ?? (updated.client_id as string | null) ?? null,
+      clientId:
+        clientId ?? (updated.client_id as string | null) ?? convClientId,
       fallbackPrestation: newItems[0]?.label ?? null,
       fallbackNumber: updated.number as string,
     });
@@ -234,7 +249,10 @@ export async function POST(req: NextRequest) {
       .from("quotes")
       .insert({
         user_id: user.id,
-        client_id: clientId ?? null,
+        // Inherit the conversation's client when the caller didn't pass one
+        // explicitly. Otherwise the new draft would land in /devis with no
+        // client attached — the bug this fix addresses.
+        client_id: effectiveClientId,
         number: candidateNumber,
         status: "draft",
         items: newItems,
@@ -265,10 +283,42 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Pull the linked client so the response can populate the right-panel
+  // preview synchronously. Without it, mode="new" imports landed in the UI
+  // as "Aucun client sélectionné" even though the row had client_id set —
+  // the panel refreshed only on the next conversation reload.
+  let clientSnapshot: {
+    id: string;
+    name: string;
+    first_name: string | null;
+    email: string | null;
+    phone: string | null;
+  } | null = null;
+  if (effectiveClientId) {
+    const { data: clientRow } = await supabase
+      .from("clients")
+      .select("id, name, first_name, email, phone")
+      .eq("id", effectiveClientId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (clientRow) {
+      clientSnapshot = {
+        id: clientRow.id as string,
+        name: (clientRow.name as string) ?? "",
+        first_name: (clientRow.first_name as string | null) ?? null,
+        email: (clientRow.email as string | null) ?? null,
+        phone: (clientRow.phone as string | null) ?? null,
+      };
+    }
+  }
+
   if (conversationId) {
     // For mode="new" this overwrites any previous related_quote_id — exactly
     // what the user asked for ("crée un nouveau devis", the conv now points
-    // at the new draft).
+    // at the new draft). We only write related_client_id when the caller
+    // passed one explicitly: convClientId already lives on the conversation,
+    // re-writing it would be a no-op at best and could clobber a concurrent
+    // update at worst.
     await supabase
       .from("conversations")
       .update({
@@ -279,7 +329,7 @@ export async function POST(req: NextRequest) {
       .eq("user_id", user.id);
 
     await autoTitleConversation(supabase, conversationId, {
-      clientId: clientId ?? null,
+      clientId: effectiveClientId,
       fallbackPrestation: newItems[0]?.label ?? null,
       fallbackNumber: created.number,
       // When the user explicitly asked for a NEW devis, force re-titling
@@ -293,6 +343,8 @@ export async function POST(req: NextRequest) {
     quote: {
       id: created.id,
       number: created.number,
+      client_id: effectiveClientId,
+      client: clientSnapshot,
       items: newItems,
       subtotal: totals.subtotal,
       tax_rate: totals.taxRate,

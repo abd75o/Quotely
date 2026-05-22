@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { FileText, Plus, Trash2, X } from "lucide-react";
+import { FileText, Plus, Trash2, UserPlus, X } from "lucide-react";
 import { EditableField } from "./EditableField";
 import {
   Totals,
@@ -15,6 +15,12 @@ interface QuoteFullscreenProps {
   onUpdate: (next: EmileQuoteDraft) => void;
   onClose: () => void;
   onOpenAddLine?: () => void;
+  /**
+   * When provided AND the quote has no client yet, the fullscreen client
+   * card shows a "Sélectionner un client" CTA that delegates to the parent
+   * (which owns the selector modal + the PATCH).
+   */
+  onPickClient?: () => void;
 }
 
 export function QuoteFullscreen({
@@ -22,6 +28,7 @@ export function QuoteFullscreen({
   onUpdate,
   onClose,
   onOpenAddLine,
+  onPickClient,
 }: QuoteFullscreenProps) {
   const validated =
     quote.status === "sent" ||
@@ -159,6 +166,16 @@ export function QuoteFullscreen({
                       : ""}{" "}
                     {quote.client.city ?? ""}
                   </p>
+                )}
+                {!quote.client?.name && onPickClient && !validated && (
+                  <button
+                    type="button"
+                    onClick={onPickClient}
+                    className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-dashed border-[var(--primary)]/40 bg-[var(--primary-bg)] px-2.5 py-1 text-[12px] font-semibold text-[var(--primary)] transition-colors hover:border-[var(--primary)] hover:bg-[var(--primary-bg)]/70"
+                  >
+                    <UserPlus className="h-3.5 w-3.5" />
+                    Sélectionner un client
+                  </button>
                 )}
               </div>
             </div>

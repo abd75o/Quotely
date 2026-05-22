@@ -568,6 +568,7 @@ TOOLS DISPONIBLES
 - saveUserPrestation(libelle, prix) : mémorise un prix
 - listClients(limit?, offset?) : liste tes clients sans filtre, triés par date de création décroissante
 - getClientById(clientId) : détails complets d'un client par id (adresse, SIRET…)
+- linkClientToQuote(quoteId, clientId) : rattache un client à un devis existant (UPDATE quotes SET client_id). À appeler quand l'artisan dit "associe ce devis à <client>" / "lie ce devis au client X" / "rattache le client X au devis Y", OU pour réparer un devis créé sans client (cas typique : bulk import sans client en cours). Refuse les devis déjà envoyés/signés.
 - listQuotes(status?, clientName?, limit?) : tes devis avec filtre statut ("draft", "sent", "viewed", "signed", "all") ou nom client
 - getQuoteStatus(quoteId) : statut détaillé d'un devis avec timeline (created, sent, viewed, signed)
 

@@ -899,6 +899,76 @@ export function createEmileTools(ctx: EmileToolContext) {
       },
     }),
 
+    linkClientToQuote: tool({
+      description:
+        "Associe un client à un devis existant (UPDATE quotes SET client_id = clientId). À utiliser quand l'artisan demande 'associe ce devis à <client>', 'lie ce devis au client X', 'rattache le client X au devis' ou équivalent — ou quand sendQuote a échoué parce que le devis n'a pas de client. Refuse les devis déjà envoyés/signés (status !== 'draft'). Retourne { ok, quoteId, number, client: {...} } ou { ok: false, error }.",
+      inputSchema: z.object({
+        quoteId: z
+          .string()
+          .uuid()
+          .describe(
+            "UUID du devis (celui retourné par saveQuoteDraft, pas le numéro QTL-…).",
+          ),
+        clientId: z
+          .string()
+          .uuid()
+          .describe(
+            "UUID du client à rattacher (id retourné par findClient/listClients/createClient).",
+          ),
+      }),
+      execute: async ({ quoteId, clientId }) => {
+        try {
+          // Verify the quote belongs to this artisan AND is still editable.
+          // A signed devis with the wrong client must NOT be silently
+          // re-linked — that would rewrite a legally binding document.
+          const { data: existing, error: fetchErr } = await supabase
+            .from("quotes")
+            .select("id, status")
+            .eq("id", quoteId)
+            .eq("user_id", userId)
+            .maybeSingle();
+          if (fetchErr) return err(fetchErr.message);
+          if (!existing) return err("Devis introuvable.");
+          const status = (existing.status as string | null) ?? "draft";
+          if (status !== "draft") {
+            return err(
+              `Devis déjà ${status} — impossible de rattacher un client. Crée un nouveau devis si besoin.`,
+            );
+          }
+
+          // Same RLS check on the client — confirms the artisan actually
+          // owns this client_id before we write the FK.
+          const { data: client, error: clientErr } = await supabase
+            .from("clients")
+            .select(
+              "id, name, first_name, email, phone, address, postal_code, city, type_client",
+            )
+            .eq("id", clientId)
+            .eq("user_id", userId)
+            .maybeSingle();
+          if (clientErr) return err(clientErr.message);
+          if (!client) return err("Client introuvable.");
+
+          const { data: updated, error: updErr } = await supabase
+            .from("quotes")
+            .update({ client_id: clientId })
+            .eq("id", quoteId)
+            .eq("user_id", userId)
+            .select("id, number")
+            .single();
+          if (updErr) return err(updErr.message);
+
+          return ok({
+            quoteId: updated.id,
+            number: updated.number,
+            client,
+          });
+        } catch (e) {
+          return err((e as Error).message ?? "Erreur inconnue");
+        }
+      },
+    }),
+
     listQuotes: tool({
       description:
         "Liste les devis de l'artisan avec filtre optionnel par statut ou nom client. Utile pour 'où en est mon devis pour Dupont ?' ou 'combien de devis en cours ?'.",

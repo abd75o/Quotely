@@ -9,6 +9,11 @@ import { EmileChat } from "./EmileChat";
 import { QuotePreview } from "./QuotePreview";
 import { QuoteFullscreen } from "./QuoteFullscreen";
 import { NewQuoteLineModal } from "./NewQuoteLineModal";
+import {
+  ClientSelectorModal,
+  type ExistingClient,
+} from "./ClientSelectorModal";
+import { toastError, toastSuccess } from "@/lib/toast";
 import type {
   EmileQuoteDraft,
   EmileQuoteLine,
@@ -97,6 +102,10 @@ export function EmileLayout({ conversationId }: EmileLayoutProps) {
   const [mobileView, setMobileView] = useState<MobileView>("chat");
   const [fullscreen, setFullscreen] = useState(false);
   const [showNewLine, setShowNewLine] = useState(false);
+  // Direct (non-LLM) client picker for "Sélectionner un client" in the quote
+  // preview. Lives in the layout so the same modal serves the side panel and
+  // the fullscreen view; PATCHes /api/quotes/:id on select.
+  const [clientPickerOpen, setClientPickerOpen] = useState(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleQuoteUpdate = useCallback((update: EmileQuoteUpdate) => {
@@ -144,6 +153,81 @@ export function EmileLayout({ conversationId }: EmileLayoutProps) {
     };
   }, []);
 
+  const handleOpenClientPicker = useCallback(() => {
+    if (!quote?.id) return;
+    setClientPickerOpen(true);
+  }, [quote]);
+
+  const handlePickClient = useCallback(
+    async (picked: ExistingClient) => {
+      setClientPickerOpen(false);
+      if (!quote?.id) return;
+      try {
+        const res = await fetch(`/api/quotes/${quote.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ clientId: picked.id }),
+        });
+        if (!res.ok) {
+          const detail = await res.text().catch(() => "");
+          throw new Error(detail || `HTTP ${res.status}`);
+        }
+        const json = (await res.json()) as {
+          quote?: {
+            client_id?: string | null;
+            client?: {
+              id: string;
+              name: string;
+              first_name?: string | null;
+              email?: string | null;
+              phone?: string | null;
+              address?: string | null;
+              postal_code?: string | null;
+              city?: string | null;
+              type_client?: "particulier" | "professionnel" | null;
+              siret?: string | null;
+            } | null;
+          };
+        };
+        const c = json.quote?.client ?? null;
+        // Hydrate the right-panel synchronously from the API response — the
+        // PUT already wrote to DB, no second round-trip needed for the user
+        // to see "Pour <Nom>" replace "Aucun client sélectionné".
+        setQuote((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            client: c
+              ? {
+                  id: c.id,
+                  name: c.name,
+                  first_name: c.first_name ?? null,
+                  email: c.email ?? null,
+                  phone: c.phone ?? null,
+                  address: c.address ?? null,
+                  postal_code: c.postal_code ?? null,
+                  city: c.city ?? null,
+                  type_client: c.type_client ?? null,
+                  siret: c.siret ?? null,
+                }
+              : {
+                  id: picked.id,
+                  name: picked.name,
+                  first_name: picked.first_name ?? null,
+                  email: picked.email ?? null,
+                  phone: picked.phone ?? null,
+                },
+          };
+        });
+        toastSuccess("Client rattaché au devis.");
+      } catch (e) {
+        console.error("[link client]", e);
+        toastError("Impossible de rattacher le client. Réessaie.");
+      }
+    },
+    [quote],
+  );
+
   // Reset the right-panel quote whenever the conversation changes. useEmile
   // re-runs loadConversation on the same trigger and calls handleQuoteUpdate
   // again if the new conv has a linked quote — so the panel re-populates
@@ -177,6 +261,7 @@ export function EmileLayout({ conversationId }: EmileLayoutProps) {
               onUpdate={handleQuoteEdit}
               onOpenFullscreen={() => setFullscreen(true)}
               onOpenAddLine={() => setShowNewLine(true)}
+              onPickClient={handleOpenClientPicker}
             />
           ) : (
             <QuotePlaceholder />
@@ -220,6 +305,7 @@ export function EmileLayout({ conversationId }: EmileLayoutProps) {
                 onClose={() => setMobileView("chat")}
                 onOpenFullscreen={() => setFullscreen(true)}
                 onOpenAddLine={() => setShowNewLine(true)}
+                onPickClient={handleOpenClientPicker}
               />
             ) : (
               <QuotePlaceholder />
@@ -254,6 +340,7 @@ export function EmileLayout({ conversationId }: EmileLayoutProps) {
           onUpdate={handleQuoteEdit}
           onClose={() => setFullscreen(false)}
           onOpenAddLine={() => setShowNewLine(true)}
+          onPickClient={handleOpenClientPicker}
         />
       )}
 
@@ -262,6 +349,12 @@ export function EmileLayout({ conversationId }: EmileLayoutProps) {
         onClose={() => setShowNewLine(false)}
         defaultTva={quote?.tva ?? 20}
         onAdd={handleAddLineFromModal}
+      />
+
+      <ClientSelectorModal
+        open={clientPickerOpen}
+        onClose={() => setClientPickerOpen(false)}
+        onSelect={handlePickClient}
       />
     </div>
   );

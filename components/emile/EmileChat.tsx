@@ -446,6 +446,11 @@ export function EmileChat({
         number: info.number,
         total: info.total,
         items: info.items,
+        // Forward the client snapshot so a mode="new" import that inherited
+        // the conversation's client renders the name immediately. `undefined`
+        // (modes that don't return a client) keeps the previous client in the
+        // panel via updateToDraft's fallback.
+        ...(info.client !== undefined ? { client: info.client } : {}),
       });
       const eur = new Intl.NumberFormat("fr-FR", {
         style: "currency",

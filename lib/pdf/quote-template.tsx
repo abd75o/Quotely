@@ -111,6 +111,10 @@ export interface PdfProfile {
   decennale_number?: string | null;
   decennale_company?: string | null;
   decennale_zone?: string | null;
+  // Immatriculation : RCS pour sociétés, RM pour artisans/EI. Rendu adapté
+  // par `formatRegistration()` ci-dessous selon legal_status.
+  registration_number?: string | null;
+  registration_city?: string | null;
   bank_name?: string | null;
   plan?: string | null;
   hide_branding?: boolean | null;
@@ -234,6 +238,29 @@ function formatSiret(siret: string | null | undefined): string | null {
   // Fall back to the raw value when the input isn't 14 digits — better to
   // show "SIRET 1234" than nothing on a legacy / malformed row.
   return formatted || siret;
+}
+
+/**
+ * Build the RCS/RM mention string for the legal banner. Sociétés render as
+ * "RCS Paris 853 271 064", artisans as "RM 853 271 064", and a missing
+ * legal_status falls back to a generic "N° 853 271 064" rather than
+ * picking the wrong label (the artisan can fix the status from onboarding).
+ */
+const RCS_LEGAL_STATUSES_PDF = new Set(["sarl", "sas", "sasu", "eurl"]);
+const RM_LEGAL_STATUSES_PDF = new Set(["ei", "auto-entrepreneur"]);
+
+function formatRegistration(profile: PdfProfile): string | null {
+  const number = profile.registration_number?.trim();
+  if (!number) return null;
+  const status = (profile.legal_status ?? "").toLowerCase().trim();
+  if (RCS_LEGAL_STATUSES_PDF.has(status)) {
+    const city = profile.registration_city?.trim();
+    return city ? `RCS ${city} ${number}` : `RCS ${number}`;
+  }
+  if (RM_LEGAL_STATUSES_PDF.has(status)) {
+    return `RM ${number}`;
+  }
+  return `N° ${number}`;
 }
 
 function formatIban(iban: string | null | undefined): string | null {
@@ -794,6 +821,9 @@ function EmitterReceiver(props: {
             SIRET : {formatSiret(profile.siret)}
           </Text>
         )}
+        {formatRegistration(profile) && (
+          <Text style={styles.partyLine}>{formatRegistration(profile)}</Text>
+        )}
         {profile.vat_number && (
           <Text style={styles.partyLine}>
             TVA intra. : {profile.vat_number}
@@ -1123,6 +1153,9 @@ function LegalMentions(props: {
         {companyName}
         {profile.legal_status ? ` — ${profile.legal_status}` : ""}
         {profile.siret ? ` — SIRET ${formatSiret(profile.siret)}` : ""}
+        {formatRegistration(profile)
+          ? ` — ${formatRegistration(profile)}`
+          : ""}
       </Text>
       {(profile.address || profile.postal_code || profile.city) && (
         <Text style={styles.mentionLine}>

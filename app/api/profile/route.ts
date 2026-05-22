@@ -36,6 +36,10 @@ const ALLOWED_FIELDS = [
   "decennale_zone",
   "rc_pro_company",
   "rc_pro_number",
+  // Immatriculation RCS (sociétés) / RM (artisans).
+  // Migration 20260523_legal_insurance_and_registration.sql.
+  "registration_number",
+  "registration_city",
 ] as const;
 
 type AllowedField = (typeof ALLOWED_FIELDS)[number];

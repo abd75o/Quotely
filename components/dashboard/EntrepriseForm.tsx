@@ -75,6 +75,13 @@ interface CompanyForm {
   decennale_zone: string;
   rc_pro_company: string;
   rc_pro_number: string;
+  // Immatriculation : RCS pour sociétés (sarl/sas/sasu/eurl), RM pour
+  // artisans/EI/auto-entrepreneur. Label adapté côté UI selon legal_status.
+  // legal_status loaded read-only — l'édition se fait depuis l'onboarding,
+  // ici on l'utilise juste pour choisir le bon label RCS vs RM.
+  legal_status: string;
+  registration_number: string;
+  registration_city: string;
 }
 
 const BRAND_PRESETS: ReadonlyArray<{ label: string; hex: string }> = [
@@ -87,6 +94,47 @@ const BRAND_PRESETS: ReadonlyArray<{ label: string; hex: string }> = [
 ];
 
 const BRAND_HEX_RE = /^#[0-9A-Fa-f]{6}$/;
+
+/**
+ * Pick the right label/placeholder/copy for the immatriculation field based
+ * on the artisan's legal_status. Sociétés (sarl/sas/sasu/eurl) get a RCS
+ * block with a city field; artisans (ei/auto-entrepreneur) get the RM
+ * block alone. Anything else falls back to a generic "N° d'immatriculation"
+ * with no city — preferable to a wrong label.
+ */
+const RCS_LEGAL_STATUSES = new Set(["sarl", "sas", "sasu", "eurl"]);
+const RM_LEGAL_STATUSES = new Set(["ei", "auto-entrepreneur"]);
+
+function getRegistrationConfig(legalStatus: string): {
+  label: string;
+  placeholder: string;
+  hint: string;
+  needsCity: boolean;
+} {
+  const s = legalStatus.toLowerCase().trim();
+  if (RCS_LEGAL_STATUSES.has(s)) {
+    return {
+      label: "N° RCS",
+      placeholder: "Ex : 853 271 064",
+      hint: "Le numéro RCS (généralement le SIREN, 9 chiffres) + la ville du greffe ci-dessous apparaîtront en bas du PDF.",
+      needsCity: true,
+    };
+  }
+  if (RM_LEGAL_STATUSES.has(s)) {
+    return {
+      label: "N° RM (Répertoire des Métiers)",
+      placeholder: "Ex : 853 271 064",
+      hint: "Numéro d'immatriculation au Répertoire des Métiers de la chambre des métiers et de l'artisanat.",
+      needsCity: false,
+    };
+  }
+  return {
+    label: "N° d'immatriculation",
+    placeholder: "Ex : 853 271 064",
+    hint: "Renseigne d'abord ta forme juridique (depuis l'onboarding) pour adapter le label RCS / RM.",
+    needsCity: false,
+  };
+}
 
 const EMPTY: CompanyForm = {
   email: "",
@@ -109,6 +157,9 @@ const EMPTY: CompanyForm = {
   decennale_zone: "",
   rc_pro_company: "",
   rc_pro_number: "",
+  legal_status: "",
+  registration_number: "",
+  registration_city: "",
 };
 
 export function EntrepriseForm() {
@@ -145,7 +196,7 @@ export function EntrepriseForm() {
       const { data: profile } = await supabase
         .from("profiles")
         .select(
-          "company, metier, telephone, siret, address, postal_code, city, vat_status, vat_number, iban, bic, primary_color, brand_color, logo_url, signature_url, decennale_company, decennale_number, decennale_zone, rc_pro_company, rc_pro_number"
+          "company, metier, telephone, siret, address, postal_code, city, vat_status, vat_number, iban, bic, primary_color, brand_color, logo_url, signature_url, decennale_company, decennale_number, decennale_zone, rc_pro_company, rc_pro_number, legal_status, registration_number, registration_city"
         )
         .eq("id", user.id)
         .single();
@@ -176,6 +227,9 @@ export function EntrepriseForm() {
         decennale_zone: profile?.decennale_zone ?? "",
         rc_pro_company: profile?.rc_pro_company ?? "",
         rc_pro_number: profile?.rc_pro_number ?? "",
+        legal_status: profile?.legal_status ?? "",
+        registration_number: profile?.registration_number ?? "",
+        registration_city: profile?.registration_city ?? "",
       };
       setForm(next);
       setInitial(next);
@@ -326,6 +380,11 @@ export function EntrepriseForm() {
         decennale_zone: form.decennale_zone.trim() || null,
         rc_pro_company: form.rc_pro_company.trim() || null,
         rc_pro_number: form.rc_pro_number.trim() || null,
+        // RCS / RM — `registration_city` n'a de sens qu'avec un legal_status
+        // société. On envoie quand même la valeur tapée (le PDF l'ignorera
+        // si le statut est artisan), évite une logique cross-field au save.
+        registration_number: form.registration_number.trim() || null,
+        registration_city: form.registration_city.trim() || null,
       };
 
       const res = await fetch("/api/profile", {
@@ -540,6 +599,43 @@ export function EntrepriseForm() {
           disabled
           hint="L'email est lié à votre compte. Pour le modifier, contactez le support."
         />
+      </Section>
+
+      {/* Section immatriculation — RCS pour les sociétés, RM pour les
+          artisans/EI. Le label, le placeholder et la visibilité du champ
+          "ville d'immatriculation" dérivent de form.legal_status (lui-même
+          posé en onboarding). Si legal_status est vide, on tombe sur un
+          label générique pour ne rien casser sur un profil partiel. */}
+      <Section title="Immatriculation">
+        {(() => {
+          const registrationCfg = getRegistrationConfig(form.legal_status);
+          return (
+            <>
+              <TextField
+                id="registration_number"
+                label={registrationCfg.label}
+                value={form.registration_number}
+                onChange={(e) =>
+                  update("registration_number", e.target.value)
+                }
+                placeholder={registrationCfg.placeholder}
+                hint={registrationCfg.hint}
+              />
+              {registrationCfg.needsCity && (
+                <TextField
+                  id="registration_city"
+                  label="Ville d'immatriculation"
+                  value={form.registration_city}
+                  onChange={(e) =>
+                    update("registration_city", e.target.value)
+                  }
+                  placeholder="Ex : Paris, Lyon, Marseille…"
+                  hint="Ville du greffe où l'entreprise est inscrite."
+                />
+              )}
+            </>
+          );
+        })()}
       </Section>
 
       {/* Section assurances — décennale obligatoire pour les métiers BTP

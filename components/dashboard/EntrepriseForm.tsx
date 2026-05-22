@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ImageIcon, Loader2, Save, Trash2, Upload } from "lucide-react";
+import { ImageIcon, Loader2, PenLine, Save, Trash2, Upload } from "lucide-react";
 import { TextField, SelectField, FieldShell } from "@/components/ui/Field";
 import { SiretField } from "@/components/ui/SiretField";
+import { SignatureModal } from "@/components/emile/SignatureModal";
 import { createClient } from "@/lib/supabase/client";
 import { toastError, toastSuccess } from "@/lib/toast";
 import { humanizeError } from "@/lib/errors";
@@ -107,6 +108,14 @@ export function EntrepriseForm() {
   const [errors, setErrors] = useState<Partial<Record<keyof CompanyForm, string>>>({});
   const logoInputRef = useRef<HTMLInputElement>(null);
 
+  // Signature artisan lives outside CompanyForm because /api/profile's strict
+  // allowlist doesn't include signature_url — uploads go through the dedicated
+  // /api/profile/signature endpoint (multipart-style PNG upload + Storage).
+  // We keep it in local state to avoid a second fetch on every render.
+  const [signatureUrl, setSignatureUrl] = useState<string | null>(null);
+  const [signatureModalOpen, setSignatureModalOpen] = useState(false);
+  const [deletingSignature, setDeletingSignature] = useState(false);
+
   useEffect(() => {
     const supabase = createClient();
     let cancelled = false;
@@ -123,7 +132,7 @@ export function EntrepriseForm() {
       const { data: profile } = await supabase
         .from("profiles")
         .select(
-          "company, metier, telephone, siret, address, postal_code, city, vat_status, vat_number, iban, bic, primary_color, brand_color, logo_url"
+          "company, metier, telephone, siret, address, postal_code, city, vat_status, vat_number, iban, bic, primary_color, brand_color, logo_url, signature_url"
         )
         .eq("id", user.id)
         .single();
@@ -152,6 +161,9 @@ export function EntrepriseForm() {
       };
       setForm(next);
       setInitial(next);
+      setSignatureUrl(
+        (profile?.signature_url as string | null | undefined) ?? null,
+      );
       setLoading(false);
     })();
 
@@ -214,6 +226,32 @@ export function EntrepriseForm() {
   async function handleLogoRemove() {
     if (!form.logo_url) return;
     update("logo_url", "");
+  }
+
+  async function handleSignatureDelete() {
+    if (!signatureUrl) return;
+    if (
+      !confirm(
+        "Supprimer ta signature ? Tu ne pourras plus envoyer de devis tant qu'une nouvelle signature n'est pas enregistrée.",
+      )
+    ) {
+      return;
+    }
+    setDeletingSignature(true);
+    try {
+      const res = await fetch("/api/profile/signature", { method: "DELETE" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw body;
+      }
+      setSignatureUrl(null);
+      toastSuccess("Signature supprimée.");
+    } catch (err) {
+      console.error("[EntrepriseForm] signature delete failed:", err);
+      toastError(humanizeError(err, "Suppression échouée."));
+    } finally {
+      setDeletingSignature(false);
+    }
   }
 
   function validate(): boolean {
@@ -376,6 +414,54 @@ export function EntrepriseForm() {
           error={errors.siret}
           hint="Optionnel — apparaît sur vos devis et factures"
         />
+      </Section>
+
+      {/* Section signature artisan */}
+      <Section title="Ma signature">
+        <FieldShell
+          label="Signature de l'entreprise"
+          hint="Apparaît dans le bloc « Bon pour accord » de chaque devis PDF. Obligatoire avant le premier envoi."
+        >
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="flex h-24 w-48 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl border border-dashed border-[var(--border)] bg-[var(--surface)]">
+              {signatureUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={signatureUrl}
+                  alt="Signature de l'entreprise"
+                  className="max-h-full max-w-full object-contain"
+                />
+              ) : (
+                <PenLine className="h-6 w-6 text-[var(--text-muted)]" />
+              )}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setSignatureModalOpen(true)}
+                className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--surface)]"
+              >
+                <PenLine className="h-4 w-4" />
+                {signatureUrl ? "Modifier ma signature" : "Signer mon entreprise"}
+              </button>
+              {signatureUrl && (
+                <button
+                  type="button"
+                  onClick={handleSignatureDelete}
+                  disabled={deletingSignature}
+                  className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50"
+                >
+                  {deletingSignature ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-3.5 w-3.5" />
+                  )}
+                  Supprimer
+                </button>
+              )}
+            </div>
+          </div>
+        </FieldShell>
       </Section>
 
       {/* Section 2 — Adresse */}
@@ -555,6 +641,16 @@ export function EntrepriseForm() {
           </button>
         </div>
       </div>
+
+      <SignatureModal
+        open={signatureModalOpen}
+        existingSignatureUrl={signatureUrl}
+        onClose={() => setSignatureModalOpen(false)}
+        onSaved={(url) => {
+          setSignatureUrl(url);
+          setSignatureModalOpen(false);
+        }}
+      />
     </form>
   );
 }

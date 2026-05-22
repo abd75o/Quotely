@@ -40,6 +40,7 @@ import {
   BulkImportModal,
   type BulkImportSuccess,
 } from "./BulkImportModal";
+import { SignatureModal } from "./SignatureModal";
 import type { EmileQuoteLine } from "./types";
 
 const ALL_PROFILE_FIELDS: ProfileField[] = [
@@ -128,6 +129,14 @@ export function EmileChat({
     useState<EditClientInitial | null>(null);
   const [editClientMissing, setEditClientMissing] = useState<string[]>([]);
   const [editClientOpen, setEditClientOpen] = useState(false);
+  // Signature artisan flow. Opened either by a tool result carrying
+  // action="open_signature_modal" (sendQuote → missing_signature branch or an
+  // explicit openSignatureModal tool call) or by Émile pinging it for a
+  // refresh. `signatureExistingUrl` switches the modal to edit mode.
+  const [signatureModalOpen, setSignatureModalOpen] = useState(false);
+  const [signatureExistingUrl, setSignatureExistingUrl] = useState<
+    string | null
+  >(null);
 
   useEffect(() => {
     if (conversationId && loadedRef.current !== conversationId) {
@@ -151,6 +160,8 @@ export function EmileChat({
     setBulkImportOpen(false);
     setBulkRawText("");
     setEditClientOpen(false);
+    setSignatureModalOpen(false);
+    setSignatureExistingUrl(null);
     setEditClientInitial(null);
     setEditClientMissing([]);
     autoSeededRef.current = null;
@@ -291,6 +302,46 @@ export function EmileChat({
         .catch((err) => {
           console.error("[OPEN_CLIENT_EDIT_MODAL] fetch failed", err);
         });
+    }
+
+    // Signature modal trigger — purely action-based (no text marker). We scan
+    // tool result parts for action="open_signature_modal" so either the
+    // openSignatureModal tool OR sendQuote's missing_signature branch can
+    // fire it. We also dedupe via the message id so streaming re-renders
+    // don't reopen on every chunk. Fetching the existing signature_url lets
+    // the modal default to edit mode when the artisan asked to re-sign vs.
+    // first-time onboarding.
+    if (Array.isArray(lastMessage.parts)) {
+      const wantsSignatureModal = lastMessage.parts.some((p) => {
+        const part = p as {
+          type?: string;
+          state?: string;
+          output?: { action?: string } | null;
+        };
+        if (!part.type || !part.type.startsWith("tool-")) return false;
+        if (part.state !== "output-available") return false;
+        return (
+          part.output != null &&
+          typeof part.output === "object" &&
+          (part.output as { action?: string }).action === "open_signature_modal"
+        );
+      });
+      if (wantsSignatureModal) {
+        triggered.add(lastMessage.id);
+        void fetch("/api/profile/signature")
+          .then((res) => (res.ok ? res.json() : Promise.reject(res)))
+          .then((json: { signature_url: string | null }) => {
+            setSignatureExistingUrl(json.signature_url ?? null);
+            setSignatureModalOpen(true);
+          })
+          .catch((err) => {
+            console.error("[open_signature_modal] fetch failed", err);
+            // Open in first-time mode if the GET failed — better than
+            // leaving the artisan stuck mid-send with no UI surfacing.
+            setSignatureExistingUrl(null);
+            setSignatureModalOpen(true);
+          });
+      }
     }
   }, [lastMessage]);
 
@@ -497,6 +548,33 @@ export function EmileChat({
     [sendMessage],
   );
 
+  const handleSignatureSaved = useCallback(() => {
+    justHandledModalRef.current = true;
+    setSignatureModalOpen(false);
+    setSignatureExistingUrl(null);
+    // [SYSTEM] pill — matches the wording the system prompt instructs
+    // Émile to wait for before re-trying sendQuote. The URL itself isn't
+    // forwarded; the model will pull it on the next sendQuote attempt.
+    void sendMessage(
+      "[SYSTEM] Signature enregistrée. Reprends l'envoi du devis.",
+    );
+  }, [sendMessage]);
+
+  const handleSignatureClose = useCallback(() => {
+    setSignatureModalOpen(false);
+    setSignatureExistingUrl(null);
+    if (justHandledModalRef.current) {
+      justHandledModalRef.current = false;
+      return;
+    }
+    // Silent cancel — Émile already knows the flow ended without a save
+    // because no [SYSTEM] Signature enregistrée will come; on the next
+    // sendQuote call the missing_signature branch fires again.
+    void sendMessage(
+      "[SYSTEM] Signature annulée. L'artisan n'a pas validé la signature, demande-lui s'il veut réessayer ou abandonner l'envoi.",
+    );
+  }, [sendMessage]);
+
   const handleEditClientClose = useCallback(() => {
     setEditClientOpen(false);
     if (justHandledModalRef.current) {
@@ -648,6 +726,13 @@ export function EmileChat({
         missingFields={editClientMissing}
         onClose={handleEditClientClose}
         onCreated={handleEditClientSaved}
+      />
+
+      <SignatureModal
+        open={signatureModalOpen}
+        existingSignatureUrl={signatureExistingUrl}
+        onClose={handleSignatureClose}
+        onSaved={handleSignatureSaved}
       />
     </div>
   );

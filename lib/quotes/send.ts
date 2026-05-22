@@ -47,6 +47,13 @@ export type SendQuoteResult =
         clientId: string;
         missingFields: string[];
       };
+      /**
+       * Set when the artisan has not yet uploaded a signature. The Émile
+       * tool wrapper surfaces this as a top-level status="missing_signature"
+       * so the system prompt can branch into "ask + open signature modal"
+       * without peeking at nested fields.
+       */
+      missingSignature?: true;
     };
 
 export async function executeSendQuote(
@@ -158,6 +165,22 @@ export async function executeSendQuote(
       status: 422,
       error: `Profil incomplet (${profileCheck.missing.join(", ")}).`,
       missing: profileCheck.missing,
+    };
+  }
+
+  // Signature artisan obligatoire avant tout envoi. The PDF would render
+  // an empty "Bon pour accord — L'entreprise" cell otherwise, which is a
+  // legal weak spot (no proof of consent from the artisan side). The Émile
+  // wrapper turns this status into the open_signature_modal flow.
+  const profileSignatureUrl =
+    (profile as Record<string, unknown> | null)?.signature_url ?? null;
+  if (!profileSignatureUrl || typeof profileSignatureUrl !== "string") {
+    return {
+      ok: false,
+      status: 422,
+      error:
+        "Signe ton entreprise une première fois (1 fois, réutilisée sur tous tes devis).",
+      missingSignature: true,
     };
   }
 

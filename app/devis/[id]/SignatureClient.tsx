@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import {
   CheckCircle2,
   Shield,
@@ -13,133 +13,14 @@ import {
   Clock,
   Building2,
   Phone,
-  RotateCcw,
   Loader2,
   AlertCircle,
 } from "lucide-react";
 import { Quote, SignatureType, getSignatureLabel } from "@/types";
 import { QuoviLogo } from "@/components/shared/QuoviLogo";
+import { SignaturePad } from "@/components/ui/SignaturePad";
 import { cn } from "@/lib/utils";
 import { formatCurrency, formatDate } from "@/lib/utils";
-
-// ─── Canvas signature ─────────────────────────────────────────────────────────
-
-function getEventPos(
-  e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>,
-  canvas: HTMLCanvasElement
-) {
-  const rect = canvas.getBoundingClientRect();
-  const scaleX = canvas.width / rect.width;
-  const scaleY = canvas.height / rect.height;
-
-  if ("touches" in e) {
-    const touch = e.touches[0];
-    return {
-      x: (touch.clientX - rect.left) * scaleX,
-      y: (touch.clientY - rect.top) * scaleY,
-    };
-  }
-  return {
-    x: (e.clientX - rect.left) * scaleX,
-    y: (e.clientY - rect.top) * scaleY,
-  };
-}
-
-function SignatureCanvas({
-  onSignatureChange,
-}: {
-  onSignatureChange: (dataUrl: string | null) => void;
-}) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const isDrawing = useRef(false);
-  const hasSignature = useRef(false);
-
-  const getCtx = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return null;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return null;
-    ctx.strokeStyle = "#1e1b4b";
-    ctx.lineWidth = 2.8;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    return { canvas, ctx };
-  };
-
-  const startDraw = useCallback(
-    (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-      e.preventDefault();
-      const res = getCtx();
-      if (!res) return;
-      isDrawing.current = true;
-      const pos = getEventPos(e, res.canvas);
-      res.ctx.beginPath();
-      res.ctx.moveTo(pos.x, pos.y);
-    },
-    []
-  );
-
-  const draw = useCallback(
-    (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-      if (!isDrawing.current) return;
-      e.preventDefault();
-      const res = getCtx();
-      if (!res) return;
-      const pos = getEventPos(e, res.canvas);
-      res.ctx.lineTo(pos.x, pos.y);
-      res.ctx.stroke();
-      hasSignature.current = true;
-    },
-    []
-  );
-
-  const stopDraw = useCallback(() => {
-    if (!isDrawing.current) return;
-    isDrawing.current = false;
-    const canvas = canvasRef.current;
-    if (!canvas || !hasSignature.current) return;
-    onSignatureChange(canvas.toDataURL("image/png"));
-  }, [onSignatureChange]);
-
-  const clear = useCallback(() => {
-    const res = getCtx();
-    if (!res) return;
-    res.ctx.clearRect(0, 0, res.canvas.width, res.canvas.height);
-    hasSignature.current = false;
-    onSignatureChange(null);
-  }, [onSignatureChange]);
-
-  return (
-    <div className="space-y-2">
-      <div className="relative rounded-xl border-2 border-dashed border-indigo-300 bg-indigo-50/30 overflow-hidden">
-        <canvas
-          ref={canvasRef}
-          width={600}
-          height={180}
-          className="w-full touch-none cursor-crosshair"
-          onMouseDown={startDraw}
-          onMouseMove={draw}
-          onMouseUp={stopDraw}
-          onMouseLeave={stopDraw}
-          onTouchStart={startDraw}
-          onTouchMove={draw}
-          onTouchEnd={stopDraw}
-        />
-        <p className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-sm text-indigo-300 font-medium pointer-events-none select-none">
-          Signez ici
-        </p>
-      </div>
-      <button
-        type="button"
-        onClick={clear}
-        className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
-      >
-        <RotateCcw className="w-3 h-3" />
-        Effacer
-      </button>
-    </div>
-  );
-}
 
 // ─── Signature badge ──────────────────────────────────────────────────────────
 
@@ -480,7 +361,7 @@ export function SignatureClient({ quote }: { quote: Quote }) {
           {/* Simple: canvas + name checkbox */}
           {sigType === "simple" && (
             <div className="space-y-4">
-              <SignatureCanvas onSignatureChange={setSignatureData} />
+              <SignaturePad onSignatureChange={setSignatureData} />
               <div className="flex items-center gap-3 my-1">
                 <div className="flex-1 h-px bg-[var(--border)]" />
                 <span className="text-xs text-[var(--text-muted)] font-medium">ou</span>
@@ -513,7 +394,7 @@ export function SignatureClient({ quote }: { quote: Quote }) {
           {/* Email confirmed: canvas + email */}
           {sigType === "email_confirmed" && (
             <div className="space-y-4">
-              <SignatureCanvas onSignatureChange={setSignatureData} />
+              <SignaturePad onSignatureChange={setSignatureData} />
               <div>
                 <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 uppercase tracking-wider">
                   Adresse email pour confirmation

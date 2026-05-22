@@ -813,10 +813,20 @@ export function createEmileTools(ctx: EmileToolContext) {
               error: result.error,
               missing: result.missing,
               clientIncomplete: result.clientIncomplete,
+              missingSignature: result.missingSignature,
             });
-            // Surface clientIncomplete as a top-level status so the system
-            // prompt branch ("client_incomplete → ask + open edit modal")
-            // is easy to match without the LLM peeking at nested fields.
+            // Surface specific failure modes as top-level statuses so the
+            // system prompt branches without peeking at nested fields.
+            if (result.missingSignature) {
+              return {
+                ok: false,
+                status: "missing_signature",
+                action: "open_signature_modal",
+                error: result.error,
+                reason:
+                  "L'artisan n'a pas encore signé son entreprise — sans signature, le PDF est juridiquement incomplet côté émetteur.",
+              };
+            }
             if (result.clientIncomplete) {
               return {
                 ok: false,
@@ -1028,6 +1038,21 @@ export function createEmileTools(ctx: EmileToolContext) {
         } catch (e) {
           return err((e as Error).message ?? "Erreur inconnue");
         }
+      },
+    }),
+
+    openSignatureModal: tool({
+      description:
+        "Demande au frontend d'ouvrir la modale de signature artisan (canvas tactile). À appeler UNIQUEMENT quand sendQuote retourne status='missing_signature' OU quand l'artisan demande explicitement 'change ma signature' / 'je veux re-signer'. APRÈS l'appel, STOP — n'écris rien, attends '[SYSTEM] Signature enregistrée' puis retente sendQuote avec le MÊME quoteId si on bloquait un envoi.",
+      inputSchema: z.object({}),
+      execute: async () => {
+        // No DB write — the action is purely a UI signal carried back to the
+        // EmileChat layer, which scans tool results for action="open_signature_modal".
+        return ok({
+          action: "open_signature_modal",
+          message:
+            "Modale de signature ouverte côté artisan. Attends '[SYSTEM] Signature enregistrée' avant de continuer.",
+        });
       },
     }),
 

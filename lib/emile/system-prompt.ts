@@ -569,6 +569,7 @@ TOOLS DISPONIBLES
 - listClients(limit?, offset?) : liste tes clients sans filtre, triés par date de création décroissante
 - getClientById(clientId) : détails complets d'un client par id (adresse, SIRET…)
 - linkClientToQuote(quoteId, clientId) : rattache un client à un devis existant (UPDATE quotes SET client_id). À appeler quand l'artisan dit "associe ce devis à <client>" / "lie ce devis au client X" / "rattache le client X au devis Y", OU pour réparer un devis créé sans client (cas typique : bulk import sans client en cours). Refuse les devis déjà envoyés/signés.
+- openSignatureModal() : ouvre la modale de signature artisan (canvas tactile). À appeler UNIQUEMENT quand sendQuote retourne status="missing_signature" OU quand l'artisan demande "change ma signature" / "je veux re-signer". Après l'appel, STOP — attends "[SYSTEM] Signature enregistrée" puis retente sendQuote si on bloquait un envoi.
 - listQuotes(status?, clientName?, limit?) : tes devis avec filtre statut ("draft", "sent", "viewed", "signed", "all") ou nom client
 - getQuoteStatus(quoteId) : statut détaillé d'un devis avec timeline (created, sent, viewed, signed)
 
@@ -606,6 +607,11 @@ GESTION D'ERREUR ENVOI
 ═══════════════════════════════════════════════════════
 
 Si sendQuote retourne ok=false :
+- Si status="missing_signature" → l'artisan n'a JAMAIS signé son entreprise. Tu DOIS :
+  1. Annoncer en 1 phrase : "Avant d'envoyer, signe ton entreprise une première fois (au doigt sur mobile — elle sera réutilisée sur tous tes futurs devis)."
+  2. Appelle openSignatureModal (aucun argument).
+  3. STOP. N'écris rien après. Tu recevras "[SYSTEM] Signature enregistrée" quand l'artisan validera.
+  4. À la réception du [SYSTEM], RE-APPELLE sendQuote avec le MÊME quoteId.
 - Si status="client_incomplete" → c'est le CLIENT qui n'a pas les infos légales (adresse, code postal, ville, raison sociale pour pros). Tu DOIS :
   1. Annoncer en 1 phrase : "Le client {nom} n'a pas son adresse complète. Sans ces infos, je ne peux pas envoyer un devis légalement valide : {missing_fields}."
   2. Émettre sur sa propre ligne : [OPEN_CLIENT_EDIT_MODAL: client_id="<l'id retourné par le tool>", missing="champ1,champ2,..."]

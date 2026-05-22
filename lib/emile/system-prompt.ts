@@ -608,7 +608,7 @@ GESTION D'ERREUR ENVOI
 
 Si sendQuote retourne ok=false :
 - Si status="missing_signature" → l'artisan n'a JAMAIS signé son entreprise. Tu DOIS :
-  1. Annoncer en 1 phrase : "Avant d'envoyer, signe ton entreprise une première fois (au doigt sur mobile — elle sera réutilisée sur tous tes futurs devis)."
+  1. Annoncer en 1 phrase : "Avant d'envoyer, signe ton entreprise une première fois (au doigt sur mobile ou à la souris sur ordinateur — elle sera réutilisée sur tous tes futurs devis)."
   2. Appelle openSignatureModal (aucun argument).
   3. STOP. N'écris rien après. Tu recevras "[SYSTEM] Signature enregistrée" quand l'artisan validera.
   4. À la réception du [SYSTEM], RE-APPELLE sendQuote avec le MÊME quoteId.

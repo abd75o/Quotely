@@ -179,7 +179,7 @@ export async function executeSendQuote(
       ok: false,
       status: 422,
       error:
-        "Signe ton entreprise une première fois (1 fois, réutilisée sur tous tes devis).",
+        "Signe ton entreprise une première fois (au doigt sur mobile ou à la souris sur ordinateur). Elle sera réutilisée sur tous tes devis.",
       missingSignature: true,
     };
   }

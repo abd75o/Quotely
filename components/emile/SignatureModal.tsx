@@ -124,7 +124,8 @@ export function SignatureModal({
                 {isEdit ? "Modifier ma signature" : "Signer mon entreprise"}
               </h2>
               <p className="mt-0.5 text-[12px] text-[var(--text-secondary)]">
-                Signe une fois — ta signature sera utilisée sur{" "}
+                Signe une fois (au doigt sur mobile ou à la souris sur
+                ordinateur) — ta signature sera utilisée sur{" "}
                 <strong>tous tes devis</strong>.
               </p>
             </div>

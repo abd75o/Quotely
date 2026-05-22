@@ -10,6 +10,12 @@ import {
 } from "react";
 import { RotateCcw } from "lucide-react";
 
+// Native pointer-up listener attached to the window. Without it, releasing the
+// mouse OUTSIDE the canvas (very common on desktop — the cursor drifts off the
+// pad while drawing the last stroke) leaves `isDrawing.current = true` and the
+// next mousedown extends the previous stroke with a stray line back to where
+// the previous one ended. Mirrors what react-signature-canvas does internally.
+
 /**
  * Native canvas signature pad — shared between the client-side signing page
  * (`/devis/[id]`) and the artisan signature modal. We deliberately avoid
@@ -166,6 +172,22 @@ export const SignaturePad = forwardRef<SignaturePadHandle, SignaturePadProps>(
       onSignatureChange?.(canvas.toDataURL("image/png"));
     }, [onSignatureChange]);
 
+    // Window-level pointer-up so releasing the mouse off-canvas still ends
+    // the stroke cleanly. Without this, drifting off the pad on the final
+    // pen lift left isDrawing=true and the next mousedown drew a phantom
+    // line from the previous endpoint to the new starting point.
+    useEffect(() => {
+      function onUp() {
+        if (isDrawing.current) stopDraw();
+      }
+      window.addEventListener("pointerup", onUp);
+      window.addEventListener("pointercancel", onUp);
+      return () => {
+        window.removeEventListener("pointerup", onUp);
+        window.removeEventListener("pointercancel", onUp);
+      };
+    }, [stopDraw]);
+
     const clear = useCallback(() => {
       const res = getCtx();
       if (!res) return;
@@ -207,10 +229,12 @@ export const SignaturePad = forwardRef<SignaturePadHandle, SignaturePadProps>(
             height={height}
             style={canvasStyle}
             className="w-full cursor-crosshair"
+            // No onMouseLeave — the window-level pointerup listener handles
+            // pen-lift outside the canvas without prematurely cutting a
+            // stroke that briefly grazes the border on a fast scribble.
             onMouseDown={startDraw}
             onMouseMove={draw}
             onMouseUp={stopDraw}
-            onMouseLeave={stopDraw}
             onTouchStart={startDraw}
             onTouchMove={draw}
             onTouchEnd={stopDraw}

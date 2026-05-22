@@ -12,10 +12,17 @@ import {
   Wrench,
 } from "lucide-react";
 import { TextField, SelectField } from "@/components/ui/Field";
+import { SiretField } from "@/components/ui/SiretField";
 import { createClient } from "@/lib/supabase/client";
 import { toastError, toastSuccess } from "@/lib/toast";
 import { humanizeError } from "@/lib/errors";
 import { cn } from "@/lib/utils";
+import {
+  formatSiret,
+  isValidSiret as isValidSiretShared,
+  siretDigits,
+  SIRET_ERROR_MSG,
+} from "@/lib/format/siret";
 
 const TOTAL_STEPS = 3;
 
@@ -122,7 +129,9 @@ export default function OnboardingV4Page() {
       });
       setCompany({
         companyName: p.company_name ?? p.company ?? "",
-        siret: p.siret ?? "",
+        // Display the stored 14 raw digits as "XXX XXX XXX XXXXX" so the
+        // input field reflects the canonical format on resume.
+        siret: formatSiret(p.siret),
         legalStatus: p.legal_status ?? "",
         vatStatus:
           p.vat_status === "assujetti" || p.vat_status === "soumis"
@@ -143,11 +152,11 @@ export default function OnboardingV4Page() {
   }, []);
 
   const identityValid = identity.firstName.trim() && identity.lastName.trim();
-  const siretClean = company.siret.replace(/\s+/g, "");
+  const siretClean = siretDigits(company.siret);
   const companyValid = useMemo(() => {
     return (
       company.companyName.trim().length > 0 &&
-      isValidSiret(siretClean) &&
+      isValidSiretShared(siretClean) &&
       company.legalStatus.length > 0 &&
       company.address.trim().length > 0 &&
       /^\d{5}$/.test(company.postalCode.trim()) &&
@@ -340,8 +349,8 @@ function StepCompany({
   siretClean: string;
 }) {
   const siretError =
-    value.siret.length > 0 && !isValidSiret(siretClean)
-      ? "Le SIRET doit faire 14 chiffres (vérifie la clé de Luhn)."
+    value.siret.length > 0 && !isValidSiretShared(siretClean)
+      ? SIRET_ERROR_MSG
       : undefined;
   const postalError =
     value.postalCode.length > 0 && !/^\d{5}$/.test(value.postalCode)
@@ -369,14 +378,11 @@ function StepCompany({
           autoFocus
           required
         />
-        <TextField
+        <SiretField
           id="siret"
           label="SIRET *"
           value={value.siret}
-          onChange={(e) => onChange({ ...value, siret: e.target.value })}
-          placeholder="123 456 789 00012"
-          inputMode="numeric"
-          maxLength={17}
+          onValueChange={(v) => onChange({ ...value, siret: v })}
           error={siretError}
           hint={siretError ? undefined : "14 chiffres, contrôlé automatiquement."}
         />
@@ -639,19 +645,3 @@ function RadioCard({
   );
 }
 
-/**
- * SIRET validation: 14 digits + Luhn checksum.
- */
-function isValidSiret(siret: string): boolean {
-  if (!/^\d{14}$/.test(siret)) return false;
-  let sum = 0;
-  for (let i = 0; i < 14; i++) {
-    let d = Number(siret[i]);
-    if (i % 2 === 0) {
-      d = d * 2;
-      if (d > 9) d -= 9;
-    }
-    sum += d;
-  }
-  return sum % 10 === 0;
-}

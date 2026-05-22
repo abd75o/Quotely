@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { resolveMentionsLegales } from "@/lib/pdf/mentions-legales";
 import { shouldShowBranding } from "@/lib/branding/should-show";
+import { formatSiret } from "@/lib/format/siret";
 import { SignatureClient } from "./SignatureClient";
 
 interface QuoteItem {
@@ -279,7 +280,9 @@ export default async function PublicSignaturePage({
                 [quote.profile?.postal_code, quote.profile?.city]
                   .filter(Boolean)
                   .join(" "),
-                quote.profile?.siret ? `SIRET ${quote.profile.siret}` : null,
+                quote.profile?.siret
+                  ? `SIRET ${formatSiret(quote.profile.siret) || quote.profile.siret}`
+                  : null,
                 quote.profile?.telephone,
               ]}
               color={color}
@@ -298,7 +301,9 @@ export default async function PublicSignaturePage({
                 [quote.client?.postal_code, quote.client?.city]
                   .filter(Boolean)
                   .join(" "),
-                quote.client?.siret ? `SIRET ${quote.client.siret}` : null,
+                quote.client?.siret
+                  ? `SIRET ${formatSiret(quote.client.siret) || quote.client.siret}`
+                  : null,
                 quote.client?.email,
               ]}
               color={color}

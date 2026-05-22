@@ -3,9 +3,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ImageIcon, Loader2, Save, Trash2, Upload } from "lucide-react";
 import { TextField, SelectField, FieldShell } from "@/components/ui/Field";
+import { SiretField } from "@/components/ui/SiretField";
 import { createClient } from "@/lib/supabase/client";
 import { toastError, toastSuccess } from "@/lib/toast";
 import { humanizeError } from "@/lib/errors";
+import {
+  formatSiret,
+  isValidSiret,
+  siretDigits,
+  SIRET_ERROR_MSG,
+} from "@/lib/format/siret";
 
 const LOGO_BUCKET = "company-logos";
 const LOGO_MAX_BYTES = 2 * 1024 * 1024;
@@ -127,7 +134,10 @@ export function EntrepriseForm() {
         email: user.email ?? "",
         company: profile?.company ?? "",
         metier: profile?.metier ?? "",
-        siret: profile?.siret ?? "",
+        // DB stores 14 raw digits — re-format for display so the input
+        // shows "853 271 064 00018" on first load instead of a wall of
+        // digits.
+        siret: formatSiret(profile?.siret ?? ""),
         address: profile?.address ?? "",
         postal_code: profile?.postal_code ?? "",
         city: profile?.city ?? "",
@@ -209,8 +219,8 @@ export function EntrepriseForm() {
   function validate(): boolean {
     const errs: Partial<Record<keyof CompanyForm, string>> = {};
     if (!form.company.trim()) errs.company = "Nom de l'entreprise requis.";
-    if (form.siret && !/^\d{14}$/.test(form.siret.replace(/\s+/g, ""))) {
-      errs.siret = "Le SIRET doit contenir 14 chiffres.";
+    if (form.siret && !isValidSiret(form.siret)) {
+      errs.siret = SIRET_ERROR_MSG;
     }
     if (form.postal_code && !/^\d{5}$/.test(form.postal_code)) {
       errs.postal_code = "Code postal invalide (5 chiffres).";
@@ -241,7 +251,7 @@ export function EntrepriseForm() {
         company_name: form.company.trim() || null,
         metier: form.metier || null,
         telephone: form.telephone.trim() || null,
-        siret: form.siret.replace(/\s+/g, "") || null,
+        siret: siretDigits(form.siret) || null,
         address: form.address.trim() || null,
         postal_code: form.postal_code.trim() || null,
         city: form.city.trim() || null,
@@ -358,14 +368,11 @@ export function EntrepriseForm() {
           options={METIER_OPTIONS}
         />
 
-        <TextField
+        <SiretField
           id="siret"
           label="SIRET"
           value={form.siret}
-          onChange={(e) => update("siret", e.target.value)}
-          placeholder="14 chiffres"
-          inputMode="numeric"
-          maxLength={17}
+          onValueChange={(v) => update("siret", v)}
           error={errors.siret}
           hint="Optionnel — apparaît sur vos devis et factures"
         />

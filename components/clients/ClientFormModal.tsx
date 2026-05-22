@@ -3,11 +3,18 @@
 import { useEffect, useState } from "react";
 import { Loader2, X } from "lucide-react";
 import { TextField } from "@/components/ui/Field";
+import { SiretField } from "@/components/ui/SiretField";
 import { LockedFeature } from "@/components/shared/LockedFeature";
 import { toastError, toastSuccess } from "@/lib/toast";
 import { createClient as createSupabaseClient } from "@/lib/supabase/client";
 import type { ClientRow, ClientType } from "@/lib/clients/queries";
 import { cn } from "@/lib/utils";
+import {
+  formatSiret,
+  isValidSiret,
+  siretDigits,
+  SIRET_ERROR_MSG,
+} from "@/lib/format/siret";
 
 const AVAILABLE_TAGS = ["Régulier", "VIP", "À relancer", "Premier contact", "Récurrent"];
 
@@ -57,7 +64,9 @@ function toFormState(c?: ClientRow | null): FormState {
     address: c.address ?? "",
     postal_code: c.postal_code ?? "",
     city: c.city ?? "",
-    siret: c.siret ?? "",
+    // DB column stores 14 raw digits; reformat for display so editing
+    // shows the canonical spaced form.
+    siret: formatSiret(c.siret),
     notes: c.notes ?? "",
     tags: c.tags ?? [],
   };
@@ -94,8 +103,8 @@ export function ClientFormModal({ open, initial, onClose, onSaved }: ClientFormM
     if (form.postal_code && !/^\d{5}$/.test(form.postal_code)) {
       errs.postal_code = "Code postal invalide (5 chiffres).";
     }
-    if (isPro && form.siret && !/^\d{14}$/.test(form.siret.replace(/\s+/g, ""))) {
-      errs.siret = "SIRET invalide (14 chiffres).";
+    if (isPro && form.siret && !isValidSiret(form.siret)) {
+      errs.siret = SIRET_ERROR_MSG;
     }
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -121,7 +130,7 @@ export function ClientFormModal({ open, initial, onClose, onSaved }: ClientFormM
         address: form.address.trim() || null,
         postal_code: form.postal_code.trim() || null,
         city: form.city.trim() || null,
-        siret: isPro ? form.siret.replace(/\s+/g, "") || null : null,
+        siret: isPro ? siretDigits(form.siret) || null : null,
         type_client: form.type_client,
         notes: form.notes.trim() || null,
         tags: form.tags,
@@ -283,14 +292,11 @@ export function ClientFormModal({ open, initial, onClose, onSaved }: ClientFormM
           </div>
 
           {form.type_client === "professionnel" && (
-            <TextField
+            <SiretField
               id="siret"
               label="SIRET"
               value={form.siret}
-              onChange={(e) => update("siret", e.target.value)}
-              placeholder="14 chiffres"
-              inputMode="numeric"
-              maxLength={17}
+              onValueChange={(v) => update("siret", v)}
               error={errors.siret}
             />
           )}

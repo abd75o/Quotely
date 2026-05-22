@@ -18,6 +18,7 @@ import {
 import { LockedFeature } from "@/components/shared/LockedFeature";
 import { NewQuoteButton } from "@/components/quotes/NewQuoteButton";
 import { useUserPlan } from "@/lib/hooks/useUserState";
+import { formatSiret } from "@/lib/format/siret";
 import { createClient as createSupabaseClient } from "@/lib/supabase/client";
 import {
   listQuotesForClient,
@@ -183,7 +184,10 @@ export function ClientDetailPanel({ open, client, onClose, onEdit }: Props) {
               />
             )}
             {client.siret && client.type_client === "professionnel" && (
-              <Row icon={Building2} value={`SIRET ${client.siret}`} />
+              <Row
+                icon={Building2}
+                value={`SIRET ${formatSiret(client.siret) || client.siret}`}
+              />
             )}
             {client.notes && (
               <p className="text-xs text-[var(--text-secondary)] mt-2 pt-2 border-t border-[var(--border)] whitespace-pre-line">

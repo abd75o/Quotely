@@ -3,9 +3,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { Building2, Home, Loader2, X } from "lucide-react";
 import { TextField } from "@/components/ui/Field";
+import { SiretField } from "@/components/ui/SiretField";
 import { toastError, toastSuccess } from "@/lib/toast";
 import { humanizeError } from "@/lib/errors";
 import { cn } from "@/lib/utils";
+import {
+  formatSiret,
+  isValidSiret,
+  siretDigits,
+  SIRET_ERROR_MSG,
+} from "@/lib/format/siret";
 
 export interface CreatedClient {
   id: string;
@@ -81,7 +88,9 @@ function initialFromData(data: EditClientInitial | null | undefined): FormState 
     address: data.address ?? "",
     postalCode: data.postal_code ?? "",
     city: data.city ?? "",
-    siret: data.siret ?? "",
+    // Storage = 14 raw digits; the input expects the spaced form so the
+    // edit modal shows "853 271 064 00018" instead of "85327106400018".
+    siret: formatSiret(data.siret),
   };
 }
 
@@ -96,7 +105,6 @@ interface FieldErrors {
 }
 
 const POSTAL_RE = /^\d{5}$/;
-const SIRET_RE = /^\d{14}$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function validate(form: FormState): FieldErrors {
@@ -127,9 +135,8 @@ function validate(form: FormState): FieldErrors {
     errs.city = "Ville requise.";
   }
   if (form.type === "professionnel") {
-    const siret = form.siret.replace(/\s+/g, "");
-    if (siret && !SIRET_RE.test(siret)) {
-      errs.siret = "SIRET invalide (14 chiffres attendus).";
+    if (form.siret && !isValidSiret(form.siret)) {
+      errs.siret = SIRET_ERROR_MSG;
     }
   }
   return errs;
@@ -234,9 +241,7 @@ export function NewClientModal({
         city: form.city.trim() || null,
         type_client: form.type,
         siret:
-          form.type === "professionnel"
-            ? form.siret.replace(/\s+/g, "") || null
-            : null,
+          form.type === "professionnel" ? siretDigits(form.siret) || null : null,
       };
       const url = isEdit
         ? `/api/clients/${initialData!.id}`
@@ -391,14 +396,11 @@ export function NewClientModal({
 
           {form.type === "professionnel" && (
             <div className="mt-4">
-              <TextField
+              <SiretField
                 id="client-siret"
                 label="SIRET (recommandé)"
                 value={form.siret}
-                onChange={(e) => update("siret", e.target.value)}
-                placeholder="14 chiffres"
-                inputMode="numeric"
-                maxLength={17}
+                onValueChange={(v) => update("siret", v)}
                 error={shownError("siret")}
               />
             </div>

@@ -10,6 +10,7 @@ import {
 import type { Style } from "@react-pdf/types";
 import { resolveMentionsLegales } from "./mentions-legales";
 import { shouldShowBranding } from "@/lib/branding/should-show";
+import { formatSiret as formatSiretShared } from "@/lib/format/siret";
 
 // ─── Design system ─────────────────────────────────────────────────────────
 // Quovi PDF v2 — modern, premium, indigo accent. Re-skinning the document is
@@ -229,9 +230,10 @@ function clientDisplay(c: PdfClient): string {
 
 function formatSiret(siret: string | null | undefined): string | null {
   if (!siret) return null;
-  const digits = siret.replace(/\s+/g, "");
-  if (!/^\d{14}$/.test(digits)) return siret;
-  return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6, 9)} ${digits.slice(9)}`;
+  const formatted = formatSiretShared(siret);
+  // Fall back to the raw value when the input isn't 14 digits — better to
+  // show "SIRET 1234" than nothing on a legacy / malformed row.
+  return formatted || siret;
 }
 
 function formatIban(iban: string | null | undefined): string | null {

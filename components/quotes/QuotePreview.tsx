@@ -27,6 +27,7 @@ import { ProBadge } from "@/components/ui/ProBadge";
 import { useUserPlan } from "@/lib/hooks/useUserState";
 import { useUpgradeModal } from "@/lib/hooks/useUpgradeModal";
 import { cn } from "@/lib/utils";
+import { formatSiret } from "@/lib/format/siret";
 
 interface QuoteItem {
   id: string;
@@ -478,7 +479,7 @@ export function QuotePreview({ quote }: { quote: Quote }) {
                 {quote.artisan.phone && <p>{quote.artisan.phone}</p>}
                 {quote.artisan.siret && (
                   <p className="text-xs text-[var(--text-muted)]">
-                    SIRET {quote.artisan.siret}
+                    SIRET {formatSiret(quote.artisan.siret) || quote.artisan.siret}
                   </p>
                 )}
               </div>

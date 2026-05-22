@@ -3,8 +3,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { Loader2, X } from "lucide-react";
 import { SelectField, TextField } from "@/components/ui/Field";
+import { SiretField } from "@/components/ui/SiretField";
 import { toastError, toastSuccess } from "@/lib/toast";
 import { humanizeError } from "@/lib/errors";
+import {
+  formatSiret,
+  isValidSiret as isValidSiretShared,
+  siretDigits,
+  SIRET_ERROR_MSG,
+} from "@/lib/format/siret";
 
 // Snake_case codes returned by checkProfileCompleteness. The modal only renders
 // sections whose code appears in `missingFields` so the artisan sees the minimum
@@ -100,11 +107,9 @@ const VAT_STATUS_OPTIONS = [
   { value: "non_assujetti", label: "Non assujetti" },
 ];
 
-function isValidSiret(s: string): boolean {
-  if (!s) return true;
-  const digits = s.replace(/\s+/g, "");
-  return /^\d{14}$/.test(digits);
-}
+// Delegate to the shared helper so the Luhn check + error wording stay
+// consistent with EntrepriseForm and the onboarding flow.
+const isValidSiret = isValidSiretShared;
 
 function isValidPostal(s: string): boolean {
   if (!s) return true;
@@ -142,11 +147,15 @@ export function ProfileCompletionModal({
   // `initial` so the artisan doesn't re-type fields he already had.
   useEffect(() => {
     if (!open) return;
+    const prefilled = Object.fromEntries(
+      Object.entries(initial ?? {}).map(([k, v]) => [k, v ?? ""]),
+    ) as Partial<FormState>;
     setForm({
       ...EMPTY,
-      ...Object.fromEntries(
-        Object.entries(initial ?? {}).map(([k, v]) => [k, v ?? ""]),
-      ),
+      ...prefilled,
+      // Storage is 14 raw digits; the input expects the formatted form so the
+      // user sees "853 271 064 00018" on prefill instead of a digit blob.
+      siret: formatSiret(prefilled.siret),
     });
     setConfirmClose(false);
   }, [open, initial]);
@@ -176,8 +185,7 @@ export function ProfileCompletionModal({
   // optional field passes its format check.
   const errors = useMemo(() => {
     const e: Partial<Record<keyof FormState, string>> = {};
-    if (form.siret && !isValidSiret(form.siret))
-      e.siret = "SIRET invalide (14 chiffres).";
+    if (form.siret && !isValidSiret(form.siret)) e.siret = SIRET_ERROR_MSG;
     if (form.postal_code && !isValidPostal(form.postal_code))
       e.postal_code = "Code postal invalide (5 chiffres).";
     if (form.iban && !isValidIban(form.iban)) e.iban = "IBAN invalide.";
@@ -217,7 +225,11 @@ export function ProfileCompletionModal({
       // that could leak `plan` / `subscription_status` into the request body.
       const payload: Record<string, string | null> = {};
       const PUSH = (key: keyof FormState) => {
-        const v = form[key].trim();
+        // SIRET lives in state as the formatted "XXX XXX XXX XXXXX" string
+        // for display, but the DB column stores the 14 raw digits — strip
+        // before sending so the backend never has to think about spaces.
+        const raw = form[key];
+        const v = key === "siret" ? siretDigits(raw) : raw.trim();
         if (v) payload[key] = v;
       };
       PUSH("first_name");
@@ -365,14 +377,11 @@ export function ProfileCompletionModal({
                 />
               )}
               {missing.has("siret") && (
-                <TextField
+                <SiretField
                   id="profile-siret"
                   label="SIRET *"
                   value={form.siret}
-                  onChange={(e) => update("siret", e.target.value)}
-                  placeholder="14 chiffres"
-                  inputMode="numeric"
-                  maxLength={17}
+                  onValueChange={(v) => update("siret", v)}
                   error={errors.siret}
                   required
                 />

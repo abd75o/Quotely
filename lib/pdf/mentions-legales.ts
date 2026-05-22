@@ -56,6 +56,20 @@ const B2C_BTP = [
   "Médiation de la consommation : coordonnées du médiateur à fournir sur demande",
 ];
 
+/**
+ * Mention pénalités B2B — obligatoire dès qu'on facture un professionnel
+ * (art. L441-10 et D441-5 du Code de commerce). Le taux des pénalités est
+ * traditionnellement fixé à 3× le taux d'intérêt légal ; on garde la
+ * formulation générique parce que le taux légal change chaque semestre et
+ * que le devis a vocation à survivre quelques mois.
+ *
+ * L'indemnité forfaitaire de 40 € est posée par décret (D441-5) et reste
+ * fixe — on peut donc l'écrire en clair sans risquer d'obsolescence.
+ */
+const B2B_LATE_PAYMENT = [
+  "En cas de retard de paiement, des pénalités au taux de 3 fois le taux d'intérêt légal en vigueur seront appliquées, ainsi qu'une indemnité forfaitaire de 40 € pour frais de recouvrement (art. L441-10 et D441-5 du Code de commerce).",
+];
+
 export interface ResolvedMentions {
   generales: string[];
   garanties: string[];
@@ -75,7 +89,16 @@ export function resolveMentionsLegales(opts: {
     "Mentions légales de l'entreprise (SIRET, adresse, forme juridique)",
   ];
   const garanties = profile?.garanties ?? [];
-  const specifiques = opts.typeClient === "particulier" ? B2C_BTP : [];
+  // Mentions client-spécifiques : B2C → rétractation + médiation ;
+  // B2B → pénalités de retard + indemnité forfaitaire 40 € (obligatoires
+  // sur tout devis pro, l'absence est sanctionnée par une amende
+  // administrative jusqu'à 75 k€).
+  const specifiques =
+    opts.typeClient === "particulier"
+      ? B2C_BTP
+      : opts.typeClient === "professionnel"
+        ? B2B_LATE_PAYMENT
+        : [];
 
   const tvaNote =
     opts.vatStatus === "auto_entrepreneur_franchise" ||

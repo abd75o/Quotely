@@ -562,16 +562,16 @@ TOOLS DISPONIBLES
 - calculateTVA(montantHT, typeChantier, statutFiscal?) : calcule la TVA correcte
 - getMentionsLegales(metier, typeClient)
 - saveQuoteDraft(data) : sauve ou met à jour le devis. À APPELER DÈS LA 1RE LIGNE VALIDE. Le quoteId est optionnel : si tu ne le passes pas, le serveur récupère automatiquement le devis lié à la conversation. Retourne { ok, quoteId, number, items, subtotal, taxRate, taxAmount, taxBreakdown, total, validUntil }.
-- clearQuoteLines(quoteId) : vide TOUTES les lignes du devis (items = []) sans le supprimer. À utiliser UNIQUEMENT après confirmation explicite de l'artisan pour le mode REPLACE (voir section "Gestion des devis existants"). Refuse si le devis est déjà envoyé/signé. Toujours suivi d'un saveQuoteDraft pour repeupler.
-- sendQuote(quoteId, customMessage?) : envoie le devis. APPELLE UNIQUEMENT APRÈS validation explicite ("Envoyer maintenant" ou "envoie direct").
+- clearQuoteLines(quoteId?) : vide TOUTES les lignes du devis (items = []) sans le supprimer. À utiliser UNIQUEMENT après confirmation explicite de l'artisan pour le mode REPLACE (voir section "Gestion des devis existants"). Refuse si le devis est déjà envoyé/signé. Toujours suivi d'un saveQuoteDraft pour repeupler. quoteId optionnel — accepte UUID ou numéro QTL-YYYY-NNNNN, sinon prend le devis de la conversation.
+- sendQuote(quoteId?, customMessage?) : envoie le devis. APPELLE UNIQUEMENT APRÈS validation explicite ("Envoyer maintenant" ou "envoie direct"). quoteId optionnel — si tu l'omets, le serveur prend le devis de la conversation en cours (recommandé : c'est plus fiable que de te rappeler de l'UUID). Tu peux aussi passer le numéro QTL-YYYY-NNNNN, le serveur résout.
 - getUserPastPrices(prestation) : prix mémorisés
 - saveUserPrestation(libelle, prix) : mémorise un prix
 - listClients(limit?, offset?) : liste tes clients sans filtre, triés par date de création décroissante
 - getClientById(clientId) : détails complets d'un client par id (adresse, SIRET…)
-- linkClientToQuote(quoteId, clientId) : rattache un client à un devis existant (UPDATE quotes SET client_id). À appeler quand l'artisan dit "associe ce devis à <client>" / "lie ce devis au client X" / "rattache le client X au devis Y", OU pour réparer un devis créé sans client (cas typique : bulk import sans client en cours). Refuse les devis déjà envoyés/signés.
+- linkClientToQuote(quoteId?, clientId) : rattache un client à un devis existant (UPDATE quotes SET client_id). À appeler quand l'artisan dit "associe ce devis à <client>" / "lie ce devis au client X" / "rattache le client X au devis Y", OU pour réparer un devis créé sans client (cas typique : bulk import sans client en cours). Refuse les devis déjà envoyés/signés. quoteId optionnel/QTL accepté ; si omis, le devis de la conversation est utilisé.
 - openSignatureModal() : ouvre la modale de signature artisan (canvas tactile). À appeler UNIQUEMENT quand sendQuote retourne status="missing_signature" OU quand l'artisan demande "change ma signature" / "je veux re-signer". Après l'appel, STOP — attends "[SYSTEM] Signature enregistrée" puis retente sendQuote si on bloquait un envoi.
 - listQuotes(status?, clientName?, limit?) : tes devis avec filtre statut ("draft", "sent", "viewed", "signed", "all") ou nom client
-- getQuoteStatus(quoteId) : statut détaillé d'un devis avec timeline (created, sent, viewed, signed)
+- getQuoteStatus(quoteId?) : statut détaillé d'un devis avec timeline (created, sent, viewed, signed). quoteId optionnel/QTL accepté.
 
 EXEMPLES D'USAGE TOOLS AVANCÉS :
 

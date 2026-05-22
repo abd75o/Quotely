@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { executeSendQuote } from "@/lib/quotes/send";
 import { nextQuoteNumber, bumpQuoteNumber } from "@/lib/quotes/numbering";
 import { autoTitleConversation } from "@/lib/conversations/auto-title";
+import { resolveQuoteId } from "@/lib/quotes/resolve-id";
 
 export interface EmileToolContext {
   supabase: SupabaseClient;
@@ -740,21 +741,26 @@ export function createEmileTools(ctx: EmileToolContext) {
 
     clearQuoteLines: tool({
       description:
-        "Vide TOUTES les lignes du devis en cours (items = []), sans supprimer le devis. À utiliser quand l'artisan dit 'recommence', 'repars de zéro', 'efface tout et refais', 'recrée le devis' ou équivalent. APRÈS clearQuoteLines, appelle saveQuoteDraft avec les nouvelles lignes pour repeupler le devis. Refuse l'opération si le devis est déjà envoyé/signé (status !== 'draft'). Retourne { ok, quoteId, cleared } ou { ok: false, error }.",
+        "Vide TOUTES les lignes du devis en cours (items = []), sans supprimer le devis. À utiliser quand l'artisan dit 'recommence', 'repars de zéro', 'efface tout et refais', 'recrée le devis' ou équivalent. APRÈS clearQuoteLines, appelle saveQuoteDraft avec les nouvelles lignes pour repeupler le devis. Refuse l'opération si le devis est déjà envoyé/signé (status !== 'draft'). Accepte UUID OU numéro QTL-YYYY-NNNNN ; si omis, retombe sur le devis de la conversation. Retourne { ok, quoteId, cleared } ou { ok: false, error }.",
       inputSchema: z.object({
         quoteId: z
           .string()
-          .uuid()
+          .optional()
           .describe(
-            "UUID du devis à vider (celui retourné par saveQuoteDraft, pas le numéro QTL-…).",
+            "UUID du devis OU numéro QTL-YYYY-NNNNN. Si omis, le serveur prend le devis lié à la conversation.",
           ),
       }),
       execute: async ({ quoteId }) => {
         try {
+          const resolvedId = await resolveQuoteId(supabase, userId, {
+            raw: quoteId,
+            conversationId,
+          });
+          if (!resolvedId) return err("Devis introuvable.");
           const { data: existing, error: fetchErr } = await supabase
             .from("quotes")
             .select("id, status")
-            .eq("id", quoteId)
+            .eq("id", resolvedId)
             .eq("user_id", userId)
             .maybeSingle();
           if (fetchErr) return err(fetchErr.message);
@@ -774,10 +780,10 @@ export function createEmileTools(ctx: EmileToolContext) {
               tax_breakdown: {},
               total: 0,
             })
-            .eq("id", quoteId)
+            .eq("id", resolvedId)
             .eq("user_id", userId);
           if (updErr) return err(updErr.message);
-          return ok({ quoteId, cleared: true });
+          return ok({ quoteId: resolvedId, cleared: true });
         } catch (e) {
           return err((e as Error).message ?? "Erreur inconnue");
         }
@@ -786,9 +792,14 @@ export function createEmileTools(ctx: EmileToolContext) {
 
     sendQuote: tool({
       description:
-        "Envoie le devis au client par email (avec PDF en pièce jointe). À appeler UNIQUEMENT après confirmation explicite de l'artisan via le récap OU shortcut 'envoie direct'. NE PAS appeler sans validation. Retourne { ok, messageId, signLink } ou { ok: false, error, missing? }.",
+        "Envoie le devis au client par email (avec PDF en pièce jointe). À appeler UNIQUEMENT après confirmation explicite de l'artisan via le récap OU shortcut 'envoie direct'. NE PAS appeler sans validation. Tu peux passer soit l'UUID interne, soit le numéro QTL-YYYY-NNNNN — le serveur résout. Retourne { ok, messageId, signLink } ou { ok: false, error, missing? }.",
       inputSchema: z.object({
-        quoteId: z.string(),
+        quoteId: z
+          .string()
+          .describe(
+            "UUID du devis OU numéro QTL-YYYY-NNNNN. Si omis ou non résolu, le serveur retombe sur conversations.related_quote_id (le devis de la conversation en cours).",
+          )
+          .optional(),
         customMessage: z
           .string()
           .optional()
@@ -798,11 +809,26 @@ export function createEmileTools(ctx: EmileToolContext) {
       }),
       execute: async ({ quoteId, customMessage }) => {
         try {
+          // Resolve the canonical UUID before handing off to executeSendQuote.
+          // preferConversation=true: when the artisan says "envoie le devis",
+          // the conversation's related_quote_id is more reliable than whatever
+          // identifier the LLM passes (it sometimes hands the QTL number,
+          // which sent the row-lookup down the "Devis introuvable" branch).
+          const resolvedId = await resolveQuoteId(supabase, userId, {
+            raw: quoteId,
+            conversationId,
+            preferConversation: true,
+          });
+          if (!resolvedId) {
+            return err(
+              "Devis introuvable. Passe un UUID ou un numéro QTL-YYYY-NNNNN, ou assure-toi que la conversation est bien liée à un devis.",
+            );
+          }
           const result = await executeSendQuote({
             supabase,
             userId,
             userEmail: userEmail ?? null,
-            quoteId,
+            quoteId: resolvedId,
             customMessage,
             appUrl:
               appUrl ?? process.env.NEXT_PUBLIC_APP_URL ?? "https://quovi.fr",
@@ -911,13 +937,13 @@ export function createEmileTools(ctx: EmileToolContext) {
 
     linkClientToQuote: tool({
       description:
-        "Associe un client à un devis existant (UPDATE quotes SET client_id = clientId). À utiliser quand l'artisan demande 'associe ce devis à <client>', 'lie ce devis au client X', 'rattache le client X au devis' ou équivalent — ou quand sendQuote a échoué parce que le devis n'a pas de client. Refuse les devis déjà envoyés/signés (status !== 'draft'). Retourne { ok, quoteId, number, client: {...} } ou { ok: false, error }.",
+        "Associe un client à un devis existant (UPDATE quotes SET client_id = clientId). À utiliser quand l'artisan demande 'associe ce devis à <client>', 'lie ce devis au client X', 'rattache le client X au devis' ou équivalent — ou quand sendQuote a échoué parce que le devis n'a pas de client. Accepte UUID OU numéro QTL-YYYY-NNNNN pour quoteId ; si omis, prend le devis de la conversation. Refuse les devis déjà envoyés/signés (status !== 'draft'). Retourne { ok, quoteId, number, client: {...} } ou { ok: false, error }.",
       inputSchema: z.object({
         quoteId: z
           .string()
-          .uuid()
+          .optional()
           .describe(
-            "UUID du devis (celui retourné par saveQuoteDraft, pas le numéro QTL-…).",
+            "UUID du devis OU numéro QTL-YYYY-NNNNN. Si omis, le serveur prend le devis lié à la conversation.",
           ),
         clientId: z
           .string()
@@ -928,13 +954,19 @@ export function createEmileTools(ctx: EmileToolContext) {
       }),
       execute: async ({ quoteId, clientId }) => {
         try {
+          const resolvedQuoteId = await resolveQuoteId(supabase, userId, {
+            raw: quoteId,
+            conversationId,
+          });
+          if (!resolvedQuoteId) return err("Devis introuvable.");
+
           // Verify the quote belongs to this artisan AND is still editable.
           // A signed devis with the wrong client must NOT be silently
           // re-linked — that would rewrite a legally binding document.
           const { data: existing, error: fetchErr } = await supabase
             .from("quotes")
             .select("id, status")
-            .eq("id", quoteId)
+            .eq("id", resolvedQuoteId)
             .eq("user_id", userId)
             .maybeSingle();
           if (fetchErr) return err(fetchErr.message);
@@ -962,7 +994,7 @@ export function createEmileTools(ctx: EmileToolContext) {
           const { data: updated, error: updErr } = await supabase
             .from("quotes")
             .update({ client_id: clientId })
-            .eq("id", quoteId)
+            .eq("id", resolvedQuoteId)
             .eq("user_id", userId)
             .select("id, number")
             .single();
@@ -1058,18 +1090,28 @@ export function createEmileTools(ctx: EmileToolContext) {
 
     getQuoteStatus: tool({
       description:
-        "Récupère le statut détaillé d'un devis avec timeline (créé, envoyé, vu, signé). Utile pour répondre à 'où en est le devis X ?'.",
+        "Récupère le statut détaillé d'un devis avec timeline (créé, envoyé, vu, signé). Utile pour répondre à 'où en est le devis X ?'. Accepte UUID OU numéro QTL-YYYY-NNNNN ; si omis, prend le devis de la conversation.",
       inputSchema: z.object({
-        quoteId: z.string().uuid(),
+        quoteId: z
+          .string()
+          .optional()
+          .describe(
+            "UUID du devis OU numéro QTL-YYYY-NNNNN. Si omis, le serveur prend le devis lié à la conversation.",
+          ),
       }),
       execute: async ({ quoteId }) => {
         try {
+          const resolvedId = await resolveQuoteId(supabase, userId, {
+            raw: quoteId,
+            conversationId,
+          });
+          if (!resolvedId) return err("Devis introuvable");
           const { data, error } = await supabase
             .from("quotes")
             .select(
               "id, number, status, total, created_at, sent_at, viewed_at, signed_at, sent_to_email, signature_data",
             )
-            .eq("id", quoteId)
+            .eq("id", resolvedId)
             .eq("user_id", userId)
             .maybeSingle();
           if (error) return err(error.message);

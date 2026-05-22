@@ -32,6 +32,31 @@ function companyDisplay(p: PdfProfile): string {
   );
 }
 
+/**
+ * Map a raw Resend error message to a French, actionable one. The sandbox
+ * mode (no verified domain on the Resend account) returns a long English
+ * sentence the artisan can't parse — surface a clean copy instead, with
+ * the path to the fix. We keep the original message in console.error
+ * upstream for diagnostics.
+ */
+function translateResendError(raw: string): string {
+  const m = raw.toLowerCase();
+  if (
+    m.includes("you can only send testing emails to your own email address") ||
+    m.includes("verify a domain") ||
+    (m.includes("domain") && m.includes("verif"))
+  ) {
+    return "Mode test Resend : ton domaine n'est pas encore vérifié, l'email n'a pu être envoyé qu'à ta propre adresse. Vérifie ton domaine sur resend.com (Settings → Domains) pour envoyer à tes clients.";
+  }
+  if (m.includes("invalid api key") || m.includes("missing api key")) {
+    return "Clé API Resend invalide ou absente. Vérifie RESEND_API_KEY dans la configuration.";
+  }
+  if (m.includes("rate limit") || m.includes("too many requests")) {
+    return "Trop d'envois en peu de temps (rate-limit Resend). Réessaie dans quelques minutes.";
+  }
+  return raw;
+}
+
 export async function sendQuoteEmail(
   input: SendQuoteEmailInput,
 ): Promise<SendQuoteEmailResult> {
@@ -78,14 +103,18 @@ export async function sendQuoteEmail(
     });
     if (result.error) {
       console.error("[SEND QUOTE] Resend returned error", result.error);
-      return { messageId: null, error: result.error.message };
+      return {
+        messageId: null,
+        error: translateResendError(result.error.message),
+      };
     }
     return { messageId: result.data?.id ?? null };
   } catch (e) {
+    const raw = (e as Error).message ?? "Envoi Resend échoué";
     console.error("[SEND QUOTE] Resend threw", e);
     return {
       messageId: null,
-      error: (e as Error).message ?? "Envoi Resend échoué",
+      error: translateResendError(raw),
     };
   }
 }

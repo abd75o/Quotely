@@ -31,6 +31,12 @@ export function SignatureClient({
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState(clientEmail);
   const [accepted, setAccepted] = useState(false);
+  // Mention manuscrite requise par la jurisprudence sur les devis BTP B2C :
+  // le client doit écrire "Bon pour travaux" lui-même (équivalent au "lu et
+  // approuvé" historique). On stocke la frappe et on la valide en fuzzy
+  // (espaces / casse / accents tolérés) pour éviter qu'une majuscule
+  // ratée bloque la signature.
+  const [bonPourTravaux, setBonPourTravaux] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Tracks whether the pad has any stroke. The pad calls back on strokeEnd
@@ -81,11 +87,23 @@ export function SignatureClient({
     );
   }
 
+  // Normalise the mention so "bon pour travaux", "Bon Pour Travaux",
+  // "  bon  pour travaux " all match. Accents are stripped to be tolerant
+  // of mobile keyboards that don't auto-capitalise.
+  const normalisedMention = bonPourTravaux
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+  const mentionOk = normalisedMention === "bon pour travaux";
+
   const canSubmit =
     fullName.trim().length >= 2 &&
     /\S+@\S+\.\S+/.test(email.trim()) &&
     accepted &&
     hasStroke &&
+    mentionOk &&
     !submitting;
 
   async function handleSubmit(e: React.FormEvent) {
@@ -113,6 +131,11 @@ export function SignatureClient({
           // signature_data.signature_image_url, which the PDF
           // SignatureBlock already renders via @react-pdf <Image>.
           signature_image: dataUrl,
+          // Mention manuscrite — conservée pour l'audit (signature_data
+          // JSONB, lu en cas de contestation). On envoie ce que l'utilisateur
+          // a réellement tapé, pas la version normalisée, pour qu'on puisse
+          // produire le wording original en cas de litige.
+          handwritten_mention: bonPourTravaux.trim(),
         }),
       });
       if (res.status === 409) {
@@ -207,6 +230,39 @@ export function SignatureClient({
             }}
           />
         </div>
+      </div>
+
+      <div className="mt-5">
+        <label
+          className="mb-1 block text-[11px] font-semibold uppercase tracking-widest text-[#6B7280]"
+          htmlFor="bonPourTravaux"
+        >
+          Mention manuscrite *
+        </label>
+        <input
+          id="bonPourTravaux"
+          value={bonPourTravaux}
+          onChange={(e) => setBonPourTravaux(e.target.value)}
+          placeholder="Recopiez : Bon pour travaux"
+          required
+          autoComplete="off"
+          spellCheck={false}
+          aria-invalid={bonPourTravaux.length > 0 && !mentionOk}
+          className="h-10 w-full rounded-lg border border-[#D1D5DB] bg-white px-3 text-[14px] outline-none focus:border-[var(--brand)] focus:ring-2"
+          style={{
+            ["--tw-ring-color" as string]: `${color}33`,
+          }}
+        />
+        <p className="mt-1 text-[12px] text-[#6B7280]">
+          Recopiez exactement la mention{" "}
+          <strong>Bon pour travaux</strong> pour valider votre acceptation
+          (requis sur les devis BTP).
+        </p>
+        {bonPourTravaux.length > 0 && !mentionOk && (
+          <p className="mt-1 text-[12px] text-amber-700" role="alert">
+            Mention non reconnue — vérifiez l&apos;orthographe.
+          </p>
+        )}
       </div>
 
       <label className="mt-4 flex cursor-pointer items-start gap-2 text-[13px] text-[#374151]">

@@ -209,8 +209,17 @@ export function NewClientModal({
   }, [missingFields, errors]);
 
   function shownError(key: keyof FieldErrors): string | undefined {
-    if (touched) return errors[key];
-    return forcedMissing[key];
+    // Previously this gated EVERY error on `touched` — set only inside
+    // handleSubmit. Combined with `disabled={!valid || submitting}` on the
+    // submit button, the user typed an invalid SIRET, watched the button
+    // grey out, and had no idea why (audit D1/D5). We now surface errors
+    // as soon as the user has actually typed in a field (post-`dirty`),
+    // mirroring what ClientFormModal already does. forcedMissing keeps
+    // priority so the missing-field flow can still highlight pre-typed
+    // values that need an update.
+    if (forcedMissing[key]) return forcedMissing[key];
+    if (touched || dirty) return errors[key];
+    return undefined;
   }
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {

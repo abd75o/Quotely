@@ -804,6 +804,16 @@ function EmitterReceiver(props: {
       <View style={styles.party}>
         <Text style={styles.partyLabel}>Émetteur</Text>
         <Text style={styles.partyName}>{companyName}</Text>
+        {profile.legal_status && (
+          // Show the forme juridique (SARL / SAS / EI / auto-entrepreneur…)
+          // directly in the Émetteur card too — previously it was only in
+          // the bottom legal banner, which a client glancing at the
+          // recipient block could miss. Required by art. R123-237 du
+          // Code de commerce on every commercial document.
+          <Text style={[styles.partyLine, { fontFamily: fonts.italic }]}>
+            {profile.legal_status}
+          </Text>
+        )}
         {profile.address && (
           <Text style={styles.partyLine}>{profile.address}</Text>
         )}

@@ -20,6 +20,12 @@ interface SignBody {
    *  still gets signed_at and full_name; only the drawn-image side of
    *  the "Bon pour accord" block is missing). */
   signature_image?: string;
+  /** "Bon pour travaux" — mention manuscrite recopiée par le client.
+   *  Conservée verbatim dans signature_data.handwritten_mention pour
+   *  l'audit en cas de litige. La validation côté front est tolérante
+   *  (casse / espaces / accents), donc on stocke ce que l'utilisateur
+   *  a vraiment tapé, pas la version normalisée. */
+  handwritten_mention?: string;
 }
 
 const PNG_DATA_URL_RE = /^data:image\/png(?:;base64)?,(.+)$/;
@@ -123,6 +129,11 @@ export async function POST(
   const userAgent = req.headers.get("user-agent") ?? null;
   const timestamp = new Date().toISOString();
 
+  const handwrittenMention =
+    typeof body.handwritten_mention === "string"
+      ? body.handwritten_mention.trim().slice(0, 200)
+      : null;
+
   const signatureData = {
     full_name: body.full_name.trim(),
     email: body.email.trim(),
@@ -133,6 +144,10 @@ export async function POST(
     // when the client actually drew (drawn signatures are the new flow,
     // text-only stays valid for the legacy path).
     ...(signatureImageUrl ? { signature_image_url: signatureImageUrl } : {}),
+    // Audit trail: the literal "Bon pour travaux" string the client typed.
+    // Capped at 200 chars to bound the JSONB write — anything longer is a
+    // copy-paste mishap, not a legitimate mention.
+    ...(handwrittenMention ? { handwritten_mention: handwrittenMention } : {}),
   };
 
   // 3. Update via admin (RLS UPDATE non publique)

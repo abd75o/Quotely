@@ -29,6 +29,13 @@ const ALLOWED_FIELDS = [
   "primary_color",
   "brand_color",
   "hide_branding",
+  // Insurance — required for BTP trades on the PDF (mentions légales).
+  // Migration 20260523_legal_insurance_and_registration.sql.
+  "decennale_company",
+  "decennale_number",
+  "decennale_zone",
+  "rc_pro_company",
+  "rc_pro_number",
 ] as const;
 
 type AllowedField = (typeof ALLOWED_FIELDS)[number];

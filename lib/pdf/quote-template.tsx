@@ -110,6 +110,7 @@ export interface PdfProfile {
   rc_pro_company?: string | null;
   decennale_number?: string | null;
   decennale_company?: string | null;
+  decennale_zone?: string | null;
   bank_name?: string | null;
   plan?: string | null;
   hide_branding?: boolean | null;
@@ -1146,6 +1147,7 @@ function LegalMentions(props: {
           {profile.decennale_company
             ? `${profile.decennale_company} n°${profile.decennale_number}`
             : profile.decennale_number}
+          {profile.decennale_zone ? ` — ${profile.decennale_zone}` : ""}
         </Text>
       )}
       {profile.rc_pro_number && (

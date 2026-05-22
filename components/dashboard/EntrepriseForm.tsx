@@ -67,6 +67,14 @@ interface CompanyForm {
    *  read this first. Validated /^#[0-9A-Fa-f]{6}$/ server-side and in DB. */
   brand_color: string;
   logo_url: string;
+  // Assurances (migration 20260523_legal_insurance_and_registration).
+  // Décennale = required for BTP trades (lib/quotes/send-helpers.ts gate);
+  // RC pro = recommended for everyone, blocking for no one.
+  decennale_company: string;
+  decennale_number: string;
+  decennale_zone: string;
+  rc_pro_company: string;
+  rc_pro_number: string;
 }
 
 const BRAND_PRESETS: ReadonlyArray<{ label: string; hex: string }> = [
@@ -96,6 +104,11 @@ const EMPTY: CompanyForm = {
   primary_color: "#6366F1",
   brand_color: "#0F172A",
   logo_url: "",
+  decennale_company: "",
+  decennale_number: "",
+  decennale_zone: "",
+  rc_pro_company: "",
+  rc_pro_number: "",
 };
 
 export function EntrepriseForm() {
@@ -132,7 +145,7 @@ export function EntrepriseForm() {
       const { data: profile } = await supabase
         .from("profiles")
         .select(
-          "company, metier, telephone, siret, address, postal_code, city, vat_status, vat_number, iban, bic, primary_color, brand_color, logo_url, signature_url"
+          "company, metier, telephone, siret, address, postal_code, city, vat_status, vat_number, iban, bic, primary_color, brand_color, logo_url, signature_url, decennale_company, decennale_number, decennale_zone, rc_pro_company, rc_pro_number"
         )
         .eq("id", user.id)
         .single();
@@ -158,6 +171,11 @@ export function EntrepriseForm() {
         primary_color: profile?.primary_color ?? "#6366F1",
         brand_color: (profile?.brand_color as string | null) ?? "#0F172A",
         logo_url: profile?.logo_url ?? "",
+        decennale_company: profile?.decennale_company ?? "",
+        decennale_number: profile?.decennale_number ?? "",
+        decennale_zone: profile?.decennale_zone ?? "",
+        rc_pro_company: profile?.rc_pro_company ?? "",
+        rc_pro_number: profile?.rc_pro_number ?? "",
       };
       setForm(next);
       setInitial(next);
@@ -303,6 +321,11 @@ export function EntrepriseForm() {
         // can be retired. brand_color is the canonical read path going forward.
         brand_color: form.brand_color || "#0F172A",
         logo_url: form.logo_url || null,
+        decennale_company: form.decennale_company.trim() || null,
+        decennale_number: form.decennale_number.trim() || null,
+        decennale_zone: form.decennale_zone.trim() || null,
+        rc_pro_company: form.rc_pro_company.trim() || null,
+        rc_pro_number: form.rc_pro_number.trim() || null,
       };
 
       const res = await fetch("/api/profile", {
@@ -517,6 +540,63 @@ export function EntrepriseForm() {
           disabled
           hint="L'email est lié à votre compte. Pour le modifier, contactez le support."
         />
+      </Section>
+
+      {/* Section assurances — décennale obligatoire pour les métiers BTP
+          (gate côté envoi : lib/quotes/send-helpers.ts). RC pro recommandée
+          pour tous mais jamais bloquante. */}
+      <Section title="Assurances">
+        <FieldShell
+          label="Garantie décennale"
+          hint="Obligatoire pour les métiers du bâtiment (plomberie, électricité, peinture, maçonnerie, etc.). La mention apparaîtra sur tous tes devis PDF."
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <TextField
+              id="decennale_company"
+              label="Assureur"
+              value={form.decennale_company}
+              onChange={(e) => update("decennale_company", e.target.value)}
+              placeholder="Ex : AXA, MAAF, SMA…"
+            />
+            <TextField
+              id="decennale_number"
+              label="N° de police"
+              value={form.decennale_number}
+              onChange={(e) => update("decennale_number", e.target.value)}
+              placeholder="Ex : 1234567890"
+            />
+          </div>
+          <TextField
+            id="decennale_zone"
+            label="Zone géographique couverte"
+            value={form.decennale_zone}
+            onChange={(e) => update("decennale_zone", e.target.value)}
+            placeholder="Ex : France métropolitaine"
+            hint="Précise la zone garantie par ton contrat (utile en cas de chantier hors région habituelle)."
+          />
+        </FieldShell>
+
+        <FieldShell
+          label="RC professionnelle (optionnel)"
+          hint="Responsabilité civile professionnelle. Recommandée pour tous les artisans, particulièrement utile pour les chantiers chez le client."
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <TextField
+              id="rc_pro_company"
+              label="Assureur"
+              value={form.rc_pro_company}
+              onChange={(e) => update("rc_pro_company", e.target.value)}
+              placeholder="Ex : Allianz, MMA…"
+            />
+            <TextField
+              id="rc_pro_number"
+              label="N° de police"
+              value={form.rc_pro_number}
+              onChange={(e) => update("rc_pro_number", e.target.value)}
+              placeholder="Ex : 9876543210"
+            />
+          </div>
+        </FieldShell>
       </Section>
 
       {/* Section 4 — Fiscalité */}

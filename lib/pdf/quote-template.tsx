@@ -1,7 +1,6 @@
 import {
   Document,
   Image,
-  Link,
   Page,
   StyleSheet,
   Text,
@@ -696,15 +695,23 @@ function buildStyles(accent: string) {
       fontSize: 8,
       color: palette.label,
     },
+    // Branding link: previously coloured with the brand `accent` (often a
+    // loud indigo) which made the line dominate the footer. Switched to
+    // palette.label (#94A3B8 — same grey as the quote number on the left)
+    // so the line stays discreet on every plan. The Starter variant keeps
+    // a slightly bigger / bolder weight to nudge upgrades without
+    // re-introducing the colour clash.
     footerBrandLink: {
       fontSize: 8,
-      color: accent,
+      color: palette.label,
       textDecoration: "none",
     },
     footerBrandLinkStarter: {
       fontSize: 9,
       fontFamily: fonts.bold,
-      color: accent,
+      // Same grey as footerBrandLink — the only differentiator with the Pro
+      // variant is now weight + size, no longer the brand-accent colour.
+      color: palette.label,
       textDecoration: "none",
     },
     footerRight: {
@@ -1238,16 +1245,31 @@ export function QuotePdfDocument({
           mentions={mentions}
         />
 
-        {/* Fixed page footer — quote number left, branding center, page X/Y right. */}
+        {/* Fixed page footer — quote number left, branding (last page only)
+            center, page X/Y right. The branding slot is a Text with a
+            render prop because only Text gets `totalPages` from
+            @react-pdf; View.render only exposes pageNumber. On
+            non-last pages it returns an empty string so
+            justifyContent="space-between" keeps the number and page
+            indicator anchored to the page edges. We drop the
+            previously-used <Link> wrapper — Text.render can't host
+            arbitrary JSX cleanly, and "discreet" means giving up the
+            clickable URL anyway. */}
         <View style={styles.pageFooter} fixed>
           <Text style={styles.footerLeft}>{quote.number}</Text>
           {showBranding ? (
-            <Link
-              src="https://quovi.fr"
-              style={isViralPlan ? styles.footerBrandLinkStarter : styles.footerBrandLink}
-            >
-              Devis créé avec Quovi · quovi.fr
-            </Link>
+            <Text
+              style={
+                isViralPlan
+                  ? styles.footerBrandLinkStarter
+                  : styles.footerBrandLink
+              }
+              render={({ pageNumber, totalPages }) =>
+                pageNumber === totalPages
+                  ? "Devis créé avec Quovi · quovi.fr"
+                  : ""
+              }
+            />
           ) : (
             <Text> </Text>
           )}

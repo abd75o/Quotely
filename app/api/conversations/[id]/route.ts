@@ -63,7 +63,18 @@ export async function GET(
 interface PatchBody {
   title?: string;
   status?: "active" | "archived";
+  /** Set/unset the conversation's linked client. Used by EmileChat right
+   *  after the picker/NewClientModal returns so the bulk-lines route can
+   *  inherit the client on the next import without a tool round-trip. */
+  related_client_id?: string | null;
+  /** Same idea for the linked quote — rarely needed from the client (the
+   *  tools already write this on saveQuoteDraft / bulk-lines insert), but
+   *  exposed for symmetry. */
+  related_quote_id?: string | null;
 }
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function PATCH(
   req: NextRequest,
@@ -95,6 +106,23 @@ export async function PATCH(
   if (typeof body.title === "string") update.title = body.title;
   if (body.status === "active" || body.status === "archived") {
     update.status = body.status;
+  }
+  // Accept null to explicitly clear the link, a UUID to set it, anything
+  // else is silently dropped to avoid a stray "" from a stale form state
+  // wiping the FK.
+  if ("related_client_id" in body) {
+    const v = body.related_client_id;
+    if (v === null) update.related_client_id = null;
+    else if (typeof v === "string" && UUID_RE.test(v.trim())) {
+      update.related_client_id = v.trim();
+    }
+  }
+  if ("related_quote_id" in body) {
+    const v = body.related_quote_id;
+    if (v === null) update.related_quote_id = null;
+    else if (typeof v === "string" && UUID_RE.test(v.trim())) {
+      update.related_quote_id = v.trim();
+    }
   }
   if (Object.keys(update).length === 0) {
     return new Response(JSON.stringify({ error: "Aucun champ à modifier" }), {

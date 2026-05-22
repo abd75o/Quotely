@@ -173,6 +173,32 @@ async function maybeAutoNameConversation(
   });
 }
 
+/**
+ * Tag the conversation with the linked client so the bulk-lines route (and
+ * any future flow that pulls from `conversations.related_client_id`) can
+ * inherit it without a tool round-trip.
+ *
+ * Fire-and-forget: the success path of the calling tool shouldn't fail
+ * because we couldn't dénormalize a pointer that's already discoverable
+ * via the joined client row. Errors are logged and swallowed.
+ */
+async function tagConversationClient(
+  supabase: SupabaseClient,
+  conversationId: string | null | undefined,
+  userId: string,
+  clientId: string | null | undefined,
+): Promise<void> {
+  if (!conversationId || !clientId) return;
+  const { error } = await supabase
+    .from("conversations")
+    .update({ related_client_id: clientId })
+    .eq("id", conversationId)
+    .eq("user_id", userId);
+  if (error) {
+    console.warn("[tagConversationClient] update failed", error);
+  }
+}
+
 export function createEmileTools(ctx: EmileToolContext) {
   const { supabase, userId, conversationId, userEmail, appUrl } = ctx;
 
@@ -327,6 +353,15 @@ export function createEmileTools(ctx: EmileToolContext) {
             )
             .single();
           if (error) return err(error.message);
+          // Tag the conversation so a subsequent bulk import (which bypasses
+          // the LLM) inherits the new client via conversations.related_client_id
+          // — the path the bulk-lines route now reads from.
+          await tagConversationClient(
+            supabase,
+            conversationId,
+            userId,
+            row.id as string,
+          );
           return ok({ client: row });
         } catch (e) {
           return err((e as Error).message ?? "Erreur inconnue");
@@ -534,6 +569,17 @@ export function createEmileTools(ctx: EmileToolContext) {
               .select("id, number")
               .single();
             if (error) return err(error.message);
+            // Tag the conversation with the client so future bulk imports
+            // inherit it (the bulk-lines route reads related_client_id when
+            // no explicit clientId is in the body).
+            if (clientId) {
+              await tagConversationClient(
+                supabase,
+                conversationId,
+                userId,
+                clientId,
+              );
+            }
             await maybeAutoNameConversation(
               supabase,
               conversationId,
@@ -596,11 +642,16 @@ export function createEmileTools(ctx: EmileToolContext) {
             return err(lastError?.message ?? "Erreur enregistrement devis");
           }
 
-          // Link the new quote back to the conversation so subsequent calls update.
+          // Link the new quote (and the client, if any) back to the
+          // conversation so subsequent calls — including bulk-lines, which
+          // bypasses the LLM — pick up the relations automatically.
           if (conversationId) {
             await supabase
               .from("conversations")
-              .update({ related_quote_id: data.id })
+              .update({
+                related_quote_id: data.id,
+                ...(clientId ? { related_client_id: clientId } : {}),
+              })
               .eq("id", conversationId)
               .eq("user_id", userId);
           }
@@ -1003,6 +1054,15 @@ export function createEmileTools(ctx: EmileToolContext) {
             .select("id, number")
             .single();
           if (updErr) return err(updErr.message);
+
+          // Mirror onto the conversation so a fresh bulk import inherits
+          // the client without having to re-pick or re-create it.
+          await tagConversationClient(
+            supabase,
+            conversationId,
+            userId,
+            clientId,
+          );
 
           return ok({
             quoteId: updated.id,

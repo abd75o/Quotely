@@ -385,6 +385,20 @@ export function EmileChat({
   const handleClientSelected = useCallback(
     (client: ExistingClient) => {
       setClientSelectorOpen(false);
+      // Write the link to the conversation IMMEDIATELY (fire-and-forget),
+      // independent of whether Émile then calls saveQuoteDraft. Without
+      // this, a user who picked a client and ran a bulk import a second
+      // later landed in the bulk-lines route before Émile had time to
+      // tag the conversation, and the import lost the client linkage.
+      if (conversationId) {
+        void fetch(`/api/conversations/${conversationId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ related_client_id: client.id }),
+        }).catch((err) => {
+          console.warn("[handleClientSelected] PATCH failed", err);
+        });
+      }
       const fullName =
         [client.first_name, client.name].filter(Boolean).join(" ").trim() ||
         client.name;
@@ -393,7 +407,7 @@ export function EmileChat({
       parts.push(`id:${client.id}`);
       void sendMessage(parts.join(" — "));
     },
-    [sendMessage],
+    [sendMessage, conversationId],
   );
 
   const handleClientSelectorClose = useCallback(() => {
@@ -404,6 +418,18 @@ export function EmileChat({
   const handleClientCreated = useCallback(
     (client: CreatedClient) => {
       justHandledModalRef.current = true;
+      // Same fire-and-forget link as handleClientSelected so a bulk import
+      // following a NewClientModal close inherits the freshly created row
+      // without waiting for Émile's saveQuoteDraft turn.
+      if (conversationId) {
+        void fetch(`/api/conversations/${conversationId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ related_client_id: client.id }),
+        }).catch((err) => {
+          console.warn("[handleClientCreated] PATCH failed", err);
+        });
+      }
       const fullName =
         [client.first_name, client.name].filter(Boolean).join(" ").trim() ||
         client.name;
@@ -412,7 +438,7 @@ export function EmileChat({
       if (client.type_client) parts.push(client.type_client);
       void sendMessage(parts.join(" — "));
     },
-    [sendMessage],
+    [sendMessage, conversationId],
   );
 
   const handleClientModalClose = useCallback(() => {

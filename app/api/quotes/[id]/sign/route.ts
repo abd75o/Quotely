@@ -13,7 +13,20 @@ interface SignBody {
   signature_token: string;
   full_name: string;
   email: string;
+  /** PNG data URL drawn on the SignaturePad canvas. Stored as-is in
+   *  signature_data.signature_image_url; the PDF SignatureBlock reads
+   *  the same field via @react-pdf <Image>. Optional for back-compat
+   *  with any caller that hasn't been updated to send it yet (the row
+   *  still gets signed_at and full_name; only the drawn-image side of
+   *  the "Bon pour accord" block is missing). */
+  signature_image?: string;
 }
+
+const PNG_DATA_URL_RE = /^data:image\/png(?:;base64)?,(.+)$/;
+// Cap mirrors /api/profile/signature: a 600×180 PNG sits at 5–20 KB,
+// even pathological scribbles stay under 100 KB. Hard cap at 1 MB so a
+// malicious client can't bloat the JSONB column.
+const MAX_SIGNATURE_BYTES = 1 * 1024 * 1024;
 
 function getClientIp(req: NextRequest): string | null {
   const forwarded = req.headers.get("x-forwarded-for");
@@ -47,6 +60,36 @@ export async function POST(
   }
   if (!/\S+@\S+\.\S+/.test(body.email.trim())) {
     return jsonResponse({ error: "Email invalide" }, 400);
+  }
+
+  // Validate the drawn signature when present. We accept the legacy
+  // text-only flow (no image) to keep older clients working, but a body
+  // that DOES include a signature_image must be a valid, sub-cap PNG —
+  // a JPEG or oversize blob means the front-end is broken and the row
+  // would render a corrupt image in the PDF if we wrote it through.
+  let signatureImageUrl: string | null = null;
+  if (typeof body.signature_image === "string" && body.signature_image) {
+    const match = PNG_DATA_URL_RE.exec(body.signature_image);
+    if (!match) {
+      return jsonResponse(
+        { error: "Format de signature invalide — attendu data:image/png" },
+        422,
+      );
+    }
+    // Approximate byte length from the base64 payload — accurate to within
+    // 3 bytes (padding). Cheap enough to skip the full decode.
+    const approxBytes = Math.floor((match[1].length * 3) / 4);
+    if (approxBytes > MAX_SIGNATURE_BYTES) {
+      return jsonResponse(
+        {
+          error: `Signature trop lourde (${Math.round(
+            approxBytes / 1024,
+          )} KB, max 1 MB).`,
+        },
+        413,
+      );
+    }
+    signatureImageUrl = body.signature_image;
   }
 
   // 1. Lecture via anon (RLS public select via signature_token)
@@ -86,6 +129,10 @@ export async function POST(
     ip,
     user_agent: userAgent,
     timestamp,
+    // Field name expected by lib/pdf/quote-template.tsx — populated only
+    // when the client actually drew (drawn signatures are the new flow,
+    // text-only stays valid for the legacy path).
+    ...(signatureImageUrl ? { signature_image_url: signatureImageUrl } : {}),
   };
 
   // 3. Update via admin (RLS UPDATE non publique)

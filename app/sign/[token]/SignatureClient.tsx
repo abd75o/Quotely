@@ -2,6 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { CheckCircle2 } from "lucide-react";
+import {
+  SignaturePad,
+  type SignaturePadHandle,
+} from "@/components/ui/SignaturePad";
 
 interface SignatureClientProps {
   quoteId: string;
@@ -29,6 +33,12 @@ export function SignatureClient({
   const [accepted, setAccepted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Tracks whether the pad has any stroke. The pad calls back on strokeEnd
+  // with the data URL (or null on clear); we only need the boolean here to
+  // gate the submit button — the actual PNG is pulled via padRef at submit
+  // time so we don't hold a multi-KB string in React state.
+  const [hasStroke, setHasStroke] = useState(false);
+  const padRef = useRef<SignaturePadHandle>(null);
   const trackedRef = useRef(false);
 
   useEffect(() => {
@@ -75,11 +85,20 @@ export function SignatureClient({
     fullName.trim().length >= 2 &&
     /\S+@\S+\.\S+/.test(email.trim()) &&
     accepted &&
+    hasStroke &&
     !submitting;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!canSubmit) return;
+    const dataUrl = padRef.current?.toDataURL();
+    if (!dataUrl) {
+      // Defensive: hasStroke gating should make this unreachable, but a
+      // canvas can return null if the user cleared and submitted in the
+      // same tick. Surface a clear error instead of POSTing empty.
+      setError("Signe d'abord dans le cadre avant de valider.");
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
@@ -90,6 +109,10 @@ export function SignatureClient({
           signature_token: signatureToken,
           full_name: fullName.trim(),
           email: email.trim(),
+          // PNG data URL — the API stores it under
+          // signature_data.signature_image_url, which the PDF
+          // SignatureBlock already renders via @react-pdf <Image>.
+          signature_image: dataUrl,
         }),
       });
       if (res.status === 409) {
@@ -128,9 +151,21 @@ export function SignatureClient({
     >
       <h2 className="text-lg font-bold text-[#0F172A]">Signer le devis</h2>
       <p className="mt-1 text-sm text-[#6B7280]">
-        Renseignez votre nom complet pour valider le devis. Votre signature
-        a la même valeur juridique qu&apos;une signature manuscrite.
+        Dessinez votre signature ci-dessous (au doigt sur mobile ou à la
+        souris sur ordinateur). Elle a la même valeur juridique qu&apos;une
+        signature manuscrite.
       </p>
+
+      <div className="mt-5">
+        <label className="mb-1 block text-[11px] font-semibold uppercase tracking-widest text-[#6B7280]">
+          Votre signature *
+        </label>
+        <SignaturePad
+          ref={padRef}
+          onSignatureChange={(dataUrl) => setHasStroke(dataUrl !== null)}
+          placeholder="Signez ici"
+        />
+      </div>
 
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
         <div>

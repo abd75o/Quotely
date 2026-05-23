@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { FileText, Plus, Trash2, UserPlus, X } from "lucide-react";
 import { EditableField } from "./EditableField";
+import { UnitSelect } from "./UnitSelect";
 import {
   Totals,
   computeQuoteTotals,
@@ -243,11 +244,9 @@ export function QuoteFullscreen({
                         />
                       </div>
                       <div className="flex justify-center">
-                        <EditableField
-                          value={line.unit ?? "—"}
-                          onSave={(v) => updateLine(line.id, { unit: v })}
-                          label="Unité"
-                          width="3rem"
+                        <UnitSelect
+                          value={line.unit ?? null}
+                          onChange={(v) => updateLine(line.id, { unit: v })}
                           disabled={validated}
                         />
                       </div>

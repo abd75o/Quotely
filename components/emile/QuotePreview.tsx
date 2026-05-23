@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { EditableField } from "./EditableField";
 import { LockedField } from "./LockedField";
+import { UnitSelect } from "./UnitSelect";
 import { normalizeFrTva } from "@/lib/quotes/items";
 import type {
   EmileQuoteDraft,
@@ -374,11 +375,9 @@ function LineRow({
         <span className="text-[10px] uppercase tracking-widest text-[var(--text-muted)]">
           Unité
         </span>
-        <EditableField
-          value={line.unit ?? "—"}
-          onSave={(v) => onChange({ unit: v })}
-          label="Unité"
-          width="3.5rem"
+        <UnitSelect
+          value={line.unit ?? null}
+          onChange={(v) => onChange({ unit: v })}
           disabled={validated}
         />
         <span className="text-[10px] uppercase tracking-widest text-[var(--text-muted)]">

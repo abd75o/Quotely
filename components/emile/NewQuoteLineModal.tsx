@@ -5,18 +5,8 @@ import { Loader2, X } from "lucide-react";
 import { TextField, SelectField } from "@/components/ui/Field";
 import { toastError, toastSuccess } from "@/lib/toast";
 import { humanizeError } from "@/lib/errors";
+import { QUOTE_UNITS } from "@/lib/quotes/units";
 import type { EmileQuoteLine } from "./types";
-
-const UNITS = [
-  { value: "", label: "—" },
-  { value: "m²", label: "m²" },
-  { value: "ml", label: "ml" },
-  { value: "h", label: "h" },
-  { value: "jour", label: "jour" },
-  { value: "forfait", label: "forfait" },
-  { value: "pcs", label: "pièces" },
-  { value: "autre", label: "autre" },
-];
 
 const TVA_OPTIONS = [
   { value: "20", label: "20% (standard)" },
@@ -190,7 +180,7 @@ export function NewQuoteLineModal({
               label="Unité"
               value={form.unit}
               onChange={(e) => update("unit", e.target.value)}
-              options={UNITS}
+              options={[...QUOTE_UNITS]}
             />
           </div>
           <div className="grid grid-cols-2 gap-3">

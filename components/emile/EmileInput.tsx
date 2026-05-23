@@ -1,6 +1,12 @@
 "use client";
 
-import { useRef, useState, type ClipboardEvent, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ClipboardEvent,
+  type KeyboardEvent,
+} from "react";
 import { Send, Square } from "lucide-react";
 import { VoiceButton } from "./VoiceButton";
 import { toastError } from "@/lib/toast";
@@ -43,6 +49,22 @@ export function EmileInput({
 }: EmileInputProps) {
   const [value, setValue] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize the textarea up to ~10 lines, then let it scroll. We can't
+  // do this purely in CSS because `height: auto` on a textarea is fixed at
+  // its rows attribute; we measure scrollHeight after every value change.
+  // The CSS class still pins min/max so a wipe back to "" snaps to the
+  // single-row default and a 50-line paste stops growing at the cap.
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    // Reset to "auto" first so scrollHeight reflects the CONTENT height
+    // (not the previous explicit height which would lock us in only-grow).
+    el.style.height = "auto";
+    const max = 240; // ~10 lines at our line-height; matches CSS max-h-60.
+    const next = Math.min(el.scrollHeight, max);
+    el.style.height = `${next}px`;
+  }, [value]);
 
   function submit(text: string) {
     const trimmed = text.trim();
@@ -107,7 +129,9 @@ export function EmileInput({
           // down to 13px at sm: so desktop keeps its compact density.
           // touch-action: manipulation removes the 300ms tap delay and the
           // double-tap-to-zoom gesture on the textarea itself.
-          className="max-h-32 min-h-[36px] flex-1 resize-none rounded-xl border border-[var(--border)] bg-gray-50 px-3.5 py-2 text-base outline-none transition-all touch-manipulation placeholder:text-[var(--text-muted)] focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 disabled:opacity-60 sm:text-[13px]"
+          // max-h-60 = 240px ≈ 10 lines; matches the JS cap in the
+          // auto-resize effect above.
+          className="max-h-60 min-h-[36px] flex-1 resize-none overflow-y-auto rounded-xl border border-[var(--border)] bg-gray-50 px-3.5 py-2 text-base outline-none transition-all touch-manipulation placeholder:text-[var(--text-muted)] focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 disabled:opacity-60 sm:text-[13px]"
         />
         {isLoading && onAbort ? (
           <button

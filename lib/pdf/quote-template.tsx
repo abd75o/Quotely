@@ -1203,6 +1203,7 @@ function LegalMentions(props: {
       )}
       {[...mentions.generales, ...mentions.garanties, ...mentions.specifiques]
         .filter(Boolean)
+        .filter((m) => !shadowsRenderedInsurance(m, profile))
         .map((m, i) => (
           <Text key={i} style={styles.mentionBullet}>
             • {m}
@@ -1210,6 +1211,26 @@ function LegalMentions(props: {
         ))}
     </View>
   );
+}
+
+/**
+ * Drop the generic "RC professionnelle" / "Garantie décennale" bullets
+ * from the metier mentions when the artisan has already supplied the
+ * detailed insurance fields — otherwise the PDF renders the detailed line
+ * ("RC professionnelle : MAAF n°…") AND a bare bullet right after, which
+ * reads as a missing-data placeholder.
+ *
+ * We match loosely (case-insensitive substring) so variants like
+ * "Garantie décennale (numéro de police obligatoire)" or "RC pro" all
+ * collapse into the detailed line above them.
+ */
+function shadowsRenderedInsurance(mention: string, profile: PdfProfile): boolean {
+  const m = mention.toLowerCase();
+  if (profile.rc_pro_number && m.includes("rc professionnelle")) return true;
+  if (profile.rc_pro_number && m.includes("rc pro")) return true;
+  if (profile.decennale_number && m.includes("garantie décennale")) return true;
+  if (profile.decennale_number && m.includes("decennale")) return true;
+  return false;
 }
 
 // ─── Document ──────────────────────────────────────────────────────────────

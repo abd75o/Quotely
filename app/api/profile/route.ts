@@ -1,5 +1,16 @@
 import { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { titleCaseFr } from "@/lib/format/title-case";
+
+// Fields where we auto-title-case at save time so the DB row stays
+// consistent across PDF / dashboard / search. Free text the user typed
+// in lowercase ("75011 paris") comes back capitalised ("75011 Paris").
+const TITLE_CASE_FIELDS = new Set([
+  "company",
+  "company_name",
+  "city",
+  "registration_city",
+]);
 
 export const runtime = "nodejs";
 
@@ -244,7 +255,11 @@ export async function PATCH(req: NextRequest) {
     // Generic string field: trim, null-on-empty. Non-string values are
     // silently dropped — keeps malformed payloads from poisoning the row.
     if (typeof raw === "string") {
-      payload[key] = normalizeString(raw);
+      const normalised = normalizeString(raw);
+      payload[key] =
+        normalised && TITLE_CASE_FIELDS.has(key)
+          ? titleCaseFr(normalised)
+          : normalised;
     } else if (raw === null) {
       payload[key] = null;
     }

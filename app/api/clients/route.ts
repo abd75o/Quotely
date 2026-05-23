@@ -1,4 +1,14 @@
 import { NextRequest } from "next/server";
+import { titleCaseFr } from "@/lib/format/title-case";
+
+// Same write-time normalisation as /api/profile so a client typed
+// "jean lefebre" / "paris" appears capitalised everywhere it's read.
+function titleCaseField(value: unknown): unknown {
+  if (typeof value !== "string") return value;
+  const trimmed = value.trim();
+  if (!trimmed) return value;
+  return titleCaseFr(trimmed);
+}
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
@@ -56,9 +66,20 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Apply title-case to name fields + city so the row lands in the DB
+    // with consistent casing whatever the artisan typed. We mutate a
+    // shallow copy rather than the request body to keep the rejection
+    // log readable if the insert fails.
+    const normalisedBody: Record<string, unknown> = { ...body };
+    for (const field of ["name", "first_name", "city"]) {
+      if (field in normalisedBody) {
+        normalisedBody[field] = titleCaseField(normalisedBody[field]);
+      }
+    }
+
     const { data, error } = await supabase
       .from("clients")
-      .insert({ user_id: user.id, ...body })
+      .insert({ user_id: user.id, ...normalisedBody })
       .select()
       .single();
 

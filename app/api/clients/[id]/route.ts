@@ -1,5 +1,8 @@
 import { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { titleCaseFr } from "@/lib/format/title-case";
+
+const TITLE_CASE_FIELDS = new Set(["name", "first_name", "city"]);
 
 export const runtime = "nodejs";
 
@@ -77,7 +80,9 @@ export async function PUT(
   }
 
   // Whitelist explicitly so a stray `user_id` / `id` in the body can't
-  // hijack ownership or rewrite the PK.
+  // hijack ownership or rewrite the PK. Title-case name/first_name/city on
+  // the way through so an edit normalises the row even when the artisan
+  // didn't bother fixing the casing.
   const patch: Record<string, unknown> = {};
   for (const key of [
     "name",
@@ -90,7 +95,14 @@ export async function PUT(
     "type_client",
     "siret",
   ] as const) {
-    if (key in body) patch[key] = body[key];
+    if (!(key in body)) continue;
+    const raw = body[key];
+    if (typeof raw === "string" && TITLE_CASE_FIELDS.has(key)) {
+      const trimmed = raw.trim();
+      patch[key] = trimmed ? titleCaseFr(trimmed) : raw;
+    } else {
+      patch[key] = raw;
+    }
   }
   if (Object.keys(patch).length === 0) {
     return Response.json({ error: "Aucun champ à mettre à jour." }, { status: 400 });

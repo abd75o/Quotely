@@ -16,7 +16,7 @@ async function getQuotes() {
 
     const { data, error } = await supabase
       .from("quotes")
-      .select("id, number, status, total, subtotal, tax_rate, tax_amount, public_token, signature_type, items, valid_until, created_at, notes, client:clients(name, email)")
+      .select("id, number, status, total, subtotal, tax_rate, tax_amount, signature_token, signature_type, items, valid_until, created_at, notes, client:clients(name, email)")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 

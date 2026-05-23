@@ -34,7 +34,7 @@ export async function POST(
     if (error || !quote) {
       return Response.json({ error: "Devis introuvable" }, { status: 404 });
     }
-    if (quote.status !== "pending") {
+    if (!["sent", "viewed"].includes(quote.status)) {
       return Response.json({ error: "Ce devis n'est plus en attente." }, { status: 409 });
     }
     if (!quote.client?.email) {
@@ -42,7 +42,7 @@ export async function POST(
     }
 
     const origin = process.env.NEXT_PUBLIC_APP_URL ?? request.nextUrl.origin;
-    const signLink = `${origin}/devis/${quote.public_token}`;
+    const signLink = `${origin}/sign/${quote.signature_token}`;
 
     if (process.env.RESEND_API_KEY) {
       const resend = new Resend(process.env.RESEND_API_KEY);

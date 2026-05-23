@@ -34,7 +34,7 @@ interface QuoteRow {
   number: string;
   status: string;
   total: number;
-  public_token: string;
+  signature_token: string;
   created_at: string;
   valid_until: string;
   items: QuoteItem[];
@@ -91,7 +91,7 @@ function QuoteRowMenu({ quote }: { quote: QuoteRow }) {
               onClick={async () => {
                 try {
                   await navigator.clipboard.writeText(
-                    `${window.location.origin}/devis/${quote.public_token}`
+                    `${window.location.origin}/sign/${quote.signature_token}`
                   );
                   toastSuccess("Lien copié dans le presse-papier");
                 } catch {

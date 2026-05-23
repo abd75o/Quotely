@@ -18,7 +18,7 @@ import { RotateCcw } from "lucide-react";
 
 /**
  * Native canvas signature pad — shared between the client-side signing page
- * (`/devis/[id]`) and the artisan signature modal. We deliberately avoid
+ * (`/sign/[token]`) and the artisan signature modal. We deliberately avoid
  * `react-signature-canvas` and friends; the dependency is overkill for the
  * 60 lines of logic we need and would inflate the bundle on a hot path.
  *

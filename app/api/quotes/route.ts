@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
         user_id: user.id,
         client_id: clientId,
         number: quoteNumber,
-        status: "pending",
+        status: "draft",
         items,
         subtotal: totals.subtotal,
         tax_rate: totals.taxRate,

@@ -1,11 +1,4 @@
-import { SignatureType, getSignatureType } from "@/types/index";
-
-// ─── Signature type thresholds ────────────────────────────────────────────────
-export const SIGNATURE_THRESHOLDS = {
-  simple:          1_500, // < 1 500 € → simple (finger / name + checkbox)
-  email_confirmed: 5_000, // 1 500–5 000 € → finger + email confirmation
-  // > 5 000 € → YouSign eIDAS
-} as const;
+import { getSignatureType } from "@/types/index";
 
 export { getSignatureType };
 
@@ -109,65 +102,9 @@ export async function createYouSignProcedure({
   };
 }
 
-// ─── Email confirmation token ─────────────────────────────────────────────────
+// ─── Public token (used to build the public /sign/[token] URL) ────────────────
 import crypto from "crypto";
-
-export function generateConfirmationToken(): string {
-  return crypto.randomBytes(32).toString("hex");
-}
 
 export function generatePublicToken(): string {
   return crypto.randomBytes(24).toString("base64url");
-}
-
-// ─── Notification helper (artisan notified when client signs) ─────────────────
-export async function notifyArtisanSigned({
-  artisanEmail,
-  artisanName,
-  clientName,
-  quoteNumber,
-  totalEuros,
-  quoteUrl,
-}: {
-  artisanEmail: string;
-  artisanName: string;
-  clientName: string;
-  quoteNumber: string;
-  totalEuros: number;
-  quoteUrl: string;
-}) {
-  // Uses Resend — configured in lib/resend.ts
-  const { Resend } = await import("resend");
-  const resend = new Resend(process.env.RESEND_API_KEY);
-
-  await resend.emails.send({
-    from: "Quovi <notifications@quovi.fr>",
-    to: artisanEmail,
-    subject: `✅ ${clientName} a signé votre devis ${quoteNumber} — ${totalEuros.toLocaleString("fr-FR")} €`,
-    html: `
-      <div style="font-family: Inter, Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 32px 24px;">
-        <div style="background: #6366F1; border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 24px;">
-          <h1 style="color: white; font-size: 20px; margin: 0;">Devis signé ! 🎉</h1>
-        </div>
-        <p style="color: #374151; font-size: 16px; line-height: 1.6;">
-          Bonjour <strong>${artisanName}</strong>,
-        </p>
-        <p style="color: #374151; font-size: 16px; line-height: 1.6;">
-          Bonne nouvelle ! <strong>${clientName}</strong> vient de signer votre devis
-          <strong>${quoteNumber}</strong> d'un montant de <strong>${totalEuros.toLocaleString("fr-FR")} €</strong>.
-        </p>
-        <p style="color: #374151; font-size: 16px; line-height: 1.6;">
-          La facture a été générée automatiquement et est disponible dans votre espace Quovi.
-        </p>
-        <div style="text-align: center; margin: 32px 0;">
-          <a href="${quoteUrl}" style="background: #6366F1; color: white; text-decoration: none; padding: 14px 28px; border-radius: 10px; font-weight: 600; font-size: 15px;">
-            Voir le devis signé →
-          </a>
-        </div>
-        <p style="color: #9CA3AF; font-size: 13px; margin-top: 24px;">
-          Quovi · <a href="https://quovi.fr" style="color: #6366F1;">quovi.fr</a>
-        </p>
-      </div>
-    `,
-  });
 }

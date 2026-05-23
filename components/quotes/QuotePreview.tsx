@@ -51,6 +51,30 @@ interface Artisan {
   phone?: string;
   siret?: string;
   logo_url?: string;
+  address?: string;
+  postal_code?: string;
+  city?: string;
+  legal_status?: string;
+  registration_number?: string;
+  registration_city?: string;
+  decennale_company?: string;
+  decennale_number?: string;
+  rc_pro_number?: string;
+}
+
+const RCS_LEGAL_STATUSES = new Set(["sarl", "sas", "sasu", "eurl"]);
+const RM_LEGAL_STATUSES = new Set(["ei", "auto-entrepreneur"]);
+
+function artisanRegistrationLabel(a: Artisan | null | undefined): string | null {
+  if (!a?.registration_number) return null;
+  const status = (a.legal_status ?? "").toLowerCase().trim();
+  if (RCS_LEGAL_STATUSES.has(status)) {
+    return a.registration_city
+      ? `RCS ${a.registration_city} ${a.registration_number}`
+      : `RCS ${a.registration_number}`;
+  }
+  if (RM_LEGAL_STATUSES.has(status)) return `RM ${a.registration_number}`;
+  return `N° ${a.registration_number}`;
 }
 
 // Title-cases a multi-word string while preserving short uppercase acronyms
@@ -475,11 +499,38 @@ export function QuotePreview({ quote }: { quote: Quote }) {
                   </p>
                 )}
                 <p>{quote.artisan.name}</p>
+                {quote.artisan.address && <p>{quote.artisan.address}</p>}
+                {(quote.artisan.postal_code || quote.artisan.city) && (
+                  <p>
+                    {[quote.artisan.postal_code, quote.artisan.city]
+                      .filter(Boolean)
+                      .join(" ")}
+                  </p>
+                )}
                 <p>{quote.artisan.email}</p>
                 {quote.artisan.phone && <p>{quote.artisan.phone}</p>}
                 {quote.artisan.siret && (
                   <p className="text-xs text-[var(--text-muted)]">
                     SIRET {formatSiret(quote.artisan.siret) || quote.artisan.siret}
+                  </p>
+                )}
+                {artisanRegistrationLabel(quote.artisan) && (
+                  <p className="text-xs text-[var(--text-muted)]">
+                    {artisanRegistrationLabel(quote.artisan)}
+                  </p>
+                )}
+                {quote.artisan.decennale_number && (
+                  <p className="text-xs text-[var(--text-muted)]">
+                    Décennale
+                    {quote.artisan.decennale_company
+                      ? ` ${quote.artisan.decennale_company}`
+                      : ""}{" "}
+                    n°{quote.artisan.decennale_number}
+                  </p>
+                )}
+                {quote.artisan.rc_pro_number && (
+                  <p className="text-xs text-[var(--text-muted)]">
+                    RC pro n°{quote.artisan.rc_pro_number}
                   </p>
                 )}
               </div>

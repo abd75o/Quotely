@@ -11,6 +11,15 @@ interface ProfileRow {
   telephone?: string | null;
   siret?: string | null;
   logo_url?: string | null;
+  address?: string | null;
+  postal_code?: string | null;
+  city?: string | null;
+  legal_status?: string | null;
+  registration_number?: string | null;
+  registration_city?: string | null;
+  decennale_company?: string | null;
+  decennale_number?: string | null;
+  rc_pro_number?: string | null;
 }
 
 // Quotes can be persisted with two different JSON shapes:
@@ -68,7 +77,7 @@ async function getQuote(id: string) {
     const { data: profile } = await supabase
       .from("profiles")
       .select(
-        "first_name, last_name, company_name, company, telephone, siret, logo_url",
+        "first_name, last_name, company_name, company, telephone, siret, logo_url, address, postal_code, city, legal_status, registration_number, registration_city, decennale_company, decennale_number, rc_pro_number",
       )
       .eq("id", (quote as { user_id: string }).user_id)
       .maybeSingle();
@@ -94,6 +103,15 @@ async function getQuote(id: string) {
         phone: p.telephone ?? undefined,
         siret: p.siret ?? undefined,
         logo_url: p.logo_url ?? undefined,
+        address: p.address ?? undefined,
+        postal_code: p.postal_code ?? undefined,
+        city: p.city ?? undefined,
+        legal_status: p.legal_status ?? undefined,
+        registration_number: p.registration_number ?? undefined,
+        registration_city: p.registration_city ?? undefined,
+        decennale_company: p.decennale_company ?? undefined,
+        decennale_number: p.decennale_number ?? undefined,
+        rc_pro_number: p.rc_pro_number ?? undefined,
       },
     };
   } catch (e) {

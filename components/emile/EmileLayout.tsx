@@ -7,7 +7,8 @@ import { cn } from "@/lib/utils";
 import { ConversationsSidebar } from "./ConversationsSidebar";
 import { EmileChat } from "./EmileChat";
 import { QuotePreview } from "./QuotePreview";
-import { QuoteFullscreen } from "./QuoteFullscreen";
+import { QuoteFullscreen, type EmitterSnapshot } from "./QuoteFullscreen";
+import { formatSiret } from "@/lib/format/siret";
 import { NewQuoteLineModal } from "./NewQuoteLineModal";
 import {
   ClientSelectorModal,
@@ -96,9 +97,27 @@ function updateToDraft(
   };
 }
 
+const RCS_LEGAL_STATUSES = new Set(["sarl", "sas", "sasu", "eurl"]);
+const RM_LEGAL_STATUSES = new Set(["ei", "auto-entrepreneur"]);
+
+function buildRegistrationLabel(
+  number: string | null,
+  city: string | null,
+  legalStatus: string | null,
+): string | null {
+  if (!number) return null;
+  const status = (legalStatus ?? "").toLowerCase().trim();
+  if (RCS_LEGAL_STATUSES.has(status)) {
+    return city ? `RCS ${city} ${number}` : `RCS ${number}`;
+  }
+  if (RM_LEGAL_STATUSES.has(status)) return `RM ${number}`;
+  return `N° ${number}`;
+}
+
 export function EmileLayout({ conversationId }: EmileLayoutProps) {
   const router = useRouter();
   const [quote, setQuote] = useState<EmileQuoteDraft | null>(null);
+  const [emitter, setEmitter] = useState<EmitterSnapshot | null>(null);
   const [mobileView, setMobileView] = useState<MobileView>("chat");
   const [fullscreen, setFullscreen] = useState(false);
   const [showNewLine, setShowNewLine] = useState(false);
@@ -107,6 +126,51 @@ export function EmileLayout({ conversationId }: EmileLayoutProps) {
   // the fullscreen view; PATCHes /api/quotes/:id on select.
   const [clientPickerOpen, setClientPickerOpen] = useState(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Issuer snapshot for the QuoteFullscreen "Émetteur" card. Fetched once
+  // per mount — /api/profile reads the artisan's own row (RLS-friendly, the
+  // artisan is logged in here) and the cards downstream get the same shape.
+  // Cheap GET, no auto-refresh; the artisan edits profile in another tab.
+  useEffect(() => {
+    let cancelled = false;
+    void fetch("/api/profile")
+      .then((res) => (res.ok ? res.json() : Promise.reject(res)))
+      .then((json: { profile?: Record<string, string | null> }) => {
+        if (cancelled) return;
+        const p = json.profile ?? {};
+        const company =
+          (p.company_name as string | null) ||
+          (p.company as string | null) ||
+          null;
+        if (!company) {
+          setEmitter(null);
+          return;
+        }
+        const siretRaw = (p.siret as string | null) ?? null;
+        const siret = siretRaw ? formatSiret(siretRaw) || siretRaw : null;
+        setEmitter({
+          company,
+          address: (p.address as string | null) ?? null,
+          postal_code: (p.postal_code as string | null) ?? null,
+          city: (p.city as string | null) ?? null,
+          siret,
+          decennale_company: (p.decennale_company as string | null) ?? null,
+          decennale_number: (p.decennale_number as string | null) ?? null,
+          rc_pro_number: (p.rc_pro_number as string | null) ?? null,
+          registration_label: buildRegistrationLabel(
+            (p.registration_number as string | null) ?? null,
+            (p.registration_city as string | null) ?? null,
+            (p.legal_status as string | null) ?? null,
+          ),
+        });
+      })
+      .catch((err) => {
+        console.warn("[EmileLayout] profile fetch failed", err);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleQuoteUpdate = useCallback((update: EmileQuoteUpdate) => {
     setQuote((prev) => updateToDraft(update, prev));
@@ -341,6 +405,7 @@ export function EmileLayout({ conversationId }: EmileLayoutProps) {
           onClose={() => setFullscreen(false)}
           onOpenAddLine={() => setShowNewLine(true)}
           onPickClient={handleOpenClientPicker}
+          emitter={emitter}
         />
       )}
 

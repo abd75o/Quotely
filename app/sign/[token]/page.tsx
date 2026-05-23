@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { resolveMentionsLegales } from "@/lib/pdf/mentions-legales";
 import { shouldShowBranding } from "@/lib/branding/should-show";
 import { formatSiret } from "@/lib/format/siret";
@@ -53,6 +54,7 @@ interface PublicQuote {
     metier_principal: string | null;
     siret: string | null;
     vat_status: string | null;
+    vat_number: string | null;
     address: string | null;
     postal_code: string | null;
     city: string | null;
@@ -62,6 +64,14 @@ interface PublicQuote {
     plan: string | null;
     hide_branding: boolean | null;
     email: string | null;
+    legal_status: string | null;
+    registration_number: string | null;
+    registration_city: string | null;
+    decennale_company: string | null;
+    decennale_number: string | null;
+    decennale_zone: string | null;
+    rc_pro_company: string | null;
+    rc_pro_number: string | null;
   } | null;
 }
 
@@ -77,10 +87,16 @@ async function loadQuote(token: string): Promise<PublicQuote | null> {
       .maybeSingle();
     if (error || !data) return null;
 
-    const { data: profile } = await supabase
+    // /sign/[token] is PUBLIC — anon clients arriving from the email link
+    // can't pass profiles RLS (auth.uid() = id). Without the admin client,
+    // `profile` was null for real clients and companyDisplay() fell back to
+    // "Devis". The signature_token already proves the visitor is entitled to
+    // see this quote's issuer info, so bypassing RLS here is safe.
+    const admin = getSupabaseAdmin();
+    const { data: profile } = await admin
       .from("profiles")
       .select(
-        "company_name, company, first_name, last_name, metier, metier_principal, siret, vat_status, address, postal_code, city, telephone, logo_url, couleur_principale, plan, hide_branding, email",
+        "company_name, company, first_name, last_name, metier, metier_principal, siret, vat_status, vat_number, address, postal_code, city, telephone, logo_url, couleur_principale, plan, hide_branding, email, legal_status, registration_number, registration_city, decennale_company, decennale_number, decennale_zone, rc_pro_company, rc_pro_number",
       )
       .eq("id", data.user_id as string)
       .maybeSingle();
@@ -130,6 +146,37 @@ async function loadQuote(token: string): Promise<PublicQuote | null> {
   } catch {
     return null;
   }
+}
+
+const RCS_LEGAL_STATUSES = new Set(["sarl", "sas", "sasu", "eurl"]);
+const RM_LEGAL_STATUSES = new Set(["ei", "auto-entrepreneur"]);
+
+function formatRegistrationFr(p: PublicQuote["profile"]): string | null {
+  const number = p?.registration_number?.trim();
+  if (!number) return null;
+  const status = (p?.legal_status ?? "").toLowerCase().trim();
+  if (RCS_LEGAL_STATUSES.has(status)) {
+    const city = p?.registration_city?.trim();
+    return city ? `RCS ${city} ${number}` : `RCS ${number}`;
+  }
+  if (RM_LEGAL_STATUSES.has(status)) return `RM ${number}`;
+  return `N° ${number}`;
+}
+
+function formatDecennaleFr(p: PublicQuote["profile"]): string | null {
+  const num = p?.decennale_number?.trim();
+  if (!num) return null;
+  const insurer = p?.decennale_company?.trim();
+  const zone = p?.decennale_zone?.trim();
+  const body = insurer ? `${insurer} n°${num}` : num;
+  return `Décennale : ${body}${zone ? ` — ${zone}` : ""}`;
+}
+
+function formatRcProFr(p: PublicQuote["profile"]): string | null {
+  const num = p?.rc_pro_number?.trim();
+  if (!num) return null;
+  const insurer = p?.rc_pro_company?.trim();
+  return `RC pro : ${insurer ? `${insurer} n°${num}` : num}`;
 }
 
 function companyDisplay(
@@ -202,6 +249,12 @@ export default async function PublicSignaturePage({
     typeClient: quote.client?.type_client ?? "particulier",
     vatStatus: quote.profile?.vat_status,
   });
+  // RCS / RM mention shown under SIRET. Same logic as the PDF
+  // (lib/pdf/quote-template.tsx formatRegistration) — label switches on
+  // legal_status so sociétés get "RCS Paris …", artisans get "RM …".
+  const registration = formatRegistrationFr(quote.profile);
+  const decennaleLine = formatDecennaleFr(quote.profile);
+  const rcProLine = formatRcProFr(quote.profile);
 
   const pdfUrl = `/api/quotes/${quote.id}/pdf?token=${quote.signature_token}`;
   const showBranding = shouldShowBranding(
@@ -276,14 +329,24 @@ export default async function PublicSignaturePage({
               label="Émetteur"
               name={company}
               lines={[
+                quote.profile?.legal_status,
                 quote.profile?.address,
                 [quote.profile?.postal_code, quote.profile?.city]
                   .filter(Boolean)
                   .join(" "),
+                quote.profile?.telephone
+                  ? `Tél : ${quote.profile.telephone}`
+                  : null,
+                quote.profile?.email,
                 quote.profile?.siret
                   ? `SIRET ${formatSiret(quote.profile.siret) || quote.profile.siret}`
                   : null,
-                quote.profile?.telephone,
+                registration,
+                quote.profile?.vat_number
+                  ? `TVA intra. ${quote.profile.vat_number}`
+                  : null,
+                decennaleLine,
+                rcProLine,
               ]}
               color={color}
             />

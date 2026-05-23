@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { generateQuotePdfBuffer } from "@/lib/pdf/generate";
 import type {
   PdfClient,
@@ -64,7 +65,14 @@ export async function GET(
     });
   }
 
-  const { data: profile } = await supabase
+  // When the artisan downloads their own PDF, RLS lets them read their
+  // profile. When the client opens the PDF from the email link (anon +
+  // signature_token), RLS blocks it and the PDF would render with an empty
+  // emitter (broken doc on every shared link). The signature_token already
+  // gates access to the quote, so we re-use that proof to fetch the profile
+  // via the admin client whenever the token path is taken.
+  const profileClient = token ? getSupabaseAdmin() : supabase;
+  const { data: profile } = await profileClient
     .from("profiles")
     .select("*")
     .eq("id", quote.user_id as string)

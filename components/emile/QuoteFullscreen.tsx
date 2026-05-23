@@ -11,6 +11,25 @@ import {
 import { normalizeFrTva } from "@/lib/quotes/items";
 import type { EmileQuoteDraft, EmileQuoteLine } from "./types";
 
+/**
+ * Minimal emitter snapshot rendered in the "Émetteur" card. We only thread
+ * what the card actually shows; the right-panel QuotePreview doesn't need
+ * this since it focuses on lines + editing. Kept loose (`null` allowed) so
+ * a missing /api/profile fetch still renders the card with the artisan's
+ * email rather than blowing up the fullscreen view.
+ */
+export interface EmitterSnapshot {
+  company: string | null;
+  address: string | null;
+  postal_code: string | null;
+  city: string | null;
+  siret: string | null;
+  decennale_company: string | null;
+  decennale_number: string | null;
+  rc_pro_number: string | null;
+  registration_label: string | null;
+}
+
 interface QuoteFullscreenProps {
   quote: EmileQuoteDraft;
   onUpdate: (next: EmileQuoteDraft) => void;
@@ -22,6 +41,12 @@ interface QuoteFullscreenProps {
    * (which owns the selector modal + the PATCH).
    */
   onPickClient?: () => void;
+  /**
+   * Issuer profile snapshot for the Émetteur card. When null/undefined we
+   * fall back to a "complete your profile" hint — same wording as before
+   * but only shown when the profile genuinely lacks data.
+   */
+  emitter?: EmitterSnapshot | null;
 }
 
 export function QuoteFullscreen({
@@ -30,6 +55,7 @@ export function QuoteFullscreen({
   onClose,
   onOpenAddLine,
   onPickClient,
+  emitter,
 }: QuoteFullscreenProps) {
   const validated =
     quote.status === "sent" ||
@@ -140,12 +166,7 @@ export function QuoteFullscreen({
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">
                   Émetteur
                 </p>
-                <p className="mt-1 text-[14px] font-semibold text-[var(--text-primary)]">
-                  Votre entreprise
-                </p>
-                <p className="text-[12px] text-[var(--text-secondary)]">
-                  Vérifie tes infos dans /dashboard/parametres.
-                </p>
+                <EmitterCardBody emitter={emitter ?? null} />
               </div>
               <div className="rounded-xl border border-[var(--border)] bg-white p-4">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">
@@ -298,7 +319,7 @@ export function QuoteFullscreen({
               )}
             </div>
 
-            {/* Totals */}
+            {/* Totals (positioned below) */}
             <div className="ml-auto w-full max-w-sm rounded-xl border border-[var(--border)] bg-white p-4 text-[13px]">
               <Totals totals={totals} />
             </div>
@@ -311,5 +332,43 @@ export function QuoteFullscreen({
         </div>
       </div>
     </div>
+  );
+}
+
+function EmitterCardBody({ emitter }: { emitter: EmitterSnapshot | null }) {
+  if (!emitter || !emitter.company) {
+    return (
+      <>
+        <p className="mt-1 text-[14px] font-semibold text-[var(--text-primary)]">
+          Votre entreprise
+        </p>
+        <p className="text-[12px] text-[var(--text-secondary)]">
+          Vérifie tes infos dans /dashboard/parametres/entreprise.
+        </p>
+      </>
+    );
+  }
+  const cityLine = [emitter.postal_code, emitter.city]
+    .filter(Boolean)
+    .join(" ");
+  const decennale = emitter.decennale_number
+    ? `Décennale${emitter.decennale_company ? ` ${emitter.decennale_company}` : ""} n°${emitter.decennale_number}`
+    : null;
+  return (
+    <>
+      <p className="mt-1 text-[14px] font-semibold text-[var(--text-primary)]">
+        {emitter.company}
+      </p>
+      <div className="space-y-0.5 text-[12px] text-[var(--text-secondary)]">
+        {emitter.address && <p>{emitter.address}</p>}
+        {cityLine && <p>{cityLine}</p>}
+        {emitter.siret && <p>SIRET {emitter.siret}</p>}
+        {emitter.registration_label && <p>{emitter.registration_label}</p>}
+        {decennale && <p>{decennale}</p>}
+        {emitter.rc_pro_number && (
+          <p>RC pro n°{emitter.rc_pro_number}</p>
+        )}
+      </div>
+    </>
   );
 }

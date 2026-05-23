@@ -5,12 +5,7 @@ import {
   computeQuoteTotals,
   normalizeQuoteItems,
 } from "@/lib/quotes/items";
-
-function generateQuoteNumber(): string {
-  const year = new Date().getFullYear();
-  const seq = String(Math.floor(Math.random() * 9000) + 1000);
-  return `QTL-${year}-${seq}`;
-}
+import { bumpQuoteNumber, nextQuoteNumber } from "@/lib/quotes/numbering";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
@@ -50,7 +45,6 @@ export async function POST(request: NextRequest) {
   let body: {
     clientId?: string;
     newClient?: { name: string; email: string; phone?: string };
-    number?: string;
     taxRate?: number;
     items: unknown;
     validUntil?: string;
@@ -69,7 +63,6 @@ export async function POST(request: NextRequest) {
   const items = normalizeQuoteItems(body.items, defaultTva);
   const totals = computeQuoteTotals(items);
 
-  const quoteNumber = body.number || generateQuoteNumber();
   const publicToken = generatePublicToken();
   const signatureType = getSignatureType(totals.total);
   const validUntil = body.validUntil || new Date(Date.now() + 30 * 86400_000).toISOString();
@@ -95,29 +88,52 @@ export async function POST(request: NextRequest) {
       if (!clientError) clientId = newClient.id;
     }
 
-    const { data, error } = await supabase
-      .from("quotes")
-      .insert({
-        user_id: user.id,
-        client_id: clientId,
-        number: quoteNumber,
-        status: "draft",
-        items,
-        subtotal: totals.subtotal,
-        tax_rate: totals.taxRate,
-        tax_amount: totals.taxAmount,
-        tax_breakdown: totals.taxBreakdown,
-        total: totals.total,
-        valid_until: validUntil,
-        notes: body.notes ?? null,
-        public_token: publicToken,
-        signature_type: signatureType,
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-    return Response.json({ quote: data }, { status: 201 });
+    // Unified sequential numbering: same helper as Émile (lib/emile/tools.ts
+    // saveQuoteDraft) and bulk-import (app/api/quotes/bulk-lines). Retry on
+    // UNIQUE(user_id, number) collisions — the constraint is added in
+    // 20260519_emile_fixes_batch1.sql. Body-supplied `number` is no longer
+    // accepted to avoid a future caller short-circuiting the séquence.
+    let candidateNumber = await nextQuoteNumber(supabase, user.id);
+    let created:
+      | { id: string; number: string; [k: string]: unknown }
+      | null = null;
+    let lastErr: { message: string; code?: string } | null = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const res = await supabase
+        .from("quotes")
+        .insert({
+          user_id: user.id,
+          client_id: clientId,
+          number: candidateNumber,
+          status: "draft",
+          items,
+          subtotal: totals.subtotal,
+          tax_rate: totals.taxRate,
+          tax_amount: totals.taxAmount,
+          tax_breakdown: totals.taxBreakdown,
+          total: totals.total,
+          valid_until: validUntil,
+          notes: body.notes ?? null,
+          public_token: publicToken,
+          signature_type: signatureType,
+        })
+        .select()
+        .single();
+      if (!res.error) {
+        created = res.data;
+        break;
+      }
+      lastErr = res.error as { message: string; code?: string };
+      if (lastErr.code === "23505") {
+        candidateNumber = bumpQuoteNumber(candidateNumber);
+        continue;
+      }
+      break;
+    }
+    if (!created) {
+      throw new Error(lastErr?.message ?? "Insert failed");
+    }
+    return Response.json({ quote: created }, { status: 201 });
   } catch (err) {
     console.error("[api/quotes] POST failed:", err);
     return Response.json(

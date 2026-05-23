@@ -126,9 +126,13 @@ export function QuotePreview({
             <button
               type="button"
               onClick={onOpenFullscreen}
-              aria-label="Voir en plein écran"
-              title="Voir en plein écran"
-              className="flex h-7 w-7 items-center justify-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-gray-100 hover:text-[var(--text-primary)]"
+              aria-label="Ouvrir le devis en plein écran"
+              title="Ouvrir en plein écran"
+              // Brand-tinted background + indigo icon: the previous neutral
+              // gray icon was too discreet — artisans missed it during
+              // testing. We keep the size (h-7 w-7) so the header still
+              // breathes, just bumping contrast.
+              className="flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--primary)]/30 bg-[var(--primary-bg)] text-[var(--primary)] transition-colors hover:border-[var(--primary)] hover:bg-[var(--primary)] hover:text-white"
             >
               <Maximize2 className="h-3.5 w-3.5" />
             </button>

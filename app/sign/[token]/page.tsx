@@ -92,14 +92,50 @@ async function loadQuote(token: string): Promise<PublicQuote | null> {
     // `profile` was null for real clients and companyDisplay() fell back to
     // "Devis". The signature_token already proves the visitor is entitled to
     // see this quote's issuer info, so bypassing RLS here is safe.
-    const admin = getSupabaseAdmin();
-    const { data: profile } = await admin
-      .from("profiles")
-      .select(
-        "company_name, company, first_name, last_name, metier, metier_principal, siret, vat_status, vat_number, address, postal_code, city, telephone, logo_url, couleur_principale, plan, hide_branding, email, legal_status, registration_number, registration_city, decennale_company, decennale_number, decennale_zone, rc_pro_company, rc_pro_number",
-      )
-      .eq("id", data.user_id as string)
-      .maybeSingle();
+    //
+    // Resilience: if the admin client is unavailable (e.g.
+    // SUPABASE_SERVICE_ROLE_KEY missing from the runtime env on a partial
+    // deploy), getSupabaseAdmin() throws and we fall back to the SSR
+    // client. That fallback works for the artisan-previewing-their-own-quote
+    // path (RLS passes because auth.uid() = profile.id) and at least keeps
+    // the dashboard owner unblocked. We log the failure so the misconfig
+    // surfaces in the platform logs instead of silently shipping a broken
+    // emitter to clients.
+    const profileSelect =
+      "company_name, company, first_name, last_name, metier, metier_principal, siret, vat_status, vat_number, address, postal_code, city, telephone, logo_url, couleur_principale, plan, hide_branding, email, legal_status, registration_number, registration_city, decennale_company, decennale_number, decennale_zone, rc_pro_company, rc_pro_number";
+
+    let profile: Record<string, unknown> | null = null;
+    try {
+      const admin = getSupabaseAdmin();
+      const { data: row } = await admin
+        .from("profiles")
+        .select(profileSelect)
+        .eq("id", data.user_id as string)
+        .maybeSingle();
+      profile = (row as Record<string, unknown> | null) ?? null;
+    } catch (e) {
+      console.error(
+        "[sign/[token]] admin profile fetch failed, falling back to SSR client:",
+        e,
+      );
+    }
+
+    if (!profile) {
+      const { data: row } = await supabase
+        .from("profiles")
+        .select(profileSelect)
+        .eq("id", data.user_id as string)
+        .maybeSingle();
+      profile = (row as Record<string, unknown> | null) ?? null;
+    }
+
+    if (!profile) {
+      console.error(
+        "[sign/[token]] profile not found for user_id=" +
+          String(data.user_id) +
+          " — emitter block will fall back to generic label.",
+      );
+    }
 
     const clientRow = Array.isArray(data.clients)
       ? (data.clients[0] as Record<string, unknown> | undefined)
@@ -379,6 +415,9 @@ export default async function PublicSignaturePage({
                 <tr>
                   <th className="px-4 py-2 font-semibold">Description</th>
                   <th className="px-4 py-2 text-right font-semibold">Qté</th>
+                  <th className="px-4 py-2 text-center font-semibold">
+                    Unité
+                  </th>
                   <th className="px-4 py-2 text-right font-semibold">PU HT</th>
                   <th className="px-4 py-2 text-right font-semibold">TVA</th>
                   <th className="px-4 py-2 text-right font-semibold">
@@ -397,6 +436,9 @@ export default async function PublicSignaturePage({
                       </td>
                       <td className="px-4 py-3 text-right text-[#374151]">
                         {qty}
+                      </td>
+                      <td className="px-4 py-3 text-center text-[#6B7280]">
+                        {line.unite ?? "—"}
                       </td>
                       <td className="px-4 py-3 text-right text-[#374151]">
                         {formatEuros(Number(line.price ?? 0))}

@@ -51,7 +51,7 @@ export interface StatBlock {
 export interface ActivityEntry {
   id: string;
   type: ActivityType;
-  /** Already-formatted French label, e.g. "Marc Dubois a signé le devis QTL-2026-0042". */
+  /** Already-formatted French label, e.g. "Marc Dubois a signé le devis QVI-2026-00042". */
   label: string;
   /** ISO timestamp; the client renders the relative ago-label. */
   date: string;

@@ -796,13 +796,13 @@ export function createEmileTools(ctx: EmileToolContext) {
 
     clearQuoteLines: tool({
       description:
-        "Vide TOUTES les lignes du devis en cours (items = []), sans supprimer le devis. À utiliser quand l'artisan dit 'recommence', 'repars de zéro', 'efface tout et refais', 'recrée le devis' ou équivalent. APRÈS clearQuoteLines, appelle saveQuoteDraft avec les nouvelles lignes pour repeupler le devis. Refuse l'opération si le devis est déjà envoyé/signé (status !== 'draft'). Accepte UUID OU numéro QTL-YYYY-NNNNN ; si omis, retombe sur le devis de la conversation. Retourne { ok, quoteId, cleared } ou { ok: false, error }.",
+        "Vide TOUTES les lignes du devis en cours (items = []), sans supprimer le devis. À utiliser quand l'artisan dit 'recommence', 'repars de zéro', 'efface tout et refais', 'recrée le devis' ou équivalent. APRÈS clearQuoteLines, appelle saveQuoteDraft avec les nouvelles lignes pour repeupler le devis. Refuse l'opération si le devis est déjà envoyé/signé (status !== 'draft'). Accepte UUID OU numéro QVI-YYYY-NNNNN ; si omis, retombe sur le devis de la conversation. Retourne { ok, quoteId, cleared } ou { ok: false, error }.",
       inputSchema: z.object({
         quoteId: z
           .string()
           .optional()
           .describe(
-            "UUID du devis OU numéro QTL-YYYY-NNNNN. Si omis, le serveur prend le devis lié à la conversation.",
+            "UUID du devis OU numéro QVI-YYYY-NNNNN. Si omis, le serveur prend le devis lié à la conversation.",
           ),
       }),
       execute: async ({ quoteId }) => {
@@ -847,12 +847,12 @@ export function createEmileTools(ctx: EmileToolContext) {
 
     sendQuote: tool({
       description:
-        "Envoie le devis au client par email (avec PDF en pièce jointe). À appeler UNIQUEMENT après confirmation explicite de l'artisan via le récap OU shortcut 'envoie direct'. NE PAS appeler sans validation. Tu peux passer soit l'UUID interne, soit le numéro QTL-YYYY-NNNNN — le serveur résout. Retourne { ok, messageId, signLink } ou { ok: false, error, missing? }.",
+        "Envoie le devis au client par email (avec PDF en pièce jointe). À appeler UNIQUEMENT après confirmation explicite de l'artisan via le récap OU shortcut 'envoie direct'. NE PAS appeler sans validation. Tu peux passer soit l'UUID interne, soit le numéro QVI-YYYY-NNNNN — le serveur résout. Retourne { ok, messageId, signLink } ou { ok: false, error, missing? }.",
       inputSchema: z.object({
         quoteId: z
           .string()
           .describe(
-            "UUID du devis OU numéro QTL-YYYY-NNNNN. Si omis ou non résolu, le serveur retombe sur conversations.related_quote_id (le devis de la conversation en cours).",
+            "UUID du devis OU numéro QVI-YYYY-NNNNN. Si omis ou non résolu, le serveur retombe sur conversations.related_quote_id (le devis de la conversation en cours).",
           )
           .optional(),
         customMessage: z
@@ -867,7 +867,7 @@ export function createEmileTools(ctx: EmileToolContext) {
           // Resolve the canonical UUID before handing off to executeSendQuote.
           // preferConversation=true: when the artisan says "envoie le devis",
           // the conversation's related_quote_id is more reliable than whatever
-          // identifier the LLM passes (it sometimes hands the QTL number,
+          // identifier the LLM passes (it sometimes hands the QVI number,
           // which sent the row-lookup down the "Devis introuvable" branch).
           const resolvedId = await resolveQuoteId(supabase, userId, {
             raw: quoteId,
@@ -876,7 +876,7 @@ export function createEmileTools(ctx: EmileToolContext) {
           });
           if (!resolvedId) {
             return err(
-              "Devis introuvable. Passe un UUID ou un numéro QTL-YYYY-NNNNN, ou assure-toi que la conversation est bien liée à un devis.",
+              "Devis introuvable. Passe un UUID ou un numéro QVI-YYYY-NNNNN, ou assure-toi que la conversation est bien liée à un devis.",
             );
           }
           const result = await executeSendQuote({
@@ -992,13 +992,13 @@ export function createEmileTools(ctx: EmileToolContext) {
 
     linkClientToQuote: tool({
       description:
-        "Associe un client à un devis existant (UPDATE quotes SET client_id = clientId). À utiliser quand l'artisan demande 'associe ce devis à <client>', 'lie ce devis au client X', 'rattache le client X au devis' ou équivalent — ou quand sendQuote a échoué parce que le devis n'a pas de client. Accepte UUID OU numéro QTL-YYYY-NNNNN pour quoteId ; si omis, prend le devis de la conversation. Refuse les devis déjà envoyés/signés (status !== 'draft'). Retourne { ok, quoteId, number, client: {...} } ou { ok: false, error }.",
+        "Associe un client à un devis existant (UPDATE quotes SET client_id = clientId). À utiliser quand l'artisan demande 'associe ce devis à <client>', 'lie ce devis au client X', 'rattache le client X au devis' ou équivalent — ou quand sendQuote a échoué parce que le devis n'a pas de client. Accepte UUID OU numéro QVI-YYYY-NNNNN pour quoteId ; si omis, prend le devis de la conversation. Refuse les devis déjà envoyés/signés (status !== 'draft'). Retourne { ok, quoteId, number, client: {...} } ou { ok: false, error }.",
       inputSchema: z.object({
         quoteId: z
           .string()
           .optional()
           .describe(
-            "UUID du devis OU numéro QTL-YYYY-NNNNN. Si omis, le serveur prend le devis lié à la conversation.",
+            "UUID du devis OU numéro QVI-YYYY-NNNNN. Si omis, le serveur prend le devis lié à la conversation.",
           ),
         clientId: z
           .string()
@@ -1154,13 +1154,13 @@ export function createEmileTools(ctx: EmileToolContext) {
 
     getQuoteStatus: tool({
       description:
-        "Récupère le statut détaillé d'un devis avec timeline (créé, envoyé, vu, signé). Utile pour répondre à 'où en est le devis X ?'. Accepte UUID OU numéro QTL-YYYY-NNNNN ; si omis, prend le devis de la conversation.",
+        "Récupère le statut détaillé d'un devis avec timeline (créé, envoyé, vu, signé). Utile pour répondre à 'où en est le devis X ?'. Accepte UUID OU numéro QVI-YYYY-NNNNN ; si omis, prend le devis de la conversation.",
       inputSchema: z.object({
         quoteId: z
           .string()
           .optional()
           .describe(
-            "UUID du devis OU numéro QTL-YYYY-NNNNN. Si omis, le serveur prend le devis lié à la conversation.",
+            "UUID du devis OU numéro QVI-YYYY-NNNNN. Si omis, le serveur prend le devis lié à la conversation.",
           ),
       }),
       execute: async ({ quoteId }) => {

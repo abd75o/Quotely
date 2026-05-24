@@ -95,7 +95,7 @@ interface BulkImportModalProps {
    * in the right-panel state) so we don't pay a round-trip on open.
    */
   existingItemCount?: number;
-  /** Active quote number, shown in the pre-step copy ("Devis QTL-… a 12 lignes"). */
+  /** Active quote number, shown in the pre-step copy ("Devis QVI-… a 12 lignes"). */
   existingQuoteNumber?: string | null;
   onImported: (info: BulkImportSuccess) => void;
 }

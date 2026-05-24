@@ -2,15 +2,17 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-// Quote numbers minted by lib/quotes/numbering.ts look like "QTL-2026-00004".
-// We're liberal on the digit suffix (4 to 6 chars) so a future tweak to the
-// numbering format doesn't silently break this resolver.
-const QUOTE_NUMBER_RE = /^QTL-\d{4}-\d{4,6}$/i;
+// Quote numbers minted by lib/quotes/numbering.ts look like "QVI-2026-00004"
+// (new) or "QTL-2026-…" (legacy Quotely-era rows still on disk). We're
+// liberal on the digit suffix (4 to 6 chars) so a future tweak to the
+// numbering format — or a 6-digit overflow past 99999 — doesn't silently
+// break this resolver. The prefix alternation matches both brand eras.
+const QUOTE_NUMBER_RE = /^Q(?:TL|VI)-\d{4}-\d{4,6}$/i;
 
 interface ResolveOptions {
   /** What the LLM (or the caller) passed as `quoteId`. May be a UUID, a
-   *  QTL-YYYY-NNNNN number, or `undefined`/`null` when the caller relies on
-   *  the conversation link entirely. */
+   *  QVI/QTL-YYYY-NNNNN number, or `undefined`/`null` when the caller relies
+   *  on the conversation link entirely. */
   raw?: string | null;
   /** Conversation in which the tool was invoked. When present, the row's
    *  `related_quote_id` is checked first if `preferConversation` is on. */
@@ -19,7 +21,7 @@ interface ResolveOptions {
    * When true, the conversation's `related_quote_id` wins over an explicit
    * `raw` id. Recommended for write-and-go tools like `sendQuote` where the
    * user's intent ("envoie le devis") is bound to the active conversation —
-   * the LLM occasionally drops the QTL number into the call when it means
+   * the LLM occasionally drops the quote number into the call when it means
    * "the devis we've been editing".
    *
    * Leave false for tools that legitimately target an arbitrary quote
@@ -39,7 +41,7 @@ interface ResolveOptions {
  *      this is the strongest signal because it's set every time a tool
  *      writes to the linked quote.
  *   2. `raw` if it matches the UUID format.
- *   3. `quotes.number` lookup when `raw` matches QTL-YYYY-NNNNN.
+ *   3. `quotes.number` lookup when `raw` matches QVI/QTL-YYYY-NNNNN.
  *   4. (fallback) `conversations.related_quote_id` if we hadn't tried it
  *      yet (preferConversation === false but raw didn't pan out).
  */

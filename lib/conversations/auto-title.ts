@@ -46,7 +46,7 @@ interface AutoTitleOptions {
   clientLabel?: string | null;
   /** First prestation libellé, used as fallback when no client. */
   fallbackPrestation?: string | null;
-  /** Devis number for the last-ditch fallback ("Devis QTL-2026-…"). */
+  /** Devis number for the last-ditch fallback ("Devis QVI-2026-…"). */
   fallbackNumber?: string | null;
   /**
    * When true, overwrite any existing title even if it doesn't look like a

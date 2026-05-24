@@ -290,3 +290,22 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* ─── Number inputs — masque les flèches natives ──────────────────────
+   Les spinners haut/bas natifs sur <input type="number"> :
+     - rognent le 1er chiffre dans les champs étroits (PU HT, Qté, TVA
+       des lignes de devis : "18" s'affichait avec un fragment du spinner
+       qui coupait le "1").
+     - polluent visuellement le design system (pas dans la palette).
+   On les neutralise globalement ; la saisie numérique reste possible
+   (clavier + collage), seules les flèches disparaissent. Le validation
+   se fait déjà via les attributs `step` / `min` côté React. */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}

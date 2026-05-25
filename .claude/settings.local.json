@@ -5,7 +5,12 @@
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
       "Bash(git push *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(git pull *)",
+      "Bash(findstr /B /C:\"NEXT_PUBLIC_SUPABASE_URL\" /C:\"SUPABASE_SERVICE_ROLE_KEY\" .env.local .env.example)",
+      "Bash(findstr /V \"=\")",
+      "Bash(npx next *)",
+      "Bash(findstr /R /C:\"error\" /C:\"warning\" /C:\"Compiled\" /C:\"Failed\" /C:\"Linting\" /C:\"Type check\" /C:\"Generating\" /I)"
     ]
   }
 }

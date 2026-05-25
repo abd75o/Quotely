@@ -87,9 +87,24 @@ export function EmileChat({
     isHydrated,
     error,
     sendMessage,
+    regenerate,
+    editAndResend,
     loadConversation,
     abort,
   } = useEmile({ conversationId, onQuoteUpdate, onConversationCreated });
+
+  // Debug (NEXT_PUBLIC_EMILE_DEBUG=1): a MOUNT followed by an UNMOUNT around a
+  // single first send is the fingerprint of the remount bug; a lone MOUNT that
+  // survives the whole turn means the history.replaceState fix held.
+  useEffect(() => {
+    if (process.env.NEXT_PUBLIC_EMILE_DEBUG !== "1") return;
+    const ts = () => new Date().toISOString();
+    console.log(`[emile-chat ${ts()}] MOUNT`, { conversationId });
+    return () => {
+      console.log(`[emile-chat ${ts()}] UNMOUNT`, { conversationId });
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -674,6 +689,8 @@ export function EmileChat({
                 onPickExistingClient={handlePickExistingClient}
                 onPickNewClient={handlePickNewClient}
                 pickerDisabled={idx < lastUserIndex}
+                onRegenerate={regenerate}
+                onEdit={editAndResend}
               />
             ))}
             {showTypingIndicator && (

@@ -1,7 +1,7 @@
 "use client";
 
-import { memo } from "react";
-import { Pencil } from "lucide-react";
+import { memo, useState } from "react";
+import { Check, Copy, Pencil, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   parseQuickReplies,
@@ -21,6 +21,17 @@ interface EmileMessageProps {
    * picker buttons are then hidden so a stale bubble can't reopen the flow.
    */
   pickerDisabled?: boolean;
+  /** Re-run the turn that produced this assistant message (action bar). */
+  onRegenerate?: (messageId: string) => void;
+  /** Replace this user message with new text and re-send (action bar). */
+  onEdit?: (messageId: string, newText: string) => void;
+}
+
+function formatTime(iso?: string): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 }
 
 function getText(message: EmileMessageType): string {
@@ -90,7 +101,11 @@ function EmileMessageInner({
   onPickExistingClient,
   onPickNewClient,
   pickerDisabled,
+  onRegenerate,
+  onEdit,
 }: EmileMessageProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useState("");
   const text = getText(message);
   const { cleaned, replies } = parseQuickReplies(text);
   const profileLabel = parseProfileButton(text);
@@ -123,11 +138,69 @@ function EmileMessageInner({
   }
 
   if (isUser) {
+    if (isEditing) {
+      const submitEdit = () => {
+        const next = draft.trim();
+        if (!next) return;
+        setIsEditing(false);
+        onEdit?.(message.id, next);
+      };
+      return (
+        <div className="flex justify-end">
+          <div className="w-full max-w-[80%] rounded-2xl border border-[var(--primary)] bg-white p-2 shadow-sm">
+            <textarea
+              value={draft}
+              autoFocus
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  submitEdit();
+                }
+                if (e.key === "Escape") setIsEditing(false);
+              }}
+              rows={Math.min(6, Math.max(2, draft.split("\n").length))}
+              className="w-full resize-none rounded-lg bg-[var(--surface)] px-3 py-2 text-[13px] text-[var(--text-primary)] outline-none focus:ring-1 focus:ring-[var(--primary)]"
+            />
+            <div className="mt-2 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsEditing(false)}
+                className="rounded-lg px-3 py-1.5 text-[12px] font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface)]"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={submitEdit}
+                disabled={!draft.trim()}
+                className="rounded-lg bg-[var(--primary)] px-3 py-1.5 text-[12px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+              >
+                Envoyer
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
     return (
-      <div className="flex justify-end">
+      <div className="group flex flex-col items-end gap-1">
         <div className="emile-bubble-enter-user max-w-[80%] rounded-2xl rounded-br-md bg-[var(--primary)] px-3.5 py-2 text-[13px] text-white shadow-sm whitespace-pre-wrap">
           {cleaned || <span className="opacity-60">…</span>}
         </div>
+        <MessageActions time={formatTime(message.createdAt)}>
+          {cleaned && <CopyButton getText={() => cleaned} />}
+          {onEdit && (
+            <ActionButton
+              icon={Pencil}
+              label="Éditer"
+              onClick={() => {
+                setDraft(cleaned);
+                setIsEditing(true);
+              }}
+            />
+          )}
+        </MessageActions>
       </div>
     );
   }
@@ -142,31 +215,49 @@ function EmileMessageInner({
     cleaned || (replies.length > 0 ? "Choisis :" : isThinking ? "" : "…");
 
   return (
-    <div className="emile-bubble-enter-assistant flex items-end gap-2">
-      <Avatar />
-      <div
-        className={cn(
-          "flex max-w-[80%] flex-col rounded-2xl rounded-bl-md border border-[var(--border)] bg-white px-3.5 py-2 text-[13px] text-[var(--text-primary)] shadow-sm",
-        )}
-      >
-        {isThinking ? (
-          <span className="inline-flex items-center gap-1 text-[var(--text-muted)]">
-            <Dot delay={-200} />
-            <Dot delay={-100} />
-            <Dot delay={0} />
-          </span>
-        ) : (
-          <div className="leading-relaxed">{renderMessageBody(bodyText)}</div>
-        )}
-        {profileLabel && <ProfileButton label={profileLabel} />}
-        {showClientPicker && (
-          <ClientPicker
-            onExisting={onPickExistingClient!}
-            onNew={onPickNewClient!}
-            disabled={pickerDisabled}
-          />
-        )}
+    <div className="group emile-bubble-enter-assistant flex flex-col gap-1">
+      <div className="flex items-end gap-2">
+        <Avatar />
+        <div
+          className={cn(
+            "flex max-w-[80%] flex-col rounded-2xl rounded-bl-md border border-[var(--border)] bg-white px-3.5 py-2 text-[13px] text-[var(--text-primary)] shadow-sm",
+          )}
+        >
+          {isThinking ? (
+            <span className="inline-flex items-center gap-1 text-[var(--text-muted)]">
+              <Dot delay={-200} />
+              <Dot delay={-100} />
+              <Dot delay={0} />
+            </span>
+          ) : (
+            <div className="leading-relaxed">{renderMessageBody(bodyText)}</div>
+          )}
+          {profileLabel && <ProfileButton label={profileLabel} />}
+          {showClientPicker && (
+            <ClientPicker
+              onExisting={onPickExistingClient!}
+              onNew={onPickNewClient!}
+              disabled={pickerDisabled}
+            />
+          )}
+        </div>
       </div>
+      {/* Action bar is indented (pl-9) to sit under the bubble, past the avatar.
+          Hidden while the bubble is still a thinking placeholder. */}
+      {!isThinking && (
+        <div className="pl-9">
+          <MessageActions time={formatTime(message.createdAt)}>
+            {cleaned && <CopyButton getText={() => cleaned} />}
+            {onRegenerate && (
+              <ActionButton
+                icon={RotateCcw}
+                label="Régénérer"
+                onClick={() => onRegenerate(message.id)}
+              />
+            )}
+          </MessageActions>
+        </div>
+      )}
     </div>
   );
 }
@@ -180,6 +271,86 @@ function Avatar() {
     <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-[var(--primary-bg)]">
       <Pencil className="h-3.5 w-3.5 text-[var(--primary)]" />
     </div>
+  );
+}
+
+// Discreet per-message bar: timestamp + actions. Fades in on row hover (or on
+// keyboard focus, for a11y). `children` are the role-specific action buttons.
+function MessageActions({
+  time,
+  children,
+}: {
+  time: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-0.5 opacity-0 transition-opacity duration-150 focus-within:opacity-100 group-hover:opacity-100">
+      {time && (
+        <span className="px-1 text-[10px] tabular-nums text-[var(--text-muted)]">
+          {time}
+        </span>
+      )}
+      {children}
+    </div>
+  );
+}
+
+function ActionButton({
+  icon: Icon,
+  label,
+  onClick,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={label}
+      aria-label={label}
+      className="inline-flex h-6 w-6 items-center justify-center rounded-md text-[var(--text-muted)] transition-colors hover:bg-[var(--primary-bg)] hover:text-[var(--primary)]"
+    >
+      <Icon className="h-3.5 w-3.5" />
+    </button>
+  );
+}
+
+function CopyButton({ getText }: { getText: () => string }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = async () => {
+    const value = getText();
+    if (!value) return;
+    try {
+      await navigator.clipboard.writeText(value);
+    } catch {
+      // Clipboard can be blocked (no focus / non-secure context) — fail soft,
+      // the user can still select the text manually.
+      return;
+    }
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1500);
+  };
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      title="Copier"
+      aria-label="Copier"
+      className="inline-flex h-6 items-center gap-1 rounded-md px-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--primary-bg)] hover:text-[var(--primary)]"
+    >
+      {copied ? (
+        <>
+          <Check className="h-3.5 w-3.5 text-emerald-600" />
+          <span className="text-[11px] font-medium text-emerald-600">
+            Copié
+          </span>
+        </>
+      ) : (
+        <Copy className="h-3.5 w-3.5" />
+      )}
+    </button>
   );
 }
 

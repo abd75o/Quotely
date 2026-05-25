@@ -11,6 +11,38 @@ import {
 export interface EmileMessage extends UIMessage {
   id: string;
   role: "system" | "user" | "assistant";
+  /**
+   * ISO timestamp of when the message was sent. Set client-side for live
+   * messages (user input + the assistant turn's start) and hydrated from
+   * `messages.created_at` when a conversation is loaded from the DB. Optional
+   * because the AI-SDK stream chunks don't carry it — we stamp it ourselves.
+   * Used by the per-message action bar to show the "18:45" send time.
+   */
+  createdAt?: string;
+}
+
+// Flip via NEXT_PUBLIC_EMILE_DEBUG=1 to trace the full send flow in the
+// browser console (clic → newConversation → fetch payload → first chunk →
+// finish) plus EmileChat mount/unmount. Used to prove the "no response on the
+// 1st message" remount bug; off in normal runs so production logs stay clean.
+const EMILE_DEBUG =
+  typeof process !== "undefined" &&
+  process.env.NEXT_PUBLIC_EMILE_DEBUG === "1";
+
+function dbg(...args: unknown[]): void {
+  if (EMILE_DEBUG) {
+    console.log(`[emile ${new Date().toISOString()}]`, ...args);
+  }
+}
+
+function lastTextOf(msgs: EmileMessage[]): string {
+  const last = msgs[msgs.length - 1];
+  if (!last || !Array.isArray(last.parts)) return "";
+  return last.parts
+    .filter((p) => (p as { type?: string }).type === "text")
+    .map((p) => (p as { text?: string }).text ?? "")
+    .join(" ")
+    .slice(0, 60);
 }
 
 export interface ConversationSummary {
@@ -102,6 +134,10 @@ export interface UseEmileResult {
   error: string | null;
   conversationId: string | null;
   sendMessage: (text: string) => Promise<void>;
+  /** Re-run the turn that produced the given assistant message (re-roll). */
+  regenerate: (assistantMessageId: string) => Promise<void>;
+  /** Replace a user message with new text and re-run from that point. */
+  editAndResend: (userMessageId: string, newText: string) => Promise<void>;
   newConversation: (opts?: {
     title?: string;
     related_quote_id?: string;
@@ -124,6 +160,7 @@ function userMessage(text: string): EmileMessage {
     id: makeId(),
     role: "user",
     parts: [{ type: "text", text }],
+    createdAt: new Date().toISOString(),
   };
 }
 
@@ -195,6 +232,7 @@ function dbMessageToUI(row: DbMessageRow): EmileMessage | null {
     id: row.id || makeId(),
     role,
     parts: parts as EmileMessage["parts"],
+    createdAt: row.created_at,
   };
 }
 
@@ -417,25 +455,24 @@ export function useEmile(
     }
   }, []);
 
-  const sendMessage = useCallback(
-    async (text: string) => {
-      const trimmed = text.trim();
-      if (!trimmed || isLoading) return;
-      setError(null);
-
-      let convId = conversationId;
-      if (!convId) {
-        convId = await newConversation();
-        if (!convId) return;
-      }
-
-      const userMsg = userMessage(trimmed);
-      const baseMessages: EmileMessage[] = [...messages, userMsg];
-      setMessages(baseMessages);
-
+  // Shared streaming core: POST `baseMessages` to /api/emile/chat and fold the
+  // SSE chunks into a single assistant bubble. `baseMessages` is the EXACT
+  // history sent to the model and must already be in `messages` (the caller
+  // sets it before calling). Used by sendMessage, regenerate and editAndResend
+  // so the three share one code path and one set of streaming invariants.
+  const streamAssistant = useCallback(
+    async (baseMessages: EmileMessage[], convId: string) => {
       const ctrl = new AbortController();
       abortRef.current = ctrl;
       setIsLoading(true);
+      // Stamp the assistant turn's start once; reused across every chunk so the
+      // bubble's timestamp stays stable while tokens stream in.
+      const turnStartedAt = new Date().toISOString();
+      dbg("fetch /api/emile/chat", {
+        convId,
+        count: baseMessages.length,
+        lastText: lastTextOf(baseMessages),
+      });
 
       try {
         const res = await fetch("/api/emile/chat", {
@@ -483,15 +520,21 @@ export function useEmile(
         // track the bubble's slot index explicitly — never via findIndex(id).
         const turnAssistantId = makeId();
         let assistantBubbleIndex: number | null = null;
+        let sawChunk = false;
 
         for await (const ui of readUIMessageStream({
           stream: filtered,
           onError: (e) => setError((e as Error).message ?? "Erreur stream"),
         })) {
+          if (!sawChunk) {
+            sawChunk = true;
+            dbg("first assistant chunk");
+          }
           const uiMsg = ui as EmileMessage;
           const stableMsg: EmileMessage = {
             ...uiMsg,
             id: uiMsg.id || turnAssistantId,
+            createdAt: turnStartedAt,
           };
           setMessages((prev) => {
             if (assistantBubbleIndex === null) {
@@ -519,9 +562,83 @@ export function useEmile(
       } finally {
         abortRef.current = null;
         setIsLoading(false);
+        dbg("stream finished");
       }
     },
-    [conversationId, isLoading, messages, newConversation],
+    [],
+  );
+
+  const sendMessage = useCallback(
+    async (text: string) => {
+      const trimmed = text.trim();
+      if (!trimmed || isLoading) return;
+      setError(null);
+      dbg("sendMessage", {
+        text: trimmed.slice(0, 40),
+        conversationId,
+      });
+
+      let convId = conversationId;
+      if (!convId) {
+        convId = await newConversation();
+        dbg("newConversation resolved", { convId });
+        if (!convId) return;
+      }
+
+      const userMsg = userMessage(trimmed);
+      const baseMessages: EmileMessage[] = [...messages, userMsg];
+      setMessages(baseMessages);
+      await streamAssistant(baseMessages, convId);
+    },
+    [conversationId, isLoading, messages, newConversation, streamAssistant],
+  );
+
+  const regenerate = useCallback(
+    async (assistantMessageId: string) => {
+      if (isLoading || !conversationId) return;
+      const idx = messages.findIndex((m) => m.id === assistantMessageId);
+      if (idx === -1) return;
+      // Keep everything up to (but not including) this assistant message, then
+      // trim back to the preceding user turn so the slice is a valid prompt.
+      let baseMessages = messages.slice(0, idx);
+      while (
+        baseMessages.length > 0 &&
+        baseMessages[baseMessages.length - 1].role !== "user"
+      ) {
+        baseMessages = baseMessages.slice(0, -1);
+      }
+      if (baseMessages.length === 0) return;
+      setError(null);
+      setMessages(baseMessages);
+      await streamAssistant(baseMessages, conversationId);
+    },
+    [conversationId, isLoading, messages, streamAssistant],
+  );
+
+  const editAndResend = useCallback(
+    async (userMessageId: string, newText: string) => {
+      if (isLoading) return;
+      const trimmed = newText.trim();
+      if (!trimmed) return;
+
+      let convId = conversationId;
+      if (!convId) {
+        convId = await newConversation();
+        if (!convId) return;
+      }
+
+      const idx = messages.findIndex((m) => m.id === userMessageId);
+      if (idx === -1) return;
+      // Drop the edited user message and everything after it, then re-send the
+      // edited text as a fresh user turn.
+      const history = messages.slice(0, idx);
+      const userMsg = userMessage(trimmed);
+      const baseMessages: EmileMessage[] = [...history, userMsg];
+      setError(null);
+      setMessages(baseMessages);
+      await streamAssistant(baseMessages, convId);
+    },
+    [conversationId, isLoading, messages, newConversation, streamAssistant],
   );
 
   return {
@@ -531,6 +648,8 @@ export function useEmile(
     error,
     conversationId,
     sendMessage,
+    regenerate,
+    editAndResend,
     newConversation,
     loadConversation,
     abort,

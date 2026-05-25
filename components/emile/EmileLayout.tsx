@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { FileText, MessageSquare, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ConversationsSidebar } from "./ConversationsSidebar";
@@ -115,7 +114,6 @@ function buildRegistrationLabel(
 }
 
 export function EmileLayout({ conversationId }: EmileLayoutProps) {
-  const router = useRouter();
   const [quote, setQuote] = useState<EmileQuoteDraft | null>(null);
   const [emitter, setEmitter] = useState<EmitterSnapshot | null>(null);
   const [mobileView, setMobileView] = useState<MobileView>("chat");
@@ -176,13 +174,28 @@ export function EmileLayout({ conversationId }: EmileLayoutProps) {
     setQuote((prev) => updateToDraft(update, prev));
   }, []);
 
-  const handleConversationCreated = useCallback(
-    (id: string) => {
-      // Replace the URL so refresh / sharing keeps the conversation
-      router.replace(`/dashboard/emile/${id}`);
-    },
-    [router],
-  );
+  const handleConversationCreated = useCallback((id: string) => {
+    // ROOT CAUSE of "Émile ne répond pas au 1er message":
+    // On the very first message of a brand-new chat, sendMessage() creates the
+    // conversation and then immediately streams /api/emile/chat. Using
+    // router.replace() here navigates /dashboard/emile (page.tsx) →
+    // /dashboard/emile/[conversationId] — two DISTINCT route segments — which
+    // UNMOUNTS this EmileLayout, EmileChat and the useEmile hook driving the
+    // in-flight stream. The fresh mount then runs loadConversation() against a
+    // conversation whose assistant reply isn't persisted yet (the route persists
+    // in onFinish, seconds later), so the user sees no answer until a manual
+    // reload. The 2nd message works because conversationId is already set, so no
+    // navigation happens.
+    //
+    // We only need the URL bar to reflect the id (refresh / share).
+    // window.history.replaceState updates the URL WITHOUT a Next.js route change,
+    // so the component stays mounted and the stream keeps rendering in place.
+    // usePathname/useSearchParams stay in sync, and a real reload still resolves
+    // the [conversationId] server page correctly.
+    if (typeof window !== "undefined") {
+      window.history.replaceState(null, "", `/dashboard/emile/${id}`);
+    }
+  }, []);
 
   // Debounced save when the user edits the quote in the panel/fullscreen.
   const handleQuoteEdit = useCallback((next: EmileQuoteDraft) => {

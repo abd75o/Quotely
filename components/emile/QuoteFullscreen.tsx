@@ -11,6 +11,7 @@ import {
 } from "./QuotePreview";
 import { normalizeFrTva } from "@/lib/quotes/items";
 import type { EmileQuoteDraft, EmileQuoteLine } from "./types";
+import { clientFullName } from "./types";
 
 /**
  * Minimal emitter snapshot rendered in the "Émetteur" card. We only thread
@@ -132,7 +133,7 @@ export function QuoteFullscreen({
             </h1>
             <p className="text-[12px] text-[var(--text-muted)]">
               {quote.client?.name
-                ? `Pour ${quote.client.name}`
+                ? `Pour ${clientFullName(quote.client)}`
                 : "Client non défini"}{" "}
               · Date {quote.date} · Validité {quote.validity} jours
             </p>
@@ -174,7 +175,9 @@ export function QuoteFullscreen({
                   Client
                 </p>
                 <p className="mt-1 text-[14px] font-semibold text-[var(--text-primary)]">
-                  {quote.client?.name ?? "Aucun client sélectionné"}
+                  {quote.client?.name
+                    ? clientFullName(quote.client)
+                    : "Aucun client sélectionné"}
                 </p>
                 {quote.client?.email && (
                   <p className="text-[12px] text-[var(--text-secondary)]">

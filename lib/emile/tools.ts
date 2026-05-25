@@ -537,6 +537,51 @@ export function createEmileTools(ctx: EmileToolContext) {
             Date.now() + validDays * 24 * 60 * 60 * 1000,
           ).toISOString();
 
+          const acompteValue =
+            conditions && Number.isFinite(conditions.acompte_percent ?? NaN)
+              ? Number(conditions.acompte_percent)
+              : null;
+
+          // Persist the acompte SEPARATELY and best-effort. The `acompte_percent`
+          // column is added by a migration; if it hasn't been applied yet this
+          // write fails harmlessly and never blocks the main save. Keeping it out
+          // of the main insert/update payload is what makes that safe.
+          const persistAcompte = async (qid: string) => {
+            if (acompteValue === null) return;
+            try {
+              await supabase
+                .from("quotes")
+                .update({ acompte_percent: acompteValue })
+                .eq("id", qid)
+                .eq("user_id", userId);
+            } catch {
+              // column not migrated yet — ignore
+            }
+          };
+
+          // Client snapshot for the right-panel. Returning it in the tool result
+          // lets the live stream populate the panel with the FULL name
+          // (prénom + nom) the instant the draft is saved, instead of only on a
+          // later reload (the old behaviour that made the panel "sync late").
+          const clientSnapshot = async (cid: string | null | undefined) => {
+            if (!cid) return undefined;
+            const { data } = await supabase
+              .from("clients")
+              .select("id, name, first_name, email, phone")
+              .eq("id", cid)
+              .eq("user_id", userId)
+              .maybeSingle();
+            if (!data) return undefined;
+            const row = data as Record<string, unknown>;
+            return {
+              id: String(row.id ?? cid),
+              name: String(row.name ?? ""),
+              first_name: (row.first_name as string | null) ?? null,
+              email: (row.email as string | null) ?? null,
+              phone: (row.phone as string | null) ?? null,
+            };
+          };
+
           // Resolve target quoteId: explicit param > conversation.related_quote_id
           let targetQuoteId = quoteId ?? null;
           if (!targetQuoteId && conversationId) {
@@ -566,9 +611,10 @@ export function createEmileTools(ctx: EmileToolContext) {
               })
               .eq("id", targetQuoteId)
               .eq("user_id", userId)
-              .select("id, number")
+              .select("id, number, client_id")
               .single();
             if (error) return err(error.message);
+            await persistAcompte(data.id);
             // Tag the conversation with the client so future bulk imports
             // inherit it (the bulk-lines route reads related_client_id when
             // no explicit clientId is in the body).
@@ -587,6 +633,9 @@ export function createEmileTools(ctx: EmileToolContext) {
               clientId ?? null,
               data.number,
             );
+            const client = await clientSnapshot(
+              clientId ?? (data.client_id as string | null),
+            );
             return ok({
               quoteId: data.id,
               number: data.number,
@@ -597,6 +646,7 @@ export function createEmileTools(ctx: EmileToolContext) {
               taxBreakdown: breakdown,
               total,
               validUntil,
+              ...(client ? { client } : {}),
             });
           }
 
@@ -656,6 +706,7 @@ export function createEmileTools(ctx: EmileToolContext) {
               .eq("user_id", userId);
           }
 
+          await persistAcompte(data.id);
           await maybeAutoNameConversation(
             supabase,
             conversationId,
@@ -663,6 +714,7 @@ export function createEmileTools(ctx: EmileToolContext) {
             clientId ?? null,
             data.number,
           );
+          const client = await clientSnapshot(clientId ?? null);
           return ok({
             quoteId: data.id,
             number: data.number,
@@ -673,6 +725,7 @@ export function createEmileTools(ctx: EmileToolContext) {
             taxBreakdown: breakdown,
             total,
             validUntil,
+            ...(client ? { client } : {}),
           });
         } catch (e) {
           return err((e as Error).message ?? "Erreur inconnue");

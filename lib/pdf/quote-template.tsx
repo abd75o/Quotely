@@ -304,24 +304,9 @@ function statusDescriptor(status: string, accent: string): StatusDescriptor {
   }
 }
 
-interface PaymentStage {
-  label: string;
-  percent: number;
-  amount: number;
-}
-
-function paymentSchedule(total: number, acomptePercent?: number | null): PaymentStage[] {
-  const deposit = Number.isFinite(acomptePercent ?? NaN) ? Number(acomptePercent) : 30;
-  const remaining = 100 - deposit;
-  const mid = Math.round((remaining * 4) / 7);
-  const last = 100 - deposit - mid;
-  const at = (p: number) => +(total * (p / 100)).toFixed(2);
-  return [
-    { label: "Acompte à la signature", percent: deposit, amount: at(deposit) },
-    { label: "Au démarrage des travaux", percent: mid, amount: at(mid) },
-    { label: "Solde à la réception", percent: last, amount: at(last) },
-  ];
-}
+// NOTE: there is deliberately NO default payment schedule anymore. The PDF must
+// reflect EXACTLY what the artisan configured — a fabricated 30/40/30 split was
+// printing an "échéancier" nobody asked for (see PaymentScheduleBlock).
 
 // ─── StyleSheet ────────────────────────────────────────────────────────────
 function buildStyles(accent: string) {
@@ -987,12 +972,36 @@ function PaymentScheduleBlock(props: {
   quote: PdfQuote;
 }) {
   const { styles, quote } = props;
-  const schedule = paymentSchedule(quote.total, quote.acompte_percent);
+
+  // A free-form multi-line schedule the artisan explicitly typed takes priority
+  // and is rendered verbatim.
+  const terms =
+    typeof quote.payment_terms === "string" ? quote.payment_terms.trim() : "";
+  const hasTerms = terms.length > 0;
+
+  // A simple deposit (acompte) → render ONLY "Acompte X% à la signature" + the
+  // balance. Two lines, never a 3-stage split.
+  const acompte = Number.isFinite(quote.acompte_percent ?? NaN)
+    ? Number(quote.acompte_percent)
+    : null;
+  const hasAcompte = acompte !== null && acompte > 0 && acompte < 100;
+
+  // Nothing configured → no payment section at all. We never fabricate a
+  // default échéancier.
+  if (!hasTerms && !hasAcompte) return null;
+
+  const depositAmount = hasAcompte
+    ? +(quote.total * (acompte! / 100)).toFixed(2)
+    : 0;
+  const balanceAmount = +(quote.total - depositAmount).toFixed(2);
+
   return (
     <View style={styles.section} wrap={false}>
-      <Text style={styles.sectionTitle}>Échéancier</Text>
-      {quote.payment_terms ? (
-        quote.payment_terms
+      <Text style={styles.sectionTitle}>
+        {hasTerms ? "Échéancier" : "Modalités de paiement"}
+      </Text>
+      {hasTerms ? (
+        terms
           .split(/\r?\n/)
           .filter((l) => l.trim())
           .map((line, i) => (
@@ -1002,22 +1011,32 @@ function PaymentScheduleBlock(props: {
           ))
       ) : (
         <>
-          {schedule.map((stage) => (
-            <View key={stage.label} style={styles.paymentRow}>
-              <View style={styles.paymentBulletWrap}>
-                <View style={styles.paymentBullet} />
-              </View>
-              <Text style={styles.paymentPercent}>{stage.percent}%</Text>
-              <Text style={styles.paymentLabel}>{stage.label}</Text>
-              <Text style={styles.paymentAmount}>{formatEuros(stage.amount)}</Text>
+          <View style={styles.paymentRow}>
+            <View style={styles.paymentBulletWrap}>
+              <View style={styles.paymentBullet} />
             </View>
-          ))}
-          <Text style={styles.sectionLineMuted}>
-            Délai de paiement : 30 jours à compter de la facturation, sauf
-            mention contraire.
-          </Text>
+            <Text style={styles.paymentPercent}>{acompte}%</Text>
+            <Text style={styles.paymentLabel}>Acompte à la signature</Text>
+            <Text style={styles.paymentAmount}>
+              {formatEuros(depositAmount)}
+            </Text>
+          </View>
+          <View style={styles.paymentRow}>
+            <View style={styles.paymentBulletWrap}>
+              <View style={styles.paymentBullet} />
+            </View>
+            <Text style={styles.paymentPercent}>{100 - acompte!}%</Text>
+            <Text style={styles.paymentLabel}>Solde à la réception</Text>
+            <Text style={styles.paymentAmount}>
+              {formatEuros(balanceAmount)}
+            </Text>
+          </View>
         </>
       )}
+      <Text style={styles.sectionLineMuted}>
+        Délai de paiement : 30 jours à compter de la facturation, sauf mention
+        contraire.
+      </Text>
     </View>
   );
 }

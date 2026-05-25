@@ -20,6 +20,7 @@ import type {
   EmileQuoteLine,
   EmileQuoteStatus,
 } from "./types";
+import { clientFullName } from "./types";
 
 interface QuotePreviewProps {
   quote: EmileQuoteDraft;
@@ -164,7 +165,7 @@ export function QuotePreview({
               <Field label="Client">
                 {quote.client?.name ? (
                   <LockedField
-                    value={quote.client.name}
+                    value={clientFullName(quote.client)}
                     lockReason={LOCK_REASONS.client}
                     onClick={handleLockedClick}
                   />

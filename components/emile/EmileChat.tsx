@@ -417,17 +417,30 @@ export function EmileChat({
       const fullName =
         [client.first_name, client.name].filter(Boolean).join(" ").trim() ||
         client.name;
-      const parts: string[] = [`Client sélectionné : ${fullName}`];
+      // Instant panel sync: surface the FULL client in the right panel the
+      // moment it's picked, instead of waiting for Émile's saveQuoteDraft turn
+      // (which used to be the only thing that populated it → "syncs late").
+      onQuoteUpdate?.({
+        client: {
+          id: client.id,
+          name: client.name,
+          first_name: client.first_name ?? null,
+          email: client.email ?? null,
+        },
+      });
+      // [SYSTEM] prefix → renders as a discreet system pill (not a violet user
+      // bubble); EmileMessage also strips the technical id from the display.
+      const parts: string[] = [`[SYSTEM] Client sélectionné : ${fullName}`];
       if (client.email) parts.push(client.email);
       parts.push(`id:${client.id}`);
       void sendMessage(parts.join(" — "));
     },
-    [sendMessage, conversationId],
+    [sendMessage, conversationId, onQuoteUpdate],
   );
 
   const handleClientSelectorClose = useCallback(() => {
     setClientSelectorOpen(false);
-    void sendMessage("Sélection client annulée.");
+    void sendMessage("[SYSTEM] Sélection client annulée.");
   }, [sendMessage]);
 
   const handleClientCreated = useCallback(
@@ -448,12 +461,21 @@ export function EmileChat({
       const fullName =
         [client.first_name, client.name].filter(Boolean).join(" ").trim() ||
         client.name;
-      const parts: string[] = [`Client créé : ${fullName}`];
+      // Same instant panel sync as the existing-client path.
+      onQuoteUpdate?.({
+        client: {
+          id: client.id,
+          name: client.name,
+          first_name: client.first_name ?? null,
+          email: client.email ?? null,
+        },
+      });
+      const parts: string[] = [`[SYSTEM] Client créé : ${fullName}`];
       if (client.email) parts.push(client.email);
       if (client.type_client) parts.push(client.type_client);
       void sendMessage(parts.join(" — "));
     },
-    [sendMessage, conversationId],
+    [sendMessage, conversationId, onQuoteUpdate],
   );
 
   const handleClientModalClose = useCallback(() => {
@@ -462,7 +484,7 @@ export function EmileChat({
       justHandledModalRef.current = false;
       return;
     }
-    void sendMessage("Création client annulée.");
+    void sendMessage("[SYSTEM] Création client annulée.");
   }, [sendMessage]);
 
   const handleQuoteLineAdd = useCallback(
@@ -470,7 +492,7 @@ export function EmileChat({
       justHandledModalRef.current = true;
       const unit = line.unit ? ` ${line.unit}` : "";
       const tva = typeof line.tva === "number" ? ` (TVA ${line.tva}%)` : "";
-      const text = `Ligne ajoutée : ${line.label} — ${line.quantity}${unit} × ${line.price} € HT${tva}.`;
+      const text = `[SYSTEM] Ligne ajoutée : ${line.label} — ${line.quantity}${unit} × ${line.price} € HT${tva}.`;
       void sendMessage(text);
     },
     [sendMessage],
@@ -482,7 +504,7 @@ export function EmileChat({
       justHandledModalRef.current = false;
       return;
     }
-    void sendMessage("Ajout de ligne annulé.");
+    void sendMessage("[SYSTEM] Ajout de ligne annulé.");
   }, [sendMessage]);
 
   const handleProfileCompleted = useCallback(

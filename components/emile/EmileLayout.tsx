@@ -82,7 +82,21 @@ function updateToDraft(
     : (previous?.lines ?? []);
   // Client / status: hydration from a full DB row supplies them, tool-emitted
   // updates don't — fall back to the previous value rather than wiping it.
-  const client = update.client !== undefined ? update.client : (previous?.client ?? null);
+  // When an update carries a client, MERGE it over the previous one instead of
+  // replacing: tool snapshots (saveQuoteDraft) only carry name/first_name/email/
+  // phone, so a plain replace would drop a richer client's address/city/SIRET
+  // that a full DB hydration had already loaded. `null` still means explicit clear.
+  let client: EmileQuoteDraft["client"];
+  if (update.client === undefined) {
+    client = previous?.client ?? null;
+  } else if (update.client === null) {
+    client = null;
+  } else {
+    client = {
+      ...(previous?.client ?? {}),
+      ...update.client,
+    } as EmileQuoteDraft["client"];
+  }
   const status = coerceStatus(update.status) ?? previous?.status ?? "draft";
   return {
     id: update.quoteId ?? previous?.id,

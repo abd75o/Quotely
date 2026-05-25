@@ -101,17 +101,30 @@ async function loadQuote(token: string): Promise<PublicQuote | null> {
     // the dashboard owner unblocked. We log the failure so the misconfig
     // surfaces in the platform logs instead of silently shipping a broken
     // emitter to clients.
+    // IMPORTANT: `email` is intentionally NOT selected here. There is no
+    // `email` column on `profiles` (the artisan email lives on auth.users).
+    // Selecting it made PostgREST reject the ENTIRE query (42703 "column
+    // profiles.email does not exist") → profile=null → the emitter fell back to
+    // "Devis" + generic legal mentions. The artisan email is fetched separately
+    // from auth.users below.
     const profileSelect =
-      "company_name, company, first_name, last_name, metier, metier_principal, siret, vat_status, vat_number, address, postal_code, city, telephone, logo_url, couleur_principale, plan, hide_branding, email, legal_status, registration_number, registration_city, decennale_company, decennale_number, decennale_zone, rc_pro_company, rc_pro_number";
+      "company_name, company, first_name, last_name, metier, metier_principal, siret, vat_status, vat_number, address, postal_code, city, telephone, logo_url, couleur_principale, plan, hide_branding, legal_status, registration_number, registration_city, decennale_company, decennale_number, decennale_zone, rc_pro_company, rc_pro_number";
 
     let profile: Record<string, unknown> | null = null;
+    let artisanEmail: string | null = null;
+    let admin: ReturnType<typeof getSupabaseAdmin> | null = null;
     try {
-      const admin = getSupabaseAdmin();
-      const { data: row } = await admin
+      admin = getSupabaseAdmin();
+      const { data: row, error: adminErr } = await admin
         .from("profiles")
         .select(profileSelect)
         .eq("id", data.user_id as string)
         .maybeSingle();
+      // Do NOT swallow the error: a schema drift (like the `email` column above)
+      // must surface in the logs instead of silently shipping a broken emitter.
+      if (adminErr) {
+        console.error("[sign/[token]] admin profile select error:", adminErr);
+      }
       profile = (row as Record<string, unknown> | null) ?? null;
     } catch (e) {
       console.error(
@@ -121,11 +134,14 @@ async function loadQuote(token: string): Promise<PublicQuote | null> {
     }
 
     if (!profile) {
-      const { data: row } = await supabase
+      const { data: row, error: ssrErr } = await supabase
         .from("profiles")
         .select(profileSelect)
         .eq("id", data.user_id as string)
         .maybeSingle();
+      if (ssrErr) {
+        console.error("[sign/[token]] SSR profile select error:", ssrErr);
+      }
       profile = (row as Record<string, unknown> | null) ?? null;
     }
 
@@ -135,6 +151,30 @@ async function loadQuote(token: string): Promise<PublicQuote | null> {
           String(data.user_id) +
           " — emitter block will fall back to generic label.",
       );
+    }
+
+    // Artisan email comes from auth.users, NOT profiles. Best-effort via the
+    // service-role admin API (the public visitor isn't the artisan, so we can't
+    // read it from the SSR session). Failure just means no email line in the
+    // emitter — never a broken page.
+    if (admin) {
+      try {
+        const { data: authData, error: authErr } =
+          await admin.auth.admin.getUserById(data.user_id as string);
+        if (authErr) {
+          console.error("[sign/[token]] artisan email lookup error:", authErr);
+        }
+        artisanEmail = authData?.user?.email ?? null;
+      } catch (e) {
+        console.error("[sign/[token]] artisan email lookup failed:", e);
+      }
+    }
+
+    // Attach the auth email onto the profile object so the existing
+    // companyDisplay()/emitter rendering (which read `profile.email`) keep
+    // working unchanged.
+    if (profile && artisanEmail) {
+      profile.email = artisanEmail;
     }
 
     const clientRow = Array.isArray(data.clients)

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import type { EmileMessage } from "@/hooks/useEmile";
 
@@ -118,6 +118,10 @@ function getMessageText(message: EmileMessage): string {
 export function QuickReplies({ message, onSelect }: QuickRepliesProps) {
   const [hiddenForId, setHiddenForId] = useState<string | null>(null);
   const [pressedReply, setPressedReply] = useState<string | null>(null);
+  // Free-text "Autre…" escape hatch — always available on top of the model's
+  // options so the artisan can type their own value on ANY closed question.
+  const [otherMode, setOtherMode] = useState(false);
+  const [otherValue, setOtherValue] = useState("");
 
   const messageId = message?.id;
   useEffect(() => {
@@ -127,6 +131,16 @@ export function QuickReplies({ message, onSelect }: QuickRepliesProps) {
     }
   }, [messageId, hiddenForId]);
 
+  // Reset the "Autre…" input when the active message changes. Done during
+  // render (React's documented "adjust state on prop change" pattern) rather
+  // than in an effect — no extra commit, no flash.
+  const prevMessageIdRef = useRef(messageId);
+  if (prevMessageIdRef.current !== messageId) {
+    prevMessageIdRef.current = messageId;
+    if (otherMode) setOtherMode(false);
+    if (otherValue) setOtherValue("");
+  }
+
   if (!message || message.role !== "assistant") return null;
   if (hiddenForId === message.id) return null;
 
@@ -134,19 +148,61 @@ export function QuickReplies({ message, onSelect }: QuickRepliesProps) {
   const { replies } = parseQuickReplies(text);
   if (replies.length === 0) return null;
 
-  function handleClick(reply: string) {
-    if (!message) return;
+  function send(value: string) {
+    const v = value.trim();
+    if (!message || !v) return;
     // Press animation: hold the row in a faded/pressed state for ~180ms before
     // calling onSelect — gives an iOS-style "tap" feel before the user bubble
     // mounts and replaces this row.
-    setPressedReply(reply);
+    setPressedReply(value);
     setHiddenForId(message.id);
     window.setTimeout(() => {
-      onSelect(reply);
+      onSelect(v);
     }, 180);
   }
 
+  // The front always offers a free-text option, so the model never needs to
+  // emit its own "Autre" (the system prompt tells it not to). Dedupe in case an
+  // older message still carries one.
+  const hasOwnOther = replies.some((r) => /^autre/i.test(r.trim()));
   const fading = pressedReply !== null;
+
+  if (otherMode) {
+    return (
+      <div className="flex items-center gap-2 border-t border-[var(--border)] bg-white px-4 py-3">
+        <input
+          type="text"
+          autoFocus
+          value={otherValue}
+          onChange={(e) => setOtherValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              send(otherValue);
+            }
+            if (e.key === "Escape") setOtherMode(false);
+          }}
+          placeholder="Ta réponse…"
+          className="min-w-0 flex-1 rounded-full border border-[var(--border)] bg-white px-3.5 py-1.5 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--primary)]"
+        />
+        <button
+          type="button"
+          onClick={() => send(otherValue)}
+          disabled={!otherValue.trim()}
+          className="shrink-0 rounded-full bg-[var(--primary)] px-3.5 py-1.5 text-[13px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+        >
+          Envoyer
+        </button>
+        <button
+          type="button"
+          onClick={() => setOtherMode(false)}
+          className="shrink-0 rounded-full px-2 py-1.5 text-[13px] text-[var(--text-secondary)] hover:underline"
+        >
+          Annuler
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -163,7 +219,7 @@ export function QuickReplies({ message, onSelect }: QuickRepliesProps) {
           <button
             key={`${reply}-${i}`}
             type="button"
-            onClick={() => handleClick(reply)}
+            onClick={() => send(reply)}
             disabled={fading}
             className={cn(
               "w-full rounded-full border border-[var(--border)] bg-[var(--primary-bg)] px-3.5 py-1.5 text-[13px] font-semibold text-[var(--primary)] shadow-sm transition-all duration-150 sm:w-auto",
@@ -176,6 +232,20 @@ export function QuickReplies({ message, onSelect }: QuickRepliesProps) {
           </button>
         );
       })}
+      {!hasOwnOther && (
+        <button
+          type="button"
+          onClick={() => setOtherMode(true)}
+          disabled={fading}
+          className={cn(
+            "w-full rounded-full border border-dashed border-[var(--border)] bg-white px-3.5 py-1.5 text-[13px] font-medium text-[var(--text-secondary)] transition-all duration-150 sm:w-auto",
+            "hover:border-[var(--primary)] hover:text-[var(--primary)]",
+            "active:scale-95",
+          )}
+        >
+          Autre…
+        </button>
+      )}
     </div>
   );
 }

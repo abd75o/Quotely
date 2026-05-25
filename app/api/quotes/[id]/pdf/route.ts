@@ -65,6 +65,31 @@ export async function GET(
     });
   }
 
+  // Payment configuration (acompte / échéancier). Read DEFENSIVELY in its own
+  // query: these two columns are added by a migration; if that migration hasn't
+  // been applied yet the select returns an error (which we ignore) instead of
+  // breaking the whole PDF. Same access gate as the main query.
+  let acompte_percent: number | null = null;
+  let payment_terms: string | null = null;
+  {
+    let payQuery = supabase
+      .from("quotes")
+      .select("acompte_percent, payment_terms")
+      .eq("id", id);
+    payQuery = token
+      ? payQuery.eq("signature_token", token)
+      : payQuery.eq("user_id", quote.user_id as string);
+    const { data: pay } = await payQuery.maybeSingle();
+    if (pay) {
+      const ap = (pay as { acompte_percent?: number | string | null })
+        .acompte_percent;
+      acompte_percent =
+        typeof ap === "number" ? ap : ap != null ? Number(ap) : null;
+      payment_terms =
+        (pay as { payment_terms?: string | null }).payment_terms ?? null;
+    }
+  }
+
   // When the artisan downloads their own PDF, RLS lets them read their
   // profile. When the client opens the PDF from the email link (anon +
   // signature_token), RLS blocks it and the PDF would render with an empty
@@ -108,6 +133,8 @@ export async function GET(
     tax_rate: Number(quote.tax_rate),
     tax_amount: Number(quote.tax_amount),
     total: Number(quote.total),
+    acompte_percent,
+    payment_terms,
     notes: (quote.notes as string | null) ?? null,
     signed_at: (quote as { signed_at?: string | null }).signed_at ?? null,
     signature_data: signatureData,

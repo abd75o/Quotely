@@ -27,6 +27,20 @@ interface EmileMessageProps {
   onEdit?: (messageId: string, newText: string) => void;
 }
 
+// System-pill display: drop the [SYSTEM] marker, the raw technical id
+// (`id:a003fac0-…`) and any email address, then tidy leftover separators. The
+// artisan sees "Client sélectionné : Sophie Martin", never the internal id.
+function formatSystemPill(raw: string): string {
+  let s = raw.replace(/^\[SYSTEM\]\s*—?\s*/i, "").trim();
+  s = s.replace(/\s*[—-]?\s*id\s*:\s*\S+/gi, ""); // drop "id:<uuid>"
+  s = s.replace(/\s*[—-]?\s*[^\s—]+@[^\s—]+/g, ""); // drop emails
+  s = s
+    .replace(/\s*[—-]\s*$/g, "") // trailing separator
+    .replace(/\s{2,}/g, " ")
+    .trim();
+  return s || "…";
+}
+
 function formatTime(iso?: string): string {
   if (!iso) return "";
   const d = new Date(iso);
@@ -125,9 +139,7 @@ function EmileMessageInner({
   const isInternalSystem = isUser && /^\[SYSTEM\]/i.test(cleaned);
 
   if (isSystem || isInternalSystem) {
-    const pillText = isInternalSystem
-      ? cleaned.replace(/^\[SYSTEM\]\s*—?\s*/i, "").trim()
-      : cleaned;
+    const pillText = isInternalSystem ? formatSystemPill(cleaned) : cleaned;
     return (
       <div className="flex justify-center">
         <span className="rounded-full bg-[var(--surface)] px-3 py-1 text-[11px] text-[var(--text-muted)]">

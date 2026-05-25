@@ -194,6 +194,28 @@ export async function executeSendQuote(
     };
   }
 
+  // Payment config — read defensively (separate query) so the emailed PDF shows
+  // the real acompte/échéancier once the migration is applied, and never breaks
+  // the send if it isn't.
+  let acompte_percent: number | null = null;
+  let payment_terms: string | null = null;
+  {
+    const { data: pay } = await supabase
+      .from("quotes")
+      .select("acompte_percent, payment_terms")
+      .eq("id", quoteId)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (pay) {
+      const ap = (pay as { acompte_percent?: number | string | null })
+        .acompte_percent;
+      acompte_percent =
+        typeof ap === "number" ? ap : ap != null ? Number(ap) : null;
+      payment_terms =
+        (pay as { payment_terms?: string | null }).payment_terms ?? null;
+    }
+  }
+
   const pdfQuote: PdfQuote = {
     number: quote.number as string,
     status: quote.status as string,
@@ -211,6 +233,8 @@ export async function executeSendQuote(
     tax_rate: Number(quote.tax_rate),
     tax_amount: Number(quote.tax_amount),
     total: Number(quote.total),
+    acompte_percent,
+    payment_terms,
     notes: (quote.notes as string | null) ?? null,
   };
 

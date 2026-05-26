@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   FileText,
   Plus,
@@ -18,6 +19,8 @@ import { StatsCards } from "./StatsCards";
 import { NewQuoteButton } from "./NewQuoteButton";
 import { toastSuccess, toastError } from "@/lib/toast";
 import { cn } from "@/lib/utils";
+import { PLAN_FEATURES } from "@/lib/permissions";
+import type { QuoteUsage } from "@/lib/quotes/quota";
 
 type Status = "all" | "pending" | "signed" | "refused" | "invoiced";
 
@@ -71,6 +74,7 @@ function StatusBadge({ status }: { status: string }) {
 
 function QuoteRowMenu({ quote }: { quote: QuoteRow }) {
   const [open, setOpen] = useState(false);
+  const router = useRouter();
 
   return (
     <div className="relative">
@@ -119,6 +123,9 @@ function QuoteRowMenu({ quote }: { quote: QuoteRow }) {
                   const res = await fetch(`/api/quotes/${quote.id}`, { method: "DELETE" });
                   if (!res.ok) throw new Error("Suppression impossible");
                   toastSuccess("Devis supprimé");
+                  // Re-render the server page so the list AND the monthly quota
+                  // badge reflect the deletion (a hard DELETE frees up quota).
+                  router.refresh();
                 } catch {
                   toastError("Impossible de supprimer ce devis. Réessayez.");
                 }
@@ -134,7 +141,48 @@ function QuoteRowMenu({ quote }: { quote: QuoteRow }) {
   );
 }
 
-export function QuotesList({ initialQuotes }: { initialQuotes: QuoteRow[] }) {
+// Monthly quota badge. Reads the SAME usage object the server cap computes
+// (lib/quotes/quota.getMonthlyQuoteUsage) — no parallel recount, so it can
+// never diverge from what the API enforces.
+function QuotaBadge({ usage }: { usage: QuoteUsage | null }) {
+  if (!usage) return null;
+  const { plan, used, limit } = usage;
+  const unlimited = !Number.isFinite(limit);
+  const reached = !unlimited && used >= limit;
+  const nextPlan = PLAN_FEATURES[plan]?.nextUpgrade ?? null;
+  const nextLabel = nextPlan ? PLAN_FEATURES[nextPlan].label : null;
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <span
+        className={cn(
+          "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold",
+          reached
+            ? "border-red-200 bg-red-50 text-red-600"
+            : "border-[var(--primary)]/20 bg-[var(--primary-bg)] text-[var(--primary)]",
+        )}
+      >
+        <FileText className="h-3.5 w-3.5" />
+        {unlimited
+          ? `${used} devis ce mois`
+          : `${used} / ${limit} devis ce mois`}
+      </span>
+      {reached && (
+        <span className="text-xs font-medium text-red-600">
+          Quota atteint ce mois{nextLabel ? ` — passe à ${nextLabel}` : ""}
+        </span>
+      )}
+    </div>
+  );
+}
+
+export function QuotesList({
+  initialQuotes,
+  usage = null,
+}: {
+  initialQuotes: QuoteRow[];
+  usage?: QuoteUsage | null;
+}) {
   const [activeTab, setActiveTab] = useState<Status>("all");
   const [search, setSearch] = useState("");
 
@@ -163,6 +211,9 @@ export function QuotesList({ initialQuotes }: { initialQuotes: QuoteRow[] }) {
         <div className="min-w-0">
           <h1 className="text-2xl md:text-3xl font-bold text-[var(--text-primary)] truncate">Mes devis</h1>
           <p className="text-xs sm:text-sm text-[var(--text-muted)] mt-0.5 truncate">{total} devis au total</p>
+          <div className="mt-2">
+            <QuotaBadge usage={usage} />
+          </div>
         </div>
         {/* Sur mobile, le bouton "+" est dans le header sticky du dashboard */}
         <NewQuoteButton

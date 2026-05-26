@@ -15,21 +15,35 @@ export async function GET(
     const { createClient } = await import("@/lib/supabase/server");
     const supabase = await createClient();
 
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     // NOTE: we used to embed `artisan:users(name, company, email, phone, siret)`
     // here. The `users` table lives in the `auth` schema and is NOT exposed via
     // PostgREST — that embed silently 500'd, the route returned 404, and the
     // Émile panel never hydrated when reopening a conversation (BUG #2).
     // Callers that need artisan info should join `profiles` separately.
+    // `.eq(user_id)` = defense-in-depth on top of RLS.
     const { data, error } = await supabase
       .from("quotes")
       .select("*, client:clients(*)")
       .eq("id", id)
-      .single();
+      .eq("user_id", user.id)
+      .maybeSingle();
 
-    if (error || !data) return Response.json({ error: "Not found" }, { status: 404 });
+    if (error) {
+      console.error("[GET /api/quotes/:id] query failed", error);
+      return Response.json({ error: "Query failed" }, { status: 500 });
+    }
+    if (!data) return Response.json({ error: "Not found" }, { status: 404 });
     return Response.json({ quote: data });
-  } catch {
-    return Response.json({ error: "Not found" }, { status: 404 });
+  } catch (e) {
+    console.error("[GET /api/quotes/:id] threw", e);
+    return Response.json({ error: "Server error" }, { status: 500 });
   }
 }
 
@@ -91,14 +105,23 @@ export async function PUT(
     const { createClient } = await import("@/lib/supabase/server");
     const supabase = await createClient();
 
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { data, error } = await supabase
       .from("quotes")
       .update(update)
       .eq("id", id)
+      .eq("user_id", user.id)
       .select("*, client:clients(*)")
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
+    if (!data) return Response.json({ error: "Not found" }, { status: 404 });
     return Response.json({ quote: data });
   } catch (e) {
     console.error("[PUT /api/quotes/:id] update failed", e);
@@ -116,11 +139,29 @@ export async function DELETE(
     const { createClient } = await import("@/lib/supabase/server");
     const supabase = await createClient();
 
-    const { error } = await supabase.from("quotes").delete().eq("id", id);
-    if (error) throw error;
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Scope by user_id (defense-in-depth on top of RLS) and NEVER report
+    // success on a real failure — the old `catch { success:true }` lied to the
+    // UI, which then removed a quote that was still in the DB (audit finding).
+    const { error } = await supabase
+      .from("quotes")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", user.id);
+    if (error) {
+      console.error("[DELETE /api/quotes/:id] delete failed", error);
+      return Response.json({ error: "Delete failed" }, { status: 500 });
+    }
 
     return Response.json({ success: true });
-  } catch {
-    return Response.json({ success: true }); // dev fallback
+  } catch (e) {
+    console.error("[DELETE /api/quotes/:id] threw", e);
+    return Response.json({ error: "Delete failed" }, { status: 500 });
   }
 }

@@ -8,11 +8,11 @@ import { CTA } from "@/components/landing/CTA";
 import { Reveal } from "@/components/ui/Reveal";
 import { createClient } from "@/lib/supabase/server";
 import type { UserStateValue } from "@/lib/hooks/useUserState";
+import { PLAN_FEATURES } from "@/lib/permissions";
 
 export const metadata: Metadata = {
   title: "Tarifs — Quovi",
-  description:
-    "Choisissez le plan Quovi adapté à votre activité. Plan Gratuit (5 devis/mois), Starter 25€/mois ou Pro 49€/mois. Sans carte bancaire.",
+  description: `Choisissez le plan Quovi adapté à votre activité. Plan Gratuit (${PLAN_FEATURES.free.maxDevisPerMonth} devis/mois), Starter 25€/mois ou Pro 49€/mois. Sans carte bancaire.`,
 };
 
 export default async function TarifsPage({

@@ -116,8 +116,12 @@ export function normalizeQuoteItem(
     "Prestation";
 
   const description = asString(raw.description);
-  const quantity = asNumber(raw.quantity ?? raw.quantite, 1);
-  const price = asNumber(raw.price ?? raw.unitPrice ?? raw.prixHT, 0);
+  // Defense-in-depth: clamp away negative garbage before it reaches the JSONB
+  // column. A devis line can't have a negative price or quantity. The Émile
+  // tool and bulk-lines already reject these via zod; this guards the legacy
+  // POST/PUT /api/quotes paths that only normalize (no per-line schema).
+  const quantity = Math.max(0, asNumber(raw.quantity ?? raw.quantite, 1));
+  const price = Math.max(0, asNumber(raw.price ?? raw.unitPrice ?? raw.prixHT, 0));
   // Snap to a valid French rate so a stray 21 / 19.6 / 5.6 from the LLM
   // or the per-line editor never lands in the JSONB column.
   const tva = normalizeFrTva(raw.tva ?? raw.tauxTVA, defaultTva);

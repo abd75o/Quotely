@@ -6,6 +6,7 @@ import {
   normalizeQuoteItems,
 } from "@/lib/quotes/items";
 import { bumpQuoteNumber, nextQuoteNumber } from "@/lib/quotes/numbering";
+import { checkMonthlyQuoteQuota } from "@/lib/quotes/quota";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
@@ -76,7 +77,24 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Server-side monthly cap (mirrors the UI gate). Plan limits were UI-only,
+    // so a raw API call could create unlimited devis → unbounded API cost.
+    const quota = await checkMonthlyQuoteQuota(supabase, user.id);
+    if (!quota.ok) {
+      return Response.json(
+        {
+          error: quota.error,
+          code: "quota_exceeded",
+          plan: quota.plan,
+          used: quota.used,
+          limit: quota.limit,
+        },
+        { status: 403 },
+      );
+    }
+
     let clientId = body.clientId;
+    let clientCreateFailed = false;
 
     // Create client on the fly if needed
     if (!clientId && body.newClient) {
@@ -85,7 +103,14 @@ export async function POST(request: NextRequest) {
         .insert({ user_id: user.id, ...body.newClient })
         .select()
         .single();
-      if (!clientError) clientId = newClient.id;
+      if (!clientError) {
+        clientId = newClient.id;
+      } else {
+        // Don't swallow: a failed client creation means an orphan quote. Log it
+        // and flag it in the response so the caller can warn the user.
+        console.error("[api/quotes] inline client creation failed:", clientError);
+        clientCreateFailed = true;
+      }
     }
 
     // Unified sequential numbering: same helper as Émile (lib/emile/tools.ts
@@ -133,7 +158,18 @@ export async function POST(request: NextRequest) {
     if (!created) {
       throw new Error(lastErr?.message ?? "Insert failed");
     }
-    return Response.json({ quote: created }, { status: 201 });
+    return Response.json(
+      {
+        quote: created,
+        ...(clientCreateFailed
+          ? {
+              warning:
+                "Le client n'a pas pu être créé — le devis a été enregistré sans client. Rattache un client avant de l'envoyer.",
+            }
+          : {}),
+      },
+      { status: 201 },
+    );
   } catch (err) {
     console.error("[api/quotes] POST failed:", err);
     return Response.json(

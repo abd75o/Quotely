@@ -32,7 +32,7 @@ export const PLAN_FEATURES: Record<Plan, PlanFeatures> = {
   free: {
     label: "Free",
     price: 0,
-    maxDevisPerMonth: 5,
+    maxDevisPerMonth: 3,
     maxClients: Number.POSITIVE_INFINITY,
     canUseOnlineSignature: true,
     canUseOTPSignature: false,

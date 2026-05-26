@@ -16,6 +16,7 @@ import { loadStripe, type Stripe } from "@stripe/stripe-js";
 import { cn } from "@/lib/utils";
 import { humanizeError } from "@/lib/errors";
 import { toastError } from "@/lib/toast";
+import { PLAN_FEATURES } from "@/lib/permissions";
 
 type PlanKey = "free" | "starter" | "pro";
 
@@ -47,7 +48,7 @@ const PLANS: PlanCardData[] = [
     tagline: "Pour vos premiers devis, en PDF",
     pricePerMonth: 0,
     highlights: [
-      "Émile inclus (5 devis/mois)",
+      `Émile inclus (${PLAN_FEATURES.free.maxDevisPerMonth} devis/mois)`,
       "Devis au design pro (à votre image)",
       "TVA automatique",
       "Mentions légales automatiques",

@@ -580,7 +580,9 @@ TOOLS DISPONIBLES
 - createClient(data) : crée un nouveau client
 - calculateTVA(montantHT, typeChantier, statutFiscal?) : calcule la TVA correcte
 - getMentionsLegales(metier, typeClient)
-- saveQuoteDraft(data) : sauve ou met à jour le devis. À APPELER DÈS LA 1RE LIGNE VALIDE. Le quoteId est optionnel : si tu ne le passes pas, le serveur récupère automatiquement le devis lié à la conversation. Retourne { ok, quoteId, number, items, subtotal, taxRate, taxAmount, taxBreakdown, total, validUntil }.
+- saveQuoteDraft(data) : sauve ou met à jour le devis. À APPELER DÈS LA 1RE LIGNE VALIDE. Le quoteId est optionnel : si tu ne le passes pas, le serveur récupère automatiquement le devis lié à la conversation. Retourne { ok, quoteId, number, items, subtotal, taxRate, taxAmount, taxBreakdown, total, validUntil, acompte_percent?, acompteSaved? }.
+  • ACOMPTE : si le retour contient acompteSaved:false, l'enregistrement de l'acompte a ÉCHOUÉ — NE dis PAS "acompte ajouté", signale plutôt qu'il y a eu un souci et propose de réessayer.
+  • PRIX ABSURDE : si le tool refuse avec un message "Prix anormalement élevé", demande à l'artisan de confirmer le prix (faute de frappe ?). S'il confirme, rappelle saveQuoteDraft avec confirmHighPrice:true. Les quantités négatives/nulles et prix négatifs sont refusés : redemande une valeur valide.
 - clearQuoteLines(quoteId?) : vide TOUTES les lignes du devis (items = []) sans le supprimer. À utiliser UNIQUEMENT après confirmation explicite de l'artisan pour le mode REPLACE (voir section "Gestion des devis existants"). Refuse si le devis est déjà envoyé/signé. Toujours suivi d'un saveQuoteDraft pour repeupler. quoteId optionnel — accepte UUID ou numéro QVI-YYYY-NNNNN, sinon prend le devis de la conversation.
 - sendQuote(quoteId?, customMessage?) : envoie le devis. APPELLE UNIQUEMENT APRÈS validation explicite ("Envoyer maintenant" ou "envoie direct"). quoteId optionnel — si tu l'omets, le serveur prend le devis de la conversation en cours (recommandé : c'est plus fiable que de te rappeler de l'UUID). Tu peux aussi passer le numéro QVI-YYYY-NNNNN, le serveur résout.
 - getUserPastPrices(prestation) : prix mémorisés

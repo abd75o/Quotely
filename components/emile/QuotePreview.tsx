@@ -14,7 +14,10 @@ import {
 import { EditableField } from "./EditableField";
 import { LockedField } from "./LockedField";
 import { UnitSelect } from "./UnitSelect";
-import { normalizeFrTva } from "@/lib/quotes/items";
+import {
+  normalizeFrTva,
+  computeQuoteTotals as computeItemTotals,
+} from "@/lib/quotes/items";
 import type {
   EmileQuoteDraft,
   EmileQuoteLine,
@@ -429,34 +432,27 @@ interface TotalsBreakdown {
 }
 
 function computeTotals(quote: EmileQuoteDraft): TotalsBreakdown {
-  let subtotal = 0;
-  const groups: Record<string, { rate: number; base: number; amount: number }> =
-    {};
-  for (const line of quote.lines) {
-    const base = line.price * (line.quantity || 1);
-    const rate = line.tva ?? quote.tva ?? 20;
-    subtotal += base;
-    const key = String(rate);
-    if (!groups[key]) groups[key] = { rate, base: 0, amount: 0 };
-    groups[key].base += base;
-    groups[key].amount += base * (rate / 100);
-  }
-  const byRate = Object.values(groups).sort((a, b) => a.rate - b.rate);
-  const taxAmount = byRate.reduce((s, g) => s + g.amount, 0);
+  // Derive from the SINGLE canonical helper (lib/quotes/items.computeQuoteTotals)
+  // so the right panel shows EXACTLY what the API persists and the PDF renders:
+  // same per-bucket rounding, no ±1 centime drift on multi-TVA quotes.
+  const items = quote.lines.map((l, i) => ({
+    id: l.id ?? `l-${i}`,
+    label: l.label,
+    price: l.price,
+    quantity: l.quantity || 1,
+    unite: l.unit ?? null,
+    tva: normalizeFrTva(l.tva ?? quote.tva, 20),
+  }));
+  const t = computeItemTotals(items);
+  const byRate = Object.entries(t.taxBreakdown)
+    .map(([rate, b]) => ({ rate: Number(rate), base: b.base, amount: b.tax }))
+    .sort((a, b) => a.rate - b.rate);
   return {
-    subtotal: round2(subtotal),
-    byRate: byRate.map((g) => ({
-      rate: g.rate,
-      base: round2(g.base),
-      amount: round2(g.amount),
-    })),
-    taxAmount: round2(taxAmount),
-    total: round2(subtotal + taxAmount),
+    subtotal: t.subtotal,
+    byRate,
+    taxAmount: t.taxAmount,
+    total: t.total,
   };
-}
-
-function round2(n: number): number {
-  return Math.round(n * 100) / 100;
 }
 
 function Field({

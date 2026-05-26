@@ -9,6 +9,7 @@ import {
   type QuoteItem,
 } from "@/lib/quotes/items";
 import { autoTitleConversation } from "@/lib/conversations/auto-title";
+import { checkMonthlyQuoteQuota } from "@/lib/quotes/quota";
 
 export const runtime = "nodejs";
 
@@ -240,6 +241,23 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // This path CREATES a new devis → enforce the monthly cap (server-side, same
+  // as POST /api/quotes and saveQuoteDraft). The append/replace path above
+  // updates an existing devis and is intentionally NOT capped.
+  const quota = await checkMonthlyQuoteQuota(supabase, user.id);
+  if (!quota.ok) {
+    return Response.json(
+      {
+        error: quota.error,
+        code: "quota_exceeded",
+        plan: quota.plan,
+        used: quota.used,
+        limit: quota.limit,
+      },
+      { status: 403 },
+    );
+  }
+
   const newItems = toQuoteItems(lines, 0);
   const totals = computeQuoteTotals(newItems);
   // 90-day default validity matches saveQuoteDraft.
@@ -325,7 +343,7 @@ export async function POST(req: NextRequest) {
     // passed one explicitly: convClientId already lives on the conversation,
     // re-writing it would be a no-op at best and could clobber a concurrent
     // update at worst.
-    await supabase
+    const { error: linkErr } = await supabase
       .from("conversations")
       .update({
         related_quote_id: created.id,
@@ -333,6 +351,11 @@ export async function POST(req: NextRequest) {
       })
       .eq("id", conversationId)
       .eq("user_id", user.id);
+    if (linkErr) {
+      // Non-fatal but must not stay silent: a broken conv→quote link orphans
+      // the freshly created devis from its conversation (audit finding).
+      console.error("[bulk-lines] conversation link update failed:", linkErr);
+    }
 
     await autoTitleConversation(supabase, conversationId, {
       clientId: effectiveClientId,

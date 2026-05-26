@@ -5,7 +5,8 @@ import { executeSendQuote } from "@/lib/quotes/send";
 import { nextQuoteNumber, bumpQuoteNumber } from "@/lib/quotes/numbering";
 import { autoTitleConversation } from "@/lib/conversations/auto-title";
 import { resolveQuoteId } from "@/lib/quotes/resolve-id";
-import { normalizeFrTva } from "@/lib/quotes/items";
+import { normalizeFrTva, computeQuoteTotals } from "@/lib/quotes/items";
+import { checkMonthlyQuoteQuota } from "@/lib/quotes/quota";
 
 export interface EmileToolContext {
   supabase: SupabaseClient;
@@ -446,13 +447,20 @@ export function createEmileTools(ctx: EmileToolContext) {
         clientId: z.string().optional(),
         lines: z.array(
           z.object({
-            libelle: z.string(),
-            quantite: z.number(),
+            libelle: z.string().min(1),
+            // Reject garbage at the tool boundary: a devis line is always a
+            // strictly-positive quantity and a non-negative price. tauxTVA is
+            // NOT hard-rejected — it's snapped to a valid FR rate by
+            // normalizeFrTva below (the LLM sometimes emits 21/19.6).
+            quantite: z.number().positive(),
             unite: z.string().optional(),
-            prixHT: z.number(),
+            prixHT: z.number().nonnegative(),
             tauxTVA: z.number(),
           }),
         ),
+        // Set to true by Émile ONLY after the artisan confirms an unusually
+        // high unit price (anti-typo guard, see ABSURD_UNIT_PRICE).
+        confirmHighPrice: z.boolean().optional(),
         conditions: z
           .object({
             validite_jours: z.number().default(90),
@@ -460,7 +468,7 @@ export function createEmileTools(ctx: EmileToolContext) {
           })
           .optional(),
       }),
-      execute: async ({ quoteId, clientId, lines, conditions }) => {
+      execute: async ({ quoteId, clientId, lines, conditions, confirmHighPrice }) => {
         try {
           // Guard against the bulk-import regression: after a [SYSTEM] import
           // en masse notification, the LLM sometimes calls saveQuoteDraft with
@@ -479,6 +487,20 @@ export function createEmileTools(ctx: EmileToolContext) {
             );
           }
 
+          // Anti-typo guard: a unit price above 1 000 000 € HT on an artisan
+          // devis is almost always a mistake (extra zero, cents/euros mix-up).
+          // Don't persist silently — ask the artisan to confirm. Émile re-calls
+          // with confirmHighPrice:true once the artisan validates.
+          const ABSURD_UNIT_PRICE = 1_000_000;
+          if (!confirmHighPrice) {
+            const suspect = lines.find((l) => l.prixHT > ABSURD_UNIT_PRICE);
+            if (suspect) {
+              return err(
+                `Prix anormalement élevé détecté : "${suspect.libelle}" à ${suspect.prixHT} € HT l'unité. Vérifie avec l'artisan que ce n'est pas une faute de frappe (un zéro en trop ?). S'il confirme que c'est correct, rappelle saveQuoteDraft avec confirmHighPrice:true.`,
+              );
+            }
+          }
+
           const items = lines.map((l, idx) => ({
             id: `l-${Date.now().toString(36)}-${idx}`,
             label: l.libelle,
@@ -490,47 +512,14 @@ export function createEmileTools(ctx: EmileToolContext) {
             // when re-emitting a quote post-import.
             tva: normalizeFrTva(l.tauxTVA, 20),
           }));
-          const subtotal = +items
-            .reduce((s, it) => s + it.price * it.quantity, 0)
-            .toFixed(2);
-
-          // Multi-TVA breakdown: group lines by rate so the tax total is
-          // exact even when a quote mixes 20%, 10%, 5,5%. The legacy
-          // `tax_rate` column gets the DOMINANT rate (highest HT base) so
-          // existing consumers (PDF, signature page) keep working.
-          const breakdown: Record<
-            string,
-            { base: number; tax: number; ttc: number }
-          > = {};
-          for (const it of items) {
-            const base = it.price * it.quantity;
-            const key = String(it.tva);
-            const bucket = breakdown[key] ?? { base: 0, tax: 0, ttc: 0 };
-            bucket.base += base;
-            bucket.tax += base * (it.tva / 100);
-            breakdown[key] = bucket;
-          }
-          for (const k of Object.keys(breakdown)) {
-            breakdown[k] = {
-              base: +breakdown[k].base.toFixed(2),
-              tax: +breakdown[k].tax.toFixed(2),
-              ttc: +(breakdown[k].base + breakdown[k].tax).toFixed(2),
-            };
-          }
-          const taxAmount = +Object.values(breakdown)
-            .reduce((s, b) => s + b.tax, 0)
-            .toFixed(2);
-          const total = +(subtotal + taxAmount).toFixed(2);
-          // Dominant rate = rate with the largest HT base. Used as the
-          // back-compat `tax_rate` scalar. Falls back to 20 on empty.
-          let taxRate = 20;
-          let dominantBase = -1;
-          for (const [rate, b] of Object.entries(breakdown)) {
-            if (b.base > dominantBase) {
-              dominantBase = b.base;
-              taxRate = Number(rate);
-            }
-          }
+          // SINGLE SOURCE OF TRUTH for totals: lib/quotes/items.computeQuoteTotals.
+          // Previously this re-implemented the multi-TVA breakdown inline, which
+          // had to stay byte-identical to the API routes and the right-panel —
+          // it drifted (per-bucket rounding) and the panel could show a total
+          // 1 centime off the PDF/DB. Now panel, API, PDF and Émile all derive
+          // from the exact same function.
+          const { subtotal, taxRate, taxAmount, taxBreakdown: breakdown, total } =
+            computeQuoteTotals(items);
 
           const validDays = conditions?.validite_jours ?? 90;
           const validUntil = new Date(
@@ -546,16 +535,25 @@ export function createEmileTools(ctx: EmileToolContext) {
           // column is added by a migration; if it hasn't been applied yet this
           // write fails harmlessly and never blocks the main save. Keeping it out
           // of the main insert/update payload is what makes that safe.
-          const persistAcompte = async (qid: string) => {
-            if (acompteValue === null) return;
+          const persistAcompte = async (qid: string): Promise<boolean> => {
+            if (acompteValue === null) return true; // nothing requested
             try {
-              await supabase
+              const { error: acompteErr } = await supabase
                 .from("quotes")
                 .update({ acompte_percent: acompteValue })
                 .eq("id", qid)
                 .eq("user_id", userId);
-            } catch {
-              // column not migrated yet — ignore
+              if (acompteErr) {
+                console.error(
+                  "[saveQuoteDraft] acompte persist failed:",
+                  acompteErr,
+                );
+                return false;
+              }
+              return true;
+            } catch (e) {
+              console.error("[saveQuoteDraft] acompte persist threw:", e);
+              return false;
             }
           };
 
@@ -614,7 +612,7 @@ export function createEmileTools(ctx: EmileToolContext) {
               .select("id, number, client_id")
               .single();
             if (error) return err(error.message);
-            await persistAcompte(data.id);
+            const acompteSaved = await persistAcompte(data.id);
             // Tag the conversation with the client so future bulk imports
             // inherit it (the bulk-lines route reads related_client_id when
             // no explicit clientId is in the body).
@@ -647,8 +645,18 @@ export function createEmileTools(ctx: EmileToolContext) {
               total,
               validUntil,
               ...(client ? { client } : {}),
+              ...(acompteValue !== null
+                ? { acompte_percent: acompteValue, acompteSaved }
+                : {}),
             });
           }
+
+          // ── CREATE path ────────────────────────────────────────────────────
+          // Only reached when no existing devis is linked. Enforce the monthly
+          // quote cap HERE (never on the update branch above — editing a devis
+          // must not be blocked or consume quota).
+          const quota = await checkMonthlyQuoteQuota(supabase, userId);
+          if (!quota.ok) return err(quota.error!);
 
           // Sequential per-user numbering. Retry on UNIQUE(user_id, number)
           // violations (Postgres code 23505) which can happen if two saves
@@ -696,7 +704,7 @@ export function createEmileTools(ctx: EmileToolContext) {
           // conversation so subsequent calls — including bulk-lines, which
           // bypasses the LLM — pick up the relations automatically.
           if (conversationId) {
-            await supabase
+            const { error: linkErr } = await supabase
               .from("conversations")
               .update({
                 related_quote_id: data.id,
@@ -704,9 +712,18 @@ export function createEmileTools(ctx: EmileToolContext) {
               })
               .eq("id", conversationId)
               .eq("user_id", userId);
+            if (linkErr) {
+              // Non-fatal (the quote IS created) but must not stay silent: a
+              // broken conv→quote link makes a follow-up bulk import lose the
+              // devis/client. This was an audit finding.
+              console.error(
+                "[saveQuoteDraft] conversation link update failed:",
+                linkErr,
+              );
+            }
           }
 
-          await persistAcompte(data.id);
+          const acompteSaved = await persistAcompte(data.id);
           await maybeAutoNameConversation(
             supabase,
             conversationId,
@@ -726,6 +743,9 @@ export function createEmileTools(ctx: EmileToolContext) {
             total,
             validUntil,
             ...(client ? { client } : {}),
+            ...(acompteValue !== null
+              ? { acompte_percent: acompteValue, acompteSaved }
+              : {}),
           });
         } catch (e) {
           return err((e as Error).message ?? "Erreur inconnue");

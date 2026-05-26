@@ -79,7 +79,12 @@ export async function GET(
     payQuery = token
       ? payQuery.eq("signature_token", token)
       : payQuery.eq("user_id", quote.user_id as string);
-    const { data: pay } = await payQuery.maybeSingle();
+    const { data: pay, error: payErr } = await payQuery.maybeSingle();
+    if (payErr) {
+      // Expected only if the acompte migration hasn't been applied; still log
+      // so a real RLS/schema problem doesn't hide behind the graceful fallback.
+      console.error("[quotes/:id/pdf] acompte/payment_terms read error:", payErr);
+    }
     if (pay) {
       const ap = (pay as { acompte_percent?: number | string | null })
         .acompte_percent;

@@ -1,3 +1,5 @@
+import { formatClientName } from "@/lib/text/name-normalize";
+
 export interface EmileClient {
   id: string;
   name: string;
@@ -12,20 +14,16 @@ export interface EmileClient {
 }
 
 /**
- * Display name for a client: "Prénom Nom" when a first name exists, otherwise
- * just the name (covers professionals stored under a company name). Used by the
- * quote panel + fullscreen so the prénom is never dropped (the old code showed
- * only `name`, i.e. just "Martin" for "Sophie Martin").
+ * Display name for a client: "Marc DUPONT" quand un prénom existe (prénom en
+ * casse de titre, nom en majuscules), sinon la raison sociale en casse de titre
+ * ("Linkity"). Normalisation à l'affichage déléguée à lib/text/name-normalize.
+ * Utilisé par le panneau de devis + le fullscreen.
  */
 export function clientFullName(
   client: Pick<EmileClient, "name" | "first_name"> | null | undefined,
 ): string {
   if (!client) return "";
-  return (
-    [client.first_name, client.name].filter(Boolean).join(" ").trim() ||
-    client.name ||
-    ""
-  );
+  return formatClientName({ first_name: client.first_name, name: client.name });
 }
 
 export interface EmileQuoteLine {

@@ -12,6 +12,7 @@ import {
 import { normalizeFrTva } from "@/lib/quotes/items";
 import type { EmileQuoteDraft, EmileQuoteLine } from "./types";
 import { clientFullName } from "./types";
+import { formatCompanyName } from "@/lib/text/name-normalize";
 
 /**
  * Minimal emitter snapshot rendered in the "Émetteur" card. We only thread
@@ -359,7 +360,7 @@ function EmitterCardBody({ emitter }: { emitter: EmitterSnapshot | null }) {
   return (
     <>
       <p className="mt-1 text-[14px] font-semibold text-[var(--text-primary)]">
-        {emitter.company}
+        {formatCompanyName(emitter.company)}
       </p>
       <div className="space-y-0.5 text-[12px] text-[var(--text-secondary)]">
         {emitter.address && <p>{emitter.address}</p>}

@@ -11,6 +11,11 @@ import {
   Section,
   Text,
 } from "@react-email/components";
+import {
+  formatCompanyName,
+  formatFirstName,
+  formatFullName,
+} from "@/lib/text/name-normalize";
 
 export interface QuoteEmailProfile {
   company_name?: string | null;
@@ -73,12 +78,10 @@ function formatDate(iso?: string | null): string {
 }
 
 function companyDisplay(p: QuoteEmailProfile): string {
-  return (
-    p.company_name ||
-    p.company ||
-    [p.first_name, p.last_name].filter(Boolean).join(" ") ||
-    "Votre prestataire"
-  );
+  const company = (p.company_name || p.company || "").trim();
+  if (company) return formatCompanyName(company);
+  const person = formatFullName(p.first_name, p.last_name);
+  return person || "Votre prestataire";
 }
 
 export default function QuoteEmail({
@@ -91,7 +94,9 @@ export default function QuoteEmail({
 }: QuoteEmailProps) {
   const color = profile.couleur_principale || DEFAULT_COLOR;
   const company = companyDisplay(profile);
-  const clientName = client.first_name || client.name;
+  const clientName = client.first_name
+    ? formatFirstName(client.first_name)
+    : formatCompanyName(client.name);
   const validUntil = formatDate(quote.valid_until);
 
   const previewText = `${company} vous a envoyé un devis de ${formatEuros(quote.total)}.`;

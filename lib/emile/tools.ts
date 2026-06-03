@@ -320,11 +320,18 @@ export function createEmileTools(ctx: EmileToolContext) {
 
     createClient: tool({
       description:
-        "Crée un nouveau client dans la base de l'artisan. Retourne le client créé.",
+        "Crée un nouveau client dans la base de l'artisan. Retourne le client créé. " +
+        "RÈGLE : ne renseigne QUE les infos réellement fournies par l'artisan POUR CE CLIENT. " +
+        "Ne remplace JAMAIS un email/téléphone/adresse client manquant par ceux de l'artisan (l'émetteur) " +
+        "ni par une valeur inventée — laisse le champ vide. Email, téléphone et adresse sont optionnels ici ; " +
+        "l'email sera exigé seulement au moment de l'envoi (sendQuote).",
       inputSchema: z.object({
         name: z.string(),
         first_name: z.string().optional(),
-        email: z.string().email(),
+        // Email OPTIONNEL : un client peut être créé sans email connu. Le forcer
+        // poussait Émile à recopier l'email de l'émetteur (bug coordonnées). Le
+        // gate d'envoi (executeSendQuote) réclamera l'email avant tout envoi.
+        email: z.string().email().optional(),
         phone: z.string().optional(),
         address: z.string().optional(),
         postal_code: z.string().optional(),
@@ -338,7 +345,7 @@ export function createEmileTools(ctx: EmileToolContext) {
             user_id: userId,
             name: data.name,
             first_name: data.first_name ?? null,
-            email: data.email,
+            email: data.email ?? null,
             phone: data.phone ?? null,
             address: data.address ?? null,
             postal_code: data.postal_code ?? null,

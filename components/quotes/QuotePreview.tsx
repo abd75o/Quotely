@@ -28,6 +28,7 @@ import { useUserPlan } from "@/lib/hooks/useUserState";
 import { useUpgradeModal } from "@/lib/hooks/useUpgradeModal";
 import { cn } from "@/lib/utils";
 import { formatSiret } from "@/lib/format/siret";
+import { formatCompanyName, formatClientName } from "@/lib/text/name-normalize";
 
 interface QuoteItem {
   id: string;
@@ -77,25 +78,10 @@ function artisanRegistrationLabel(a: Artisan | null | undefined): string | null 
   return `N° ${a.registration_number}`;
 }
 
-// Title-cases a multi-word string while preserving short uppercase acronyms
-// (SAS, EURL, SARL…). Used by the doc-header brand fallback so "tr électricité"
-// renders as "Tr Électricité" instead of all-caps shouting.
-function titleCase(input: string): string {
-  return input
-    .split(/(\s+)/)
-    .map((part) => {
-      if (/^\s+$/.test(part)) return part;
-      if (/^[A-Z0-9.&]+$/.test(part) && part.length <= 5) return part;
-      const lower = part.toLowerCase();
-      return lower.charAt(0).toUpperCase() + lower.slice(1);
-    })
-    .join("");
-}
-
 function artisanBrandLabel(a: Artisan | null | undefined): string {
   if (!a) return "";
   const raw = (a.company || a.name || a.email || "").trim();
-  return raw ? titleCase(raw) : "";
+  return raw ? formatCompanyName(raw) : "";
 }
 
 interface Quote {
@@ -498,7 +484,7 @@ export function QuotePreview({ quote }: { quote: Quote }) {
                     {quote.artisan.company}
                   </p>
                 )}
-                <p>{quote.artisan.name}</p>
+                <p>{formatCompanyName(quote.artisan.name)}</p>
                 {quote.artisan.address && <p>{quote.artisan.address}</p>}
                 {(quote.artisan.postal_code || quote.artisan.city) && (
                   <p>
@@ -563,7 +549,7 @@ export function QuotePreview({ quote }: { quote: Quote }) {
           <div className="px-8 py-5">
             <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-2">Destinataire</p>
             <div className="p-4 bg-[var(--surface)] rounded-xl">
-              <p className="font-semibold text-[var(--text-primary)]">{quote.client.name}</p>
+              <p className="font-semibold text-[var(--text-primary)]">{formatClientName(quote.client)}</p>
               <p className="text-sm text-[var(--text-secondary)]">{quote.client.email}</p>
               {quote.client.phone && <p className="text-sm text-[var(--text-secondary)]">{quote.client.phone}</p>}
               {quote.client.address && <p className="text-sm text-[var(--text-secondary)] mt-1">{quote.client.address}</p>}

@@ -5,6 +5,11 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { resolveMentionsLegales } from "@/lib/pdf/mentions-legales";
 import { shouldShowBranding } from "@/lib/branding/should-show";
 import { formatSiret } from "@/lib/format/siret";
+import {
+  formatCompanyName,
+  formatFullName,
+  formatClientName,
+} from "@/lib/text/name-normalize";
 import { SignatureClient } from "./SignatureClient";
 
 interface QuoteItem {
@@ -283,13 +288,11 @@ function companyDisplay(
   artisanEmail?: string | null,
 ): string {
   if (!p) return artisanEmail || "Devis";
-  return (
-    p.company_name ||
-    p.company ||
-    [p.first_name, p.last_name].filter(Boolean).join(" ") ||
-    artisanEmail ||
-    "Devis"
-  );
+  const company = (p.company_name || p.company || "").trim();
+  if (company) return formatCompanyName(company);
+  const person = formatFullName(p.first_name, p.last_name);
+  if (person) return person;
+  return artisanEmail || "Devis";
 }
 
 export async function generateMetadata({
@@ -453,9 +456,10 @@ export default async function PublicSignaturePage({
               label="Destinataire"
               name={
                 quote.client
-                  ? quote.client.first_name
-                    ? `${quote.client.first_name} ${quote.client.name}`
-                    : quote.client.name
+                  ? formatClientName({
+                      first_name: quote.client.first_name,
+                      name: quote.client.name,
+                    })
                   : "Client"
               }
               lines={[

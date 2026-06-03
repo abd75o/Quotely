@@ -21,7 +21,7 @@ async function getQuotesAndUsage() {
     const [quotesRes, usage] = await Promise.all([
       supabase
         .from("quotes")
-        .select("id, number, status, total, subtotal, tax_rate, tax_amount, signature_token, signature_type, items, valid_until, created_at, notes, client:clients(name, email)")
+        .select("id, number, status, total, subtotal, tax_rate, tax_amount, signature_token, signature_type, items, valid_until, created_at, notes, client:clients(name, first_name, email)")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false }),
       getMonthlyQuoteUsage(supabase, user.id),

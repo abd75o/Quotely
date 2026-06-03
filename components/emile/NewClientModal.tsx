@@ -200,7 +200,8 @@ export function NewClientModal({
     if (!missingFields || missingFields.length === 0) return {};
     const m: FieldErrors = {};
     for (const f of missingFields) {
-      if (f === "address" && errors.address) m.address = errors.address;
+      if (f === "email" && errors.email) m.email = errors.email;
+      else if (f === "address" && errors.address) m.address = errors.address;
       else if (f === "postal_code" && errors.postalCode) m.postalCode = errors.postalCode;
       else if (f === "city" && errors.city) m.city = errors.city;
       else if (f === "name" && errors.name) m.name = errors.name;

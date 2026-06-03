@@ -5,6 +5,7 @@ import { MoreHorizontal, FileText, Pencil, Trash2, Eye } from "lucide-react";
 import type { ClientWithStats } from "@/lib/clients/queries";
 import { useUserPlan } from "@/lib/hooks/useUserState";
 import { cn } from "@/lib/utils";
+import { formatClientName } from "@/lib/text/name-normalize";
 
 interface ClientCardProps {
   client: ClientWithStats;
@@ -24,9 +25,11 @@ function initialsOf(client: ClientWithStats): string {
 }
 
 function fullName(client: ClientWithStats): string {
-  const fn = client.first_name?.trim() ?? "";
-  const ln = client.name?.trim() ?? "";
-  return [fn, ln].filter(Boolean).join(" ") || client.email || "Client";
+  return (
+    formatClientName({ first_name: client.first_name, name: client.name }) ||
+    client.email ||
+    "Client"
+  );
 }
 
 export function ClientCard({

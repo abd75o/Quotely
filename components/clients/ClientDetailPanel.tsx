@@ -28,6 +28,7 @@ import {
 } from "@/lib/clients/queries";
 import { PLAN_FEATURES } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
+import { formatClientName } from "@/lib/text/name-normalize";
 
 interface Props {
   open: boolean;
@@ -45,7 +46,11 @@ const STATUS_LABELS: Record<string, { label: string; cls: string }> = {
 };
 
 function fullName(c: ClientRow): string {
-  return [c.first_name, c.name].filter(Boolean).join(" ") || c.email || "Client";
+  return (
+    formatClientName({ first_name: c.first_name, name: c.name }) ||
+    c.email ||
+    "Client"
+  );
 }
 
 function initials(c: ClientRow): string {

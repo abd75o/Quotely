@@ -4,6 +4,7 @@ import ArtisanSignedNotification from "@/emails/ArtisanSignedNotification";
 import { getResend, resendFromAddress } from "./client";
 import { generateQuotePdfBuffer } from "@/lib/pdf/generate";
 import { shouldShowBranding } from "@/lib/branding/should-show";
+import { formatCompanyName, formatFullName } from "@/lib/text/name-normalize";
 import type {
   PdfClient,
   PdfProfile,
@@ -24,12 +25,10 @@ export interface SendQuoteEmailResult {
 }
 
 function companyDisplay(p: PdfProfile): string {
-  return (
-    p.company_name ||
-    p.company ||
-    [p.first_name, p.last_name].filter(Boolean).join(" ") ||
-    "Devis"
-  );
+  const company = (p.company_name || p.company || "").trim();
+  if (company) return formatCompanyName(company);
+  const person = formatFullName(p.first_name, p.last_name);
+  return person || "Devis";
 }
 
 /**

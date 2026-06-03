@@ -5,6 +5,7 @@ import {
   sendQuoteSignedClientEmail,
   sendArtisanSignedNotification,
 } from "@/lib/resend/send-quote";
+import { formatClientName } from "@/lib/text/name-normalize";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -200,9 +201,10 @@ export async function POST(
       | undefined) || "#5B5BD6";
 
   const clientName =
-    (clientRow?.first_name as string | undefined) ||
-    (clientRow?.name as string | undefined) ||
-    body.full_name.trim();
+    formatClientName({
+      first_name: clientRow?.first_name as string | null | undefined,
+      name: clientRow?.name as string | null | undefined,
+    }) || body.full_name.trim();
 
   // 4a. Confirmation au client (mail depuis l'entreprise artisan)
   await sendQuoteSignedClientEmail({

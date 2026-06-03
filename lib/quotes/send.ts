@@ -112,26 +112,28 @@ export async function executeSendQuote(
   const clientRow = Array.isArray(quote.clients)
     ? (quote.clients[0] as Record<string, unknown> | undefined)
     : ((quote.clients as Record<string, unknown> | null) ?? undefined);
-  if (!clientRow || !clientRow.email) {
+  if (!clientRow) {
     return {
       ok: false,
       status: 422,
-      error:
-        "Le client n'a pas d'adresse email. Ajoute l'email avant l'envoi.",
+      error: "Sélectionne un client avant d'envoyer.",
     };
   }
 
   // Legal-conformity gate. A French devis must carry the recipient's full
   // address; for B2B it must also include the raison sociale (DB column
-  // `name` for pros) and SIRET is strongly recommended. We block here
-  // rather than at PDF render time so the artisan gets a structured
-  // missing_fields list instead of a silently broken document.
+  // `name` for pros) and SIRET is strongly recommended. L'email est inclus
+  // ici (et non plus dans un 422 sec en amont) pour que son absence ouvre la
+  // MÊME modale d'édition client que les autres champs manquants — l'artisan
+  // saisit l'email puis relance l'envoi. On ne fabrique JAMAIS l'email du
+  // client à partir de celui de l'émetteur.
   const clientType = clientRow.type_client as
     | "particulier"
     | "professionnel"
     | null
     | undefined;
   const clientMissing: string[] = [];
+  if (!toStr(clientRow.email)) clientMissing.push("email");
   if (!toStr(clientRow.address)) clientMissing.push("address");
   if (!toStr(clientRow.postal_code)) clientMissing.push("postal_code");
   if (!toStr(clientRow.city)) clientMissing.push("city");

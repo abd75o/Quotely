@@ -21,6 +21,7 @@ import { toastSuccess, toastError } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { PLAN_FEATURES } from "@/lib/permissions";
 import type { QuoteUsage } from "@/lib/quotes/quota";
+import { formatClientName } from "@/lib/text/name-normalize";
 
 type Status = "all" | "pending" | "signed" | "refused" | "invoiced";
 
@@ -41,7 +42,7 @@ interface QuoteRow {
   created_at: string;
   valid_until: string;
   items: QuoteItem[];
-  client?: { name: string; email: string } | null;
+  client?: { name: string; first_name?: string | null; email: string } | null;
 }
 
 const STATUS_CONFIG = {
@@ -314,7 +315,7 @@ export function QuotesList({
                     <StatusBadge status={quote.status} />
                   </div>
                   <p className="text-sm font-bold text-[var(--text-primary)] truncate mb-1">
-                    {quote.client?.name ?? "—"}
+                    {quote.client?.name ? formatClientName(quote.client) : "—"}
                   </p>
                   <div className="flex items-end justify-between gap-2">
                     <p className="text-lg font-bold text-[var(--text-primary)] tabular-nums leading-none">
@@ -359,7 +360,7 @@ export function QuotesList({
                     </div>
 
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-[var(--text-primary)] truncate">{quote.client?.name ?? "—"}</p>
+                      <p className="text-sm font-medium text-[var(--text-primary)] truncate">{quote.client?.name ? formatClientName(quote.client) : "—"}</p>
                       <p className="text-xs text-[var(--text-muted)] truncate">{quote.client?.email ?? ""}</p>
                     </div>
 

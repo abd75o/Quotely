@@ -8,6 +8,11 @@ import {
 } from "@react-pdf/renderer";
 import type { Style } from "@react-pdf/types";
 import { resolveMentionsLegales, isVatSubject } from "./mentions-legales";
+import {
+  formatCompanyName,
+  formatFullName,
+  formatClientName,
+} from "@/lib/text/name-normalize";
 import { shouldShowBranding } from "@/lib/branding/should-show";
 import { formatSiret as formatSiretShared } from "@/lib/format/siret";
 
@@ -204,41 +209,27 @@ function formatEuros(value: number): string {
   return `${sign}${grouped},${decPart}${NBSP}€`;
 }
 
-function titleCase(input: string): string {
-  return input
-    .split(/(\s+)/)
-    .map((part) => {
-      if (/^\s+$/.test(part)) return part;
-      if (/^[A-Z0-9.&]+$/.test(part) && part.length <= 5) return part;
-      const lower = part.toLowerCase();
-      return lower.charAt(0).toUpperCase() + lower.slice(1);
-    })
-    .join("");
-}
-
 function companyDisplay(p: PdfProfile): string {
   // No "Prestataire" fallback: if every identifying field is empty the profile
   // is broken upstream and we surface the empty string so the PDF reviewer
   // immediately spots the data hole instead of shipping a generic label.
-  const raw =
-    p.company_name ||
-    p.company ||
-    [p.first_name, p.last_name].filter(Boolean).join(" ") ||
-    p.email ||
-    "";
-  return raw ? titleCase(raw) : "";
+  const company = (p.company_name || p.company || "").trim();
+  if (company) return formatCompanyName(company);
+  const person = formatFullName(p.first_name, p.last_name);
+  if (person) return person;
+  return (p.email || "").trim();
 }
 
 function clientDisplay(c: PdfClient): string {
   // Same no-fallback policy as companyDisplay — a generic "Client" on a legal
   // document hides a real bug (broken embed / missing client_id) so we let
-  // the empty string render and force a fix upstream.
-  const base = c.first_name ? `${c.first_name} ${c.name ?? ""}`.trim() : (c.name ?? "");
+  // the empty string render and force a fix upstream. formatClientName gère le
+  // cas personne ("Marc DUPONT") vs raison sociale seule ("Linkity").
+  const base = formatClientName({ first_name: c.first_name, name: c.name });
   if (!base) return "";
-  const cased = titleCase(base);
-  // Civility (M./Mme/Mlle) is rendered verbatim — not title-cased — so the
-  // dot stays attached and the casing the user typed is preserved.
-  return c.civility ? `${c.civility.trim()} ${cased}` : cased;
+  // Civility (M./Mme/Mlle) is rendered verbatim so the dot stays attached and
+  // the casing the user typed is preserved.
+  return c.civility ? `${c.civility.trim()} ${base}` : base;
 }
 
 function formatSiret(siret: string | null | undefined): string | null {
@@ -848,7 +839,7 @@ function EmitterReceiver(props: {
               { fontFamily: fonts.bold, marginBottom: 2 },
             ]}
           >
-            {titleCase(client.company_name)}
+            {formatCompanyName(client.company_name)}
           </Text>
         )}
         {client.address && (
@@ -862,7 +853,7 @@ function EmitterReceiver(props: {
         {client.email && <Text style={styles.partyLine}>{client.email}</Text>}
         {(client.telephone || client.phone) && (
           <Text style={styles.partyLine}>
-            {client.telephone ?? client.phone}
+            Tél : {client.telephone ?? client.phone}
           </Text>
         )}
         {client.siret && (

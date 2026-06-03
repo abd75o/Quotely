@@ -193,12 +193,52 @@ function parseLine(line: string, defaultTva: number): DraftRow {
   };
 }
 
+// ─── Filtrage des lignes non-prestation (intro e-mail, titres de section) ────
+//
+// Un collage réel contient souvent des politesses ("Bonjour, voici le détail")
+// et des titres de section ("— Salle de bain —", "Plomberie :") qui ne sont PAS
+// des lignes de devis. On les écarte pour que l'artisan n'ait pas à supprimer
+// ces rangs à prix vide à la main.
+//
+// SÉCURITÉ : on ne filtre JAMAIS une ligne contenant un chiffre. Toute ligne
+// chiffrée (prix, quantité, n°) est donc toujours conservée — un faux positif
+// ne peut coûter qu'un libellé à retaper, jamais la perte d'une ligne chiffrée.
+const GREETING_RE =
+  /^(bonjour|bonsoir|madame|monsieur|messieurs|mesdames|cher|chère|chers|merci|cordialement|bien à vous|bien cordialement|salutations|sincères salutations|veuillez|ci-joint|ci-dessous|ci-après|voici|voilà|suite à|comme convenu|en vous remerciant|dans l'attente|à votre disposition|n'hésitez pas|objet\s*:)/i;
+
+// Caractères de décoration utilisés pour encadrer un titre de section.
+const DECO = "\\-=*_#~•·▪►–—.";
+
+function isNonItemLine(line: string): boolean {
+  const t = line.trim();
+  if (!t) return true;
+  // Garde-fou absolu : un chiffre ⇒ ligne potentiellement chiffrée ⇒ conservée.
+  if (/\d/.test(t)) return false;
+  // Politesses / intro d'e-mail.
+  if (GREETING_RE.test(t)) return true;
+  // Séparateur pur ("─────", "*****").
+  if (new RegExp(`^[\\s${DECO}]+$`).test(t)) return true;
+  // Titre encadré de décoration ("=== Cuisine ===", "— Salle de bain —").
+  const core = t
+    .replace(new RegExp(`^[\\s${DECO}]+`), "")
+    .replace(new RegExp(`[\\s${DECO}]+$`), "")
+    .trim();
+  if (core.length > 0 && core.length < t.length && core.length <= 40) return true;
+  // Titre de section terminé par ":" et court ("Plomberie :", "Travaux SDB :").
+  if (/[:：]\s*$/.test(t) && t.split(/\s+/).length <= 5) return true;
+  return false;
+}
+
 function parseBulk(raw: string, defaultTva: number): DraftRow[] {
   const lines = raw
     .split(/\r?\n/)
     .map((l) => l.trim())
     .filter((l) => l.length > 0);
-  return lines.map((l) => parseLine(l, defaultTva));
+  const items = lines.filter((l) => !isNonItemLine(l));
+  // Si le filtre a TOUT retiré (collage de pure prose, cas rare), on retombe
+  // sur le parse intégral plutôt que de laisser l'artisan avec un tableau vide.
+  const kept = items.length > 0 ? items : lines;
+  return kept.map((l) => parseLine(l, defaultTva));
 }
 
 // ─── Validation ──────────────────────────────────────────────────────────────

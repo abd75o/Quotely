@@ -17,27 +17,84 @@ interface EmileInputProps {
   onAbort?: () => void;
   placeholder?: string;
   /**
-   * Called when the user pastes content with more than {@link BULK_THRESHOLD}
-   * non-empty lines. EmileChat opens the BulkImportModal so the lines go
-   * through a structured editor + direct DB write instead of being shoved
-   * through the LLM (which would burn ~10k output tokens regurgitating them).
+   * Called when a paste is detected as a STRUCTURED LIST (clean per-line list
+   * or pasted Excel/TSV table) — see {@link looksStructuredList}. EmileChat
+   * opens the BulkImportModal so the lines go through a structured editor +
+   * direct DB write instead of being shoved through the LLM (which would burn
+   * ~10k output tokens regurgitating them).
+   *
+   * Spoken-language pastes (rambling dictation, fillers, prices scattered mid
+   * sentence) deliberately DON'T trigger this — they land in the textarea and
+   * Émile interprets them conversationally. The only override is the absolute
+   * {@link FORCE_BULK_LINES} safety valve, to avoid frying the LLM on a wall of
+   * text.
    */
   onBulkPaste?: (rawText: string) => void;
 }
 
-// Heuristic threshold: 25 lines = roughly "more than a typical chat message
-// could justify going through the LLM". Stays in sync with the system prompt
-// notice about long pastes.
-const BULK_THRESHOLD = 25;
 // Hard cap shared with the server-side validation in /api/quotes/bulk-lines.
 const HARD_CAP = 500;
+// Au-delà de ce nombre de lignes brutes, on bascule en bulk QUOI QU'IL ARRIVE
+// (même si ça ne ressemble pas à une liste) : un mur de texte ne doit jamais
+// partir tel quel au LLM. En dessous, c'est la détection de structure qui décide.
+const FORCE_BULK_LINES = 150;
+// Minimum de lignes pour ne serait-ce qu'ENVISAGER le bulk. En dessous, Émile
+// gère très bien en conversation, même une mini-liste.
+const MIN_STRUCTURED_LINES = 6;
 
-function countNonEmptyLines(text: string): number {
-  let n = 0;
-  for (const line of text.split(/\r?\n/)) {
-    if (line.trim().length > 0) n += 1;
-  }
-  return n;
+function nonEmptyLines(text: string): string[] {
+  return text
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0);
+}
+
+// Marqueurs de langage parlé / dictée — leur présence régulière signe un vocal
+// désordonné qu'il ne faut PAS parser mécaniquement.
+const FILLER_RE =
+  /\b(euh+|heu+|alors|donc|voil[àa]|bah|ben|du coup|en fait|tu vois|enfin|hein|genre|ouais|bon ben)\b/i;
+
+// Une ligne "structurée" : soit délimitée en colonnes (| tab ;), soit terminée
+// par un prix (nombre éventuellement suivi de € / EUR / HT) précédé d'un libellé.
+function hasColumnDelimiter(line: string): boolean {
+  return /[|\t;]/.test(line);
+}
+function endsWithPrice(line: string): boolean {
+  const m = /([\d][\d .,]*)\s*(?:€|eur|ht)?\s*$/i.exec(line.trim());
+  if (!m || !/\d/.test(m[1])) return false;
+  // Il faut un libellé non-vide AVANT le prix (sinon c'est juste un nombre seul).
+  return line.trim().slice(0, m.index).trim().length > 0;
+}
+function wordCount(line: string): number {
+  return line.split(/\s+/).filter(Boolean).length;
+}
+
+/**
+ * Détecte si un collage est une LISTE STRUCTURÉE (liste propre / tableau Excel)
+ * plutôt que du langage parlé. Conservateur : en cas de doute, on renvoie false
+ * pour laisser Émile interpréter en conversation.
+ */
+function looksStructuredList(lines: string[]): boolean {
+  const n = lines.length;
+  if (n < MIN_STRUCTURED_LINES) return false;
+
+  const delimited = lines.filter(hasColumnDelimiter).length;
+  const priced = lines.filter(endsWithPrice).length;
+  const longLines = lines.filter((l) => wordCount(l) > 12).length;
+  const fillerLines = lines.filter((l) => FILLER_RE.test(l)).length;
+
+  const delimRatio = delimited / n;
+  const priceRatio = priced / n;
+  const longRatio = longLines / n;
+  const fillerRatio = fillerLines / n;
+
+  // Tableau collé (Excel/TSV/CSV) : motif de colonnes très régulier → on fait
+  // confiance même si certaines cellules sont longues.
+  if (delimRatio >= 0.6) return true;
+
+  // Liste "libellé … prix" : la majorité des lignes finissent par un prix, les
+  // lignes sont courtes, et les marqueurs de langage parlé sont quasi absents.
+  return priceRatio >= 0.6 && longRatio <= 0.2 && fillerRatio <= 0.1;
 }
 
 export function EmileInput({
@@ -85,7 +142,8 @@ export function EmileInput({
     if (!onBulkPaste) return;
     const pasted = e.clipboardData.getData("text");
     if (!pasted) return;
-    const lineCount = countNonEmptyLines(pasted);
+    const lines = nonEmptyLines(pasted);
+    const lineCount = lines.length;
     if (lineCount > HARD_CAP) {
       e.preventDefault();
       toastError(
@@ -93,8 +151,11 @@ export function EmileInput({
       );
       return;
     }
-    if (lineCount > BULK_THRESHOLD) {
-      // preventDefault so the huge paste doesn't land in the textarea — the
+    // Bulk si : mur de texte (sécurité absolue) OU collage manifestement
+    // structuré. Sinon (vocal bavard, langage parlé), on laisse le paste
+    // atterrir dans le textarea et Émile l'interprète en conversation.
+    if (lineCount >= FORCE_BULK_LINES || looksStructuredList(lines)) {
+      // preventDefault so the paste doesn't land in the textarea — the
       // BulkImportModal becomes the structured editor for it instead.
       e.preventDefault();
       onBulkPaste(pasted);

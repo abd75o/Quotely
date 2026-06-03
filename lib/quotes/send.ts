@@ -299,6 +299,25 @@ export async function executeSendQuote(
     );
   }
 
+  // Fige l'émetteur : on persiste le profil EXACT utilisé pour le PDF envoyé.
+  // Requête SÉPARÉE et best-effort — la colonne emitter_snapshot est ajoutée par
+  // une migration ; si elle n'est pas encore appliquée, l'écriture échoue sans
+  // jamais casser l'envoi (le mail est déjà parti). À partir de maintenant, le
+  // PDF/la page de signature relisent ce snapshot au lieu du profil vivant.
+  {
+    const { error: snapErr } = await supabase
+      .from("quotes")
+      .update({ emitter_snapshot: profileForPdf })
+      .eq("id", quote.id)
+      .eq("user_id", userId);
+    if (snapErr) {
+      console.error(
+        "[SEND QUOTE] emitter_snapshot persist failed (migration appliquée ?)",
+        snapErr,
+      );
+    }
+  }
+
   return {
     ok: true,
     messageId: result.messageId,

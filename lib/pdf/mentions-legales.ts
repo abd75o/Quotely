@@ -77,6 +77,46 @@ export interface ResolvedMentions {
   tvaNote: string | null;
 }
 
+// ─── Statut TVA — source de vérité unique ────────────────────────────────────
+// Valeurs canoniques réellement stockées dans `profiles.vat_status` par
+// l'onboarding (app/dashboard/onboarding), EntrepriseForm et
+// ProfileCompletionModal : "auto_entrepreneur" | "assujetti" | "non_assujetti".
+// Les alias hérités ("franchise", "auto_entrepreneur_franchise", "soumis") sont
+// tolérés par résilience. ⚠️ BUG CORRIGÉ : resolveMentionsLegales testait
+// auparavant "auto_entrepreneur_franchise"/"franchise" — des valeurs JAMAIS
+// écrites en base — donc un auto-entrepreneur voyait "Assujetti TVA" sur son
+// PDF et la mention art. 293 B n'apparaissait jamais.
+const VAT_FRANCHISE = new Set([
+  "auto_entrepreneur",
+  "auto_entrepreneur_franchise",
+  "franchise",
+]);
+const VAT_NON_ASSUJETTI = new Set(["non_assujetti"]);
+const VAT_SUBJECT = new Set(["assujetti", "soumis"]);
+
+function normalizeVatStatus(vatStatus?: string | null): string {
+  return (vatStatus ?? "").toLowerCase().trim();
+}
+
+/** True uniquement quand l'entreprise est réellement assujettie à la TVA. */
+export function isVatSubject(vatStatus?: string | null): boolean {
+  return VAT_SUBJECT.has(normalizeVatStatus(vatStatus));
+}
+
+/**
+ * Mention légale TVA correspondant au statut :
+ * - franchise / auto-entrepreneur → "TVA non applicable, art. 293 B du CGI"
+ * - non assujetti                → "TVA non applicable" (293 B ne vise que la
+ *   franchise en base, on ne cite donc pas l'article)
+ * - assujetti / inconnu          → null (aucune mention d'exonération)
+ */
+export function resolveTvaNote(vatStatus?: string | null): string | null {
+  const s = normalizeVatStatus(vatStatus);
+  if (VAT_FRANCHISE.has(s)) return "TVA non applicable, art. 293 B du CGI";
+  if (VAT_NON_ASSUJETTI.has(s)) return "TVA non applicable";
+  return null;
+}
+
 export function resolveMentionsLegales(opts: {
   metier?: string | null;
   typeClient?: "particulier" | "professionnel" | null;
@@ -100,11 +140,7 @@ export function resolveMentionsLegales(opts: {
         ? B2B_LATE_PAYMENT
         : [];
 
-  const tvaNote =
-    opts.vatStatus === "auto_entrepreneur_franchise" ||
-    opts.vatStatus === "franchise"
-      ? "TVA non applicable, art. 293 B du CGI"
-      : null;
+  const tvaNote = resolveTvaNote(opts.vatStatus);
 
   return { generales, garanties, specifiques, tvaNote };
 }

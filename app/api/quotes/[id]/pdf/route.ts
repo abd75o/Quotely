@@ -95,18 +95,50 @@ export async function GET(
     }
   }
 
+  // RÈGLE MÉTIER draft=live / sent=snapshot. Un devis envoyé/signé doit figer
+  // l'émetteur : on relit le snapshot pris à l'envoi (emitter_snapshot) plutôt
+  // que le profil vivant, pour que les éditions de profil postérieures ne
+  // modifient pas un document déjà transmis. Lecture DÉFENSIVE (requête séparée)
+  // pour que l'absence de colonne ne casse pas le PDF. Un brouillon, lui, lit
+  // toujours le profil LIVE.
+  const isFrozen = (quote.status as string) !== "draft";
+  let frozenSnapshot: Record<string, unknown> | null = null;
+  if (isFrozen) {
+    let snapQuery = supabase
+      .from("quotes")
+      .select("emitter_snapshot")
+      .eq("id", id);
+    snapQuery = token
+      ? snapQuery.eq("signature_token", token)
+      : snapQuery.eq("user_id", quote.user_id as string);
+    const { data: snap, error: snapErr } = await snapQuery.maybeSingle();
+    if (snapErr) {
+      console.error("[quotes/:id/pdf] emitter_snapshot read error:", snapErr);
+    }
+    const raw = (snap as { emitter_snapshot?: unknown } | null)?.emitter_snapshot;
+    if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+      frozenSnapshot = raw as Record<string, unknown>;
+    }
+  }
+
   // When the artisan downloads their own PDF, RLS lets them read their
   // profile. When the client opens the PDF from the email link (anon +
   // signature_token), RLS blocks it and the PDF would render with an empty
   // emitter (broken doc on every shared link). The signature_token already
   // gates access to the quote, so we re-use that proof to fetch the profile
   // via the admin client whenever the token path is taken.
-  const profileClient = token ? getSupabaseAdmin() : supabase;
-  const { data: profile } = await profileClient
-    .from("profiles")
-    .select("*")
-    .eq("id", quote.user_id as string)
-    .maybeSingle();
+  //
+  // Skip the live fetch entirely when we already have a frozen snapshot.
+  let profile: Record<string, unknown> | null = frozenSnapshot;
+  if (!profile) {
+    const profileClient = token ? getSupabaseAdmin() : supabase;
+    const { data: live } = await profileClient
+      .from("profiles")
+      .select("*")
+      .eq("id", quote.user_id as string)
+      .maybeSingle();
+    profile = (live as Record<string, unknown> | null) ?? null;
+  }
 
   const items = Array.isArray(quote.items)
     ? (quote.items as QuoteItemRaw[])

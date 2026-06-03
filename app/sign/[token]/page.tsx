@@ -170,10 +170,33 @@ async function loadQuote(token: string): Promise<PublicQuote | null> {
       }
     }
 
+    // RÈGLE MÉTIER draft=live / sent=snapshot. Tant que le devis est un
+    // brouillon, l'émetteur affiché suit le profil LIVE. Dès qu'il est envoyé
+    // ou signé, on relit l'émetteur FIGÉ à l'envoi (emitter_snapshot) afin que
+    // toute édition de profil postérieure ne modifie pas le document déjà
+    // transmis au client. Requête séparée + défensive (colonne ajoutée par
+    // migration) : son absence ne casse jamais la page.
+    if ((data.status as string) !== "draft") {
+      const { data: snap, error: snapErr } = await supabase
+        .from("quotes")
+        .select("emitter_snapshot")
+        .eq("signature_token", token)
+        .maybeSingle();
+      if (snapErr) {
+        console.error("[sign/[token]] emitter_snapshot read error:", snapErr);
+      }
+      const raw = (snap as { emitter_snapshot?: unknown } | null)
+        ?.emitter_snapshot;
+      if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+        profile = raw as Record<string, unknown>;
+      }
+    }
+
     // Attach the auth email onto the profile object so the existing
     // companyDisplay()/emitter rendering (which read `profile.email`) keep
-    // working unchanged.
-    if (profile && artisanEmail) {
+    // working unchanged. The snapshot already carries the email captured at
+    // send time; we only refresh it when the live lookup found one.
+    if (profile && artisanEmail && !profile.email) {
       profile.email = artisanEmail;
     }
 

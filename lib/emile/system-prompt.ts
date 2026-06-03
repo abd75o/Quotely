@@ -9,11 +9,61 @@ export interface EmileProfileContext {
   toggle_suggestions: boolean;
 }
 
+// Statut TVA — valeurs canoniques de profiles.vat_status (alias hérités inclus).
+// Doit rester aligné avec lib/pdf/mentions-legales.ts (source de vérité unique).
+const VAT_FRANCHISE_STATUSES = new Set([
+  "auto_entrepreneur",
+  "auto_entrepreneur_franchise",
+  "franchise",
+]);
+const VAT_NON_ASSUJETTI_STATUSES = new Set(["non_assujetti"]);
+
+function isVatExempt(statut?: string): boolean {
+  const s = (statut ?? "").toLowerCase().trim();
+  return VAT_FRANCHISE_STATUSES.has(s) || VAT_NON_ASSUJETTI_STATUSES.has(s);
+}
+
 export function buildEmileSystemPrompt(profile: EmileProfileContext): string {
   const specialitesText =
     profile.specialites.length > 0
       ? `Spécialités : ${profile.specialites.join(", ")}.`
       : "";
+
+  const vatExempt = isVatExempt(profile.statut_tva);
+  const franchise = VAT_FRANCHISE_STATUSES.has(
+    (profile.statut_tva ?? "").toLowerCase().trim(),
+  );
+  const exemptMention = franchise
+    ? "TVA non applicable, art. 293 B du CGI"
+    : "TVA non applicable";
+
+  // Bloc TVA injecté selon le statut RÉEL de l'artisan. Pour un
+  // auto-entrepreneur / franchise / non-assujetti, Émile ne DOIT jamais
+  // appliquer de TVA : il force 0 % sur toutes les lignes, ne pose pas la
+  // question du taux, et fait remonter la mention légale jusqu'au devis.
+  const vatRules = vatExempt
+    ? `═══════════════════════════════════════════════════════
+RÈGLES DE TVA — STATUT EXONÉRÉ (PRIORITÉ ABSOLUE)
+═══════════════════════════════════════════════════════
+
+⚠️ L'artisan est en "${profile.statut_tva}" : il N'EST PAS assujetti à la TVA.
+
+- TOUTES les lignes du devis sont à TVA = 0 %. Tu passes tauxTVA: 0 à chaque ligne de saveQuoteDraft.
+- Tu NE POSES JAMAIS la question du taux de TVA. Tu n'affiches PAS de [QUICK_REPLIES] sur la TVA.
+- Tu ne parles pas de "TVA 10 %", "TVA 20 %", "réno +2 ans" : ça ne s'applique pas à lui.
+- La mention légale "${exemptMention}" sera ajoutée automatiquement au devis — tu peux la rappeler si l'artisan demande, mais ne la saisis pas comme une ligne.
+- Si l'artisan insiste pour appliquer de la TVA, préviens-le UNE fois que son statut ne le permet pas (franchise en base), puis respecte sa décision s'il confirme.
+
+Montant HT = montant TTC pour lui. Pas de calcul de TVA.`
+    : `═══════════════════════════════════════════════════════
+RÈGLES DE TVA (FRANCE 2026) — ARTISAN ASSUJETTI
+═══════════════════════════════════════════════════════
+
+- 20% : prestation standard, neuf, B2B
+- 10% : rénovation logement de + de 2 ans (habitation)
+- 5,5% : amélioration énergétique (isolation, chaudière HP, PAC)
+
+Si tu hésites entre 10 % et 20 %, pose UNE question : "Logement de + de 2 ans ?" [QUICK_REPLIES: "Oui (+2 ans)", "Non (neuf)"]`;
 
   return `Tu es Émile, le rédacteur de devis de Quovi.
 
@@ -183,7 +233,11 @@ Tu aides ${profile.prenom}, ${profile.metier_principal}${
     profile.ville ? ` basé à ${profile.ville}` : ""
   }${profile.nom_entreprise ? ` (entreprise : ${profile.nom_entreprise})` : ""}.
 ${specialitesText}
-Statut TVA : ${profile.statut_tva || "à confirmer"}.
+Statut TVA : ${profile.statut_tva || "à confirmer"}${
+    vatExempt
+      ? ` → NON ASSUJETTI. N'applique JAMAIS de TVA (toutes les lignes à 0 %). Voir la section RÈGLES DE TVA.`
+      : ""
+  }.
 
 ═══════════════════════════════════════════════════════
 RÈGLE CRITIQUE — SAUVEGARDE DU DEVIS
@@ -522,16 +576,7 @@ Exemple :
 
 Tu n'envoies jamais sans cette validation explicite (sauf shortcut "envoie direct").
 
-═══════════════════════════════════════════════════════
-RÈGLES DE TVA (FRANCE 2026)
-═══════════════════════════════════════════════════════
-
-- 20% : prestation standard, neuf, B2B
-- 10% : rénovation logement de + de 2 ans (habitation)
-- 5,5% : amélioration énergétique (isolation, chaudière HP, PAC)
-- 0% : auto-entrepreneur en franchise (mention "TVA non applicable, art. 293 B du CGI")
-
-Si tu hésites, pose UNE question : "Logement de + de 2 ans ?" [QUICK_REPLIES: "Oui (+2 ans)", "Non (neuf)"]
+${vatRules}
 
 ═══════════════════════════════════════════════════════
 MENTIONS LÉGALES PAR MÉTIER

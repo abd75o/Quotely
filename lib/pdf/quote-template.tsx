@@ -7,7 +7,7 @@ import {
   View,
 } from "@react-pdf/renderer";
 import type { Style } from "@react-pdf/types";
-import { resolveMentionsLegales } from "./mentions-legales";
+import { resolveMentionsLegales, isVatSubject } from "./mentions-legales";
 import { shouldShowBranding } from "@/lib/branding/should-show";
 import { formatSiret as formatSiretShared } from "@/lib/format/siret";
 
@@ -184,15 +184,24 @@ function formatDateTimeFr(iso: string | null | undefined): string {
 /**
  * `Intl.NumberFormat('fr-FR', { style: 'currency' })` uses U+202F (narrow
  * no-break space) which Helvetica can't render in react-pdf, so we hand-roll
- * grouping with ASCII spaces and append the € manually.
+ * grouping and append the € manually.
+ *
+ * NOWRAP : react-pdf n'expose PAS `white-space: nowrap` (absent du type Style).
+ * L'équivalent fiable est d'utiliser l'espace INSÉCABLE U+00A0 — présent dans
+ * l'encodage WinAnsi des polices standard (Helvetica/Courier), rendu à la même
+ * largeur qu'une espace mais que l'algo de césure ne coupe jamais. Sans ça, le
+ * "TOTAL TTC 12 345,67 €" (fontSize 20, carte totaux étroite à 42%) cassait au
+ * milieu du nombre sur la 1re page. On groupe les milliers ET on relie le « € »
+ * avec U+00A0 pour que le montant reste d'un seul tenant.
  */
+const NBSP = " ";
 function formatEuros(value: number): string {
   const n = Number.isFinite(value) ? value : 0;
   const fixed = Math.abs(n).toFixed(2);
   const [intPart, decPart] = fixed.split(".");
-  const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, NBSP);
   const sign = n < 0 ? "-" : "";
-  return `${sign}${grouped},${decPart} €`;
+  return `${sign}${grouped},${decPart}${NBSP}€`;
 }
 
 function titleCase(input: string): string {
@@ -1176,6 +1185,17 @@ function LegalMentions(props: {
   mentions: ReturnType<typeof resolveMentionsLegales>;
 }) {
   const { styles, profile, companyName, mentions } = props;
+  // Ligne TVA : la mention d'exonération (293 B / non applicable) prime ;
+  // sinon "Assujetti TVA" UNIQUEMENT pour un profil réellement assujetti.
+  // Auparavant le fallback affichait "Assujetti TVA" pour TOUS les statuts non
+  // reconnus — y compris les auto-entrepreneurs — ce qui était faux.
+  const tvaMentionLine = mentions.tvaNote
+    ? mentions.tvaNote
+    : profile.vat_number
+      ? `Assujetti TVA — n° ${profile.vat_number}`
+      : isVatSubject(profile.vat_status)
+        ? "Assujetti TVA"
+        : null;
   return (
     <View style={styles.mentions} wrap={false}>
       <Text style={styles.mentionLine}>
@@ -1196,13 +1216,9 @@ function LegalMentions(props: {
             .join(", ")}
         </Text>
       )}
-      <Text style={styles.mentionLine}>
-        {mentions.tvaNote
-          ? mentions.tvaNote
-          : profile.vat_number
-            ? `Assujetti TVA — n° ${profile.vat_number}`
-            : "Assujetti TVA"}
-      </Text>
+      {tvaMentionLine && (
+        <Text style={styles.mentionLine}>{tvaMentionLine}</Text>
+      )}
       {profile.decennale_number && (
         <Text style={styles.mentionLine}>
           Garantie décennale :{" "}

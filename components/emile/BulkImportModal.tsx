@@ -11,20 +11,12 @@ import { Loader2, Plus, Trash2, X } from "lucide-react";
 import { toastError, toastSuccess } from "@/lib/toast";
 import { humanizeError } from "@/lib/errors";
 import { cn } from "@/lib/utils";
-
-const UNITS: Array<{ value: string; label: string }> = [
-  { value: "", label: "—" },
-  { value: "u", label: "u" },
-  { value: "h", label: "h" },
-  { value: "j", label: "j" },
-  { value: "m", label: "m" },
-  { value: "m²", label: "m²" },
-  { value: "m³", label: "m³" },
-  { value: "ml", label: "ml" },
-  { value: "kg", label: "kg" },
-  { value: "l", label: "l" },
-  { value: "forfait", label: "forfait" },
-];
+import {
+  UNITS,
+  freshId,
+  parseBulk,
+  type DraftRow,
+} from "@/lib/bulk/parse-line";
 
 const TVA_OPTIONS = [
   { value: 0, label: "0 %" },
@@ -32,15 +24,6 @@ const TVA_OPTIONS = [
   { value: 10, label: "10 %" },
   { value: 20, label: "20 %" },
 ];
-
-interface DraftRow {
-  id: string;
-  label: string;
-  quantity: string;
-  unite: string;
-  price: string;
-  tva: number;
-}
 
 export type BulkImportMode = "append" | "replace" | "new";
 
@@ -98,147 +81,6 @@ interface BulkImportModalProps {
   /** Active quote number, shown in the pre-step copy ("Devis QVI-… a 12 lignes"). */
   existingQuoteNumber?: string | null;
   onImported: (info: BulkImportSuccess) => void;
-}
-
-let rowSeq = 0;
-function freshId(): string {
-  rowSeq += 1;
-  return `r-${Date.now().toString(36)}-${rowSeq}`;
-}
-
-// ─── Parsing heuristics ──────────────────────────────────────────────────────
-//
-// We try formats in decreasing order of structure. Anything we can't parse
-// confidently lands in the `label` column with quantity/price blank, so the
-// artisan only has to fill the missing cells instead of typing everything.
-
-function normalisePrice(raw: string): string {
-  // Strip currency / spaces, French decimal → JS decimal.
-  return raw
-    .replace(/€|EUR| |\s+/gi, "")
-    .replace(/,(\d{1,2})$/, ".$1");
-}
-
-function parseNumber(raw: string): number | null {
-  const cleaned = normalisePrice(raw);
-  if (!cleaned) return null;
-  const n = Number(cleaned);
-  return Number.isFinite(n) ? n : null;
-}
-
-function stripLeadingNumber(s: string): string {
-  // "1. Dépose baignoire" / "12) Pose carrelage" / "3 - Reprise plomberie"
-  // → drop the bullet so the label cell carries the prestation only.
-  return s.replace(/^\s*\d+\s*[.)\-–—:]\s*/, "");
-}
-
-function parseLine(line: string, defaultTva: number): DraftRow {
-  const trimmed = line.trim();
-  // 1. Pipe / tab / semicolon delimited "label | qty | unit? | price"
-  const delim = /[|\t;]/.test(trimmed) ? /\s*[|\t;]\s*/ : null;
-  if (delim) {
-    const parts = trimmed.split(delim).filter(Boolean);
-    if (parts.length >= 3) {
-      const [labelRaw, qtyRaw, ...rest] = parts;
-      let unite = "";
-      let priceRaw = rest[rest.length - 1] ?? "";
-      // If a unit cell sits between qty and price.
-      if (rest.length >= 2) {
-        const candidateUnit = rest[0].trim();
-        if (UNITS.some((u) => u.value === candidateUnit)) {
-          unite = candidateUnit;
-          priceRaw = rest[rest.length - 1];
-        }
-      }
-      const qty = parseNumber(qtyRaw);
-      const price = parseNumber(priceRaw);
-      return {
-        id: freshId(),
-        label: stripLeadingNumber(labelRaw).trim(),
-        quantity: qty != null ? String(qty) : "1",
-        unite,
-        price: price != null ? String(price) : "",
-        tva: defaultTva,
-      };
-    }
-  }
-
-  // 2. "1. Désignation - 280€" or "Désignation : 280" or "Désignation 280€"
-  //    Trailing number = price, leading "N." or "-" stripped.
-  const stripped = stripLeadingNumber(trimmed);
-  const priceMatch = /([\d ., ]+)\s*(?:€|EUR|HT)?\s*$/i.exec(stripped);
-  if (priceMatch && /\d/.test(priceMatch[1])) {
-    const labelPart = stripped.slice(0, priceMatch.index).replace(/[-:–—]\s*$/, "").trim();
-    const price = parseNumber(priceMatch[1]);
-    if (labelPart && price != null) {
-      return {
-        id: freshId(),
-        label: labelPart,
-        quantity: "1",
-        unite: "",
-        price: String(price),
-        tva: defaultTva,
-      };
-    }
-  }
-
-  // 3. Fallback: whole line into label, artisan completes the rest.
-  return {
-    id: freshId(),
-    label: stripped || trimmed,
-    quantity: "1",
-    unite: "",
-    price: "",
-    tva: defaultTva,
-  };
-}
-
-// ─── Filtrage des lignes non-prestation (intro e-mail, titres de section) ────
-//
-// Un collage réel contient souvent des politesses ("Bonjour, voici le détail")
-// et des titres de section ("— Salle de bain —", "Plomberie :") qui ne sont PAS
-// des lignes de devis. On les écarte pour que l'artisan n'ait pas à supprimer
-// ces rangs à prix vide à la main.
-//
-// SÉCURITÉ : on ne filtre JAMAIS une ligne contenant un chiffre. Toute ligne
-// chiffrée (prix, quantité, n°) est donc toujours conservée — un faux positif
-// ne peut coûter qu'un libellé à retaper, jamais la perte d'une ligne chiffrée.
-const GREETING_RE =
-  /^(bonjour|bonsoir|madame|monsieur|messieurs|mesdames|cher|chère|chers|merci|cordialement|bien à vous|bien cordialement|salutations|sincères salutations|veuillez|ci-joint|ci-dessous|ci-après|voici|voilà|suite à|comme convenu|en vous remerciant|dans l'attente|à votre disposition|n'hésitez pas|objet\s*:)/i;
-
-// Caractères de décoration utilisés pour encadrer un titre de section.
-const DECO = "\\-=*_#~•·▪►–—.";
-
-function isNonItemLine(line: string): boolean {
-  const t = line.trim();
-  if (!t) return true;
-  // Garde-fou absolu : un chiffre ⇒ ligne potentiellement chiffrée ⇒ conservée.
-  if (/\d/.test(t)) return false;
-  // Politesses / intro d'e-mail.
-  if (GREETING_RE.test(t)) return true;
-  // Séparateur pur ("─────", "*****").
-  if (new RegExp(`^[\\s${DECO}]+$`).test(t)) return true;
-  // Titre encadré de décoration ("=== Cuisine ===", "— Salle de bain —").
-  const core = t
-    .replace(new RegExp(`^[\\s${DECO}]+`), "")
-    .replace(new RegExp(`[\\s${DECO}]+$`), "")
-    .trim();
-  if (core.length > 0 && core.length < t.length && core.length <= 40) return true;
-  // Titre de section terminé par ":" et court ("Plomberie :", "Travaux SDB :").
-  if (/[:：]\s*$/.test(t) && t.split(/\s+/).length <= 5) return true;
-  return false;
-}
-
-function parseBulk(raw: string, defaultTva: number): DraftRow[] {
-  const lines = raw
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter((l) => l.length > 0);
-  const items = lines.filter((l) => !isNonItemLine(l));
-  // Si le filtre a TOUT retiré (collage de pure prose, cas rare), on retombe
-  // sur le parse intégral plutôt que de laisser l'artisan avec un tableau vide.
-  const kept = items.length > 0 ? items : lines;
-  return kept.map((l) => parseLine(l, defaultTva));
 }
 
 // ─── Validation ──────────────────────────────────────────────────────────────

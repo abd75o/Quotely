@@ -170,3 +170,203 @@ CREATE POLICY "quotes_delete" ON public.quotes
 -- quotes — lecture publique via token (page signature client)
 CREATE POLICY "quotes_public" ON public.quotes
   FOR SELECT USING (public_token IS NOT NULL AND status IN ('pending','signed'));
+
+
+-- ════════════════════════════════════════════════════════════════════════════
+-- MODULE FACTURE
+-- Miroir de la migration 20260604_invoices_foundation.sql. Mêmes conventions que
+-- quotes (user_id → auth.users, trigger updated_at, RLS owner). Numérotation
+-- légale CONTINUE (sans trou ni doublon) : pas de SEQUENCE Postgres, mais un
+-- compteur dédié `invoice_counters` incrémenté atomiquement et un numéro attribué
+-- dans la même transaction que l'INSERT (fonction create_invoice).
+-- ════════════════════════════════════════════════════════════════════════════
+
+-- ─── TABLE : invoices ────────────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS public.invoices (
+  id               UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id          UUID          NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  -- Document légal : survit au devis (SET NULL et non CASCADE).
+  quote_id         UUID          REFERENCES public.quotes(id) ON DELETE SET NULL,
+
+  -- "FAC-2026-00001" — unique PAR ARTISAN (série légale propre à chaque
+  -- entreprise), comme quotes.number. Pas d'unicité globale (multi-tenant).
+  invoice_number   TEXT          NOT NULL,
+  invoice_year     INTEGER       NOT NULL,           -- année → reset du compteur
+  sequence_number  INTEGER       NOT NULL,           -- rang dans l'année (1,2,3…)
+
+  type             TEXT          NOT NULL DEFAULT 'totale'
+                                   CHECK (type IN ('acompte', 'solde', 'totale')),
+  -- pending = générée mais pas envoyée, sent = envoyée au client.
+  status           TEXT          NOT NULL DEFAULT 'draft'
+                                   CHECK (status IN ('draft', 'pending', 'sent')),
+
+  emitter_snapshot JSONB,                            -- snapshot émetteur figé
+
+  acompte_percent  NUMERIC(5,2),
+  acompte_amount   NUMERIC(12,2),
+
+  total_ht         NUMERIC(12,2) NOT NULL DEFAULT 0,
+  total_tva        NUMERIC(12,2) NOT NULL DEFAULT 0,
+  total_ttc        NUMERIC(12,2) NOT NULL DEFAULT 0,
+
+  issued_at        DATE          NOT NULL DEFAULT CURRENT_DATE,
+  sent_at          TIMESTAMPTZ,
+  created_at       TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+  updated_at       TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+
+  CONSTRAINT uq_invoices_user_number   UNIQUE (user_id, invoice_number),
+  CONSTRAINT uq_invoices_user_year_seq UNIQUE (user_id, invoice_year, sequence_number)
+);
+
+CREATE INDEX IF NOT EXISTS idx_invoices_user_id     ON public.invoices(user_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_quote_id    ON public.invoices(quote_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_number      ON public.invoices(invoice_number);
+CREATE INDEX IF NOT EXISTS idx_invoices_user_status ON public.invoices(user_id, status);
+
+DROP TRIGGER IF EXISTS trg_invoices_updated_at ON public.invoices;
+CREATE TRIGGER trg_invoices_updated_at
+  BEFORE UPDATE ON public.invoices
+  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+
+-- ─── TABLE : invoice_counters (compteur séquentiel par artisan & année) ──────
+-- RLS activé SANS policy → aucun accès direct client : seules les fonctions
+-- SECURITY DEFINER ci-dessous l'incrémentent (pas de trou/doublon forçable).
+
+CREATE TABLE IF NOT EXISTS public.invoice_counters (
+  user_id     UUID    NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  year        INTEGER NOT NULL,
+  last_number INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (user_id, year)
+);
+
+
+-- ─── FONCTION interne : allocation atomique du prochain rang ──────────────────
+-- UPSERT ... RETURNING = incrément atomique sous verrou de ligne. NON exposée.
+
+CREATE OR REPLACE FUNCTION public._allocate_invoice_seq(p_user_id UUID, p_year INTEGER)
+RETURNS INTEGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_seq INTEGER;
+BEGIN
+  INSERT INTO public.invoice_counters (user_id, year, last_number)
+  VALUES (p_user_id, p_year, 1)
+  ON CONFLICT (user_id, year)
+  DO UPDATE SET last_number = public.invoice_counters.last_number + 1
+  RETURNING last_number INTO v_seq;
+  RETURN v_seq;
+END;
+$$;
+REVOKE ALL ON FUNCTION public._allocate_invoice_seq(UUID, INTEGER) FROM PUBLIC;
+
+
+-- ─── FONCTION : prochain numéro de facture (atomique) ────────────────────────
+-- Renvoie "FAC-YYYY-NNNNN". CONSOMME un rang (à n'utiliser qu'avant une
+-- création). Identité via auth.uid().
+
+CREATE OR REPLACE FUNCTION public.next_invoice_number(p_year INTEGER DEFAULT NULL)
+RETURNS TEXT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_user UUID    := auth.uid();
+  v_year INTEGER := COALESCE(p_year, EXTRACT(YEAR FROM CURRENT_DATE)::INTEGER);
+  v_seq  INTEGER;
+BEGIN
+  IF v_user IS NULL THEN
+    RAISE EXCEPTION 'next_invoice_number: utilisateur non authentifié';
+  END IF;
+  v_seq := public._allocate_invoice_seq(v_user, v_year);
+  RETURN 'FAC-' || v_year::TEXT || '-' || LPAD(v_seq::TEXT, 5, '0');
+END;
+$$;
+REVOKE ALL ON FUNCTION public.next_invoice_number(INTEGER) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.next_invoice_number(INTEGER) TO authenticated;
+
+
+-- ─── FONCTION : create_invoice — allocation + INSERT atomiques ────────────────
+-- Numéro attribué ET facture insérée dans la MÊME transaction (pas de trou si
+-- l'INSERT échoue). Propriété du devis vérifiée via auth.uid().
+
+CREATE OR REPLACE FUNCTION public.create_invoice(
+  p_quote_id         UUID,
+  p_type             TEXT,
+  p_status           TEXT,
+  p_emitter_snapshot JSONB,
+  p_acompte_percent  NUMERIC,
+  p_acompte_amount   NUMERIC,
+  p_total_ht         NUMERIC,
+  p_total_tva        NUMERIC,
+  p_total_ttc        NUMERIC,
+  p_issued_at        DATE
+)
+RETURNS public.invoices
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_user   UUID    := auth.uid();
+  v_issued DATE    := COALESCE(p_issued_at, CURRENT_DATE);
+  v_year   INTEGER := EXTRACT(YEAR FROM v_issued)::INTEGER;
+  v_seq    INTEGER;
+  v_number TEXT;
+  v_row    public.invoices;
+BEGIN
+  IF v_user IS NULL THEN
+    RAISE EXCEPTION 'create_invoice: utilisateur non authentifié';
+  END IF;
+  IF p_quote_id IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM public.quotes q WHERE q.id = p_quote_id AND q.user_id = v_user
+  ) THEN
+    RAISE EXCEPTION 'create_invoice: devis % introuvable pour cet utilisateur', p_quote_id;
+  END IF;
+
+  v_seq    := public._allocate_invoice_seq(v_user, v_year);
+  v_number := 'FAC-' || v_year::TEXT || '-' || LPAD(v_seq::TEXT, 5, '0');
+
+  INSERT INTO public.invoices (
+    user_id, quote_id, invoice_number, invoice_year, sequence_number,
+    type, status, emitter_snapshot, acompte_percent, acompte_amount,
+    total_ht, total_tva, total_ttc, issued_at
+  ) VALUES (
+    v_user, p_quote_id, v_number, v_year, v_seq,
+    COALESCE(p_type, 'totale'), COALESCE(p_status, 'draft'),
+    p_emitter_snapshot, p_acompte_percent, p_acompte_amount,
+    COALESCE(p_total_ht, 0), COALESCE(p_total_tva, 0), COALESCE(p_total_ttc, 0),
+    v_issued
+  )
+  RETURNING * INTO v_row;
+
+  RETURN v_row;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.create_invoice(UUID, TEXT, TEXT, JSONB, NUMERIC, NUMERIC, NUMERIC, NUMERIC, NUMERIC, DATE) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.create_invoice(UUID, TEXT, TEXT, JSONB, NUMERIC, NUMERIC, NUMERIC, NUMERIC, NUMERIC, DATE) TO authenticated;
+
+
+-- ─── RLS — invoices (accès propriétaire, comme quotes) ───────────────────────
+
+ALTER TABLE public.invoices         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.invoice_counters ENABLE ROW LEVEL SECURITY; -- aucune policy = accès direct refusé
+
+DROP POLICY IF EXISTS "invoices_select" ON public.invoices;
+DROP POLICY IF EXISTS "invoices_insert" ON public.invoices;
+DROP POLICY IF EXISTS "invoices_update" ON public.invoices;
+DROP POLICY IF EXISTS "invoices_delete" ON public.invoices;
+
+CREATE POLICY "invoices_select" ON public.invoices
+  FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "invoices_insert" ON public.invoices
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "invoices_update" ON public.invoices
+  FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "invoices_delete" ON public.invoices
+  FOR DELETE USING (auth.uid() = user_id);

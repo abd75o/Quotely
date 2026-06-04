@@ -35,6 +35,18 @@ function dbg(...args: unknown[]): void {
   }
 }
 
+// Timeout d'INACTIVITÉ du stream Émile : si aucun chunk n'arrive pendant ce
+// délai (first-token compris), on abandonne proprement et on affiche un message
+// + bouton Réessayer. Réarmé à chaque chunk → ne coupe pas une génération qui
+// progresse. Garantit qu'il n'y a JAMAIS de spinner infini.
+const EMILE_TIMEOUT_MS = 75_000;
+
+// Messages d'erreur orientés utilisateur (pas de jargon HTTP/stack).
+const EMILE_TIMEOUT_ERROR =
+  "Émile met plus de temps que prévu. Réessaie ou reformule.";
+const EMILE_GENERIC_ERROR =
+  "Une erreur s'est produite, ton devis n'a pas été perdu. Réessaie.";
+
 function lastTextOf(msgs: EmileMessage[]): string {
   const last = msgs[msgs.length - 1];
   if (!last || !Array.isArray(last.parts)) return "";
@@ -134,6 +146,12 @@ export interface UseEmileResult {
   error: string | null;
   conversationId: string | null;
   sendMessage: (text: string) => Promise<void>;
+  /**
+   * Relance la dernière action après une erreur / un timeout, sans reperdre le
+   * travail : on rejoue le dernier tour utilisateur. saveQuoteDraft réutilisant
+   * le devis lié à la conversation, aucun doublon n'est créé.
+   */
+  retry: () => Promise<void>;
   /** Re-run the turn that produced the given assistant message (re-roll). */
   regenerate: (assistantMessageId: string) => Promise<void>;
   /** Replace a user message with new text and re-run from that point. */
@@ -348,6 +366,11 @@ export function useEmile(
   const [isHydrated, setIsHydrated] = useState(!initialConversationId);
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  // Garde de ré-entrée SYNCHRONE : `isLoading` est un state asynchrone, donc une
+  // 2e action déclenchée pendant la fenêtre `await newConversation()` (avant que
+  // isLoading passe à true) pourrait se faufiler. Ce ref bloque toute action
+  // concurrente dès le 1er tick.
+  const inFlightRef = useRef(false);
   const onQuoteUpdateRef = useRef(onQuoteUpdate);
   const onConversationCreatedRef = useRef(onConversationCreated);
   useEffect(() => {
@@ -465,6 +488,19 @@ export function useEmile(
       const ctrl = new AbortController();
       abortRef.current = ctrl;
       setIsLoading(true);
+
+      // Anti-spinner-infini : timeout d'inactivité réarmé à chaque chunk.
+      let timedOut = false;
+      let idleTimer: ReturnType<typeof setTimeout> | null = null;
+      const armIdleTimeout = () => {
+        if (idleTimer) clearTimeout(idleTimer);
+        idleTimer = setTimeout(() => {
+          timedOut = true;
+          ctrl.abort();
+        }, EMILE_TIMEOUT_MS);
+      };
+      armIdleTimeout();
+
       // Stamp the assistant turn's start once; reused across every chunk so the
       // bubble's timestamp stays stable while tokens stream in.
       const turnStartedAt = new Date().toISOString();
@@ -486,8 +522,7 @@ export function useEmile(
         });
 
         if (!res.ok || !res.body) {
-          setError(`Chat: HTTP ${res.status}`);
-          setIsLoading(false);
+          setError(EMILE_GENERIC_ERROR);
           return;
         }
 
@@ -526,6 +561,8 @@ export function useEmile(
           stream: filtered,
           onError: (e) => setError((e as Error).message ?? "Erreur stream"),
         })) {
+          // Chunk reçu → le stream progresse, on réarme le timeout d'inactivité.
+          armIdleTimeout();
           if (!sawChunk) {
             sawChunk = true;
             dbg("first assistant chunk");
@@ -556,10 +593,16 @@ export function useEmile(
           }
         }
       } catch (e) {
-        if ((e as Error).name !== "AbortError") {
-          setError((e as Error).message ?? "Erreur stream");
+        // timedOut a priorité : c'est nous qui avons abort() sur inactivité.
+        if (timedOut) {
+          setError(EMILE_TIMEOUT_ERROR);
+        } else if ((e as Error).name !== "AbortError") {
+          // Une vraie erreur (réseau/serveur). Un AbortError "normal" (stop
+          // utilisateur / changement de conversation) reste silencieux.
+          setError(EMILE_GENERIC_ERROR);
         }
       } finally {
+        if (idleTimer) clearTimeout(idleTimer);
         abortRef.current = null;
         setIsLoading(false);
         dbg("stream finished");
@@ -571,31 +614,62 @@ export function useEmile(
   const sendMessage = useCallback(
     async (text: string) => {
       const trimmed = text.trim();
-      if (!trimmed || isLoading) return;
-      setError(null);
-      dbg("sendMessage", {
-        text: trimmed.slice(0, 40),
-        conversationId,
-      });
+      // Garde de ré-entrée synchrone : ignore proprement toute 2e action tant
+      // qu'une est en cours (pas de 2e requête concurrente).
+      if (!trimmed || isLoading || inFlightRef.current) return;
+      inFlightRef.current = true;
+      try {
+        setError(null);
+        dbg("sendMessage", {
+          text: trimmed.slice(0, 40),
+          conversationId,
+        });
 
-      let convId = conversationId;
-      if (!convId) {
-        convId = await newConversation();
-        dbg("newConversation resolved", { convId });
-        if (!convId) return;
+        let convId = conversationId;
+        if (!convId) {
+          convId = await newConversation();
+          dbg("newConversation resolved", { convId });
+          if (!convId) return;
+        }
+
+        const userMsg = userMessage(trimmed);
+        const baseMessages: EmileMessage[] = [...messages, userMsg];
+        setMessages(baseMessages);
+        await streamAssistant(baseMessages, convId);
+      } finally {
+        inFlightRef.current = false;
       }
-
-      const userMsg = userMessage(trimmed);
-      const baseMessages: EmileMessage[] = [...messages, userMsg];
-      setMessages(baseMessages);
-      await streamAssistant(baseMessages, convId);
     },
     [conversationId, isLoading, messages, newConversation, streamAssistant],
   );
 
+  // Relance le dernier tour utilisateur après une erreur/timeout. On retire un
+  // éventuel bubble assistant partiel en queue puis on rejoue depuis le dernier
+  // message utilisateur — le travail (lignes déjà saisies) n'est pas perdu, et
+  // saveQuoteDraft réutilise le devis de la conversation (pas de doublon).
+  const retry = useCallback(async () => {
+    if (isLoading || inFlightRef.current || !conversationId) return;
+    let baseMessages = messages;
+    while (
+      baseMessages.length > 0 &&
+      baseMessages[baseMessages.length - 1].role !== "user"
+    ) {
+      baseMessages = baseMessages.slice(0, -1);
+    }
+    if (baseMessages.length === 0) return;
+    inFlightRef.current = true;
+    try {
+      setError(null);
+      setMessages(baseMessages);
+      await streamAssistant(baseMessages, conversationId);
+    } finally {
+      inFlightRef.current = false;
+    }
+  }, [conversationId, isLoading, messages, streamAssistant]);
+
   const regenerate = useCallback(
     async (assistantMessageId: string) => {
-      if (isLoading || !conversationId) return;
+      if (isLoading || inFlightRef.current || !conversationId) return;
       const idx = messages.findIndex((m) => m.id === assistantMessageId);
       if (idx === -1) return;
       // Keep everything up to (but not including) this assistant message, then
@@ -608,35 +682,44 @@ export function useEmile(
         baseMessages = baseMessages.slice(0, -1);
       }
       if (baseMessages.length === 0) return;
-      setError(null);
-      setMessages(baseMessages);
-      await streamAssistant(baseMessages, conversationId);
+      inFlightRef.current = true;
+      try {
+        setError(null);
+        setMessages(baseMessages);
+        await streamAssistant(baseMessages, conversationId);
+      } finally {
+        inFlightRef.current = false;
+      }
     },
     [conversationId, isLoading, messages, streamAssistant],
   );
 
   const editAndResend = useCallback(
     async (userMessageId: string, newText: string) => {
-      if (isLoading) return;
+      if (isLoading || inFlightRef.current) return;
       const trimmed = newText.trim();
       if (!trimmed) return;
+      inFlightRef.current = true;
+      try {
+        let convId = conversationId;
+        if (!convId) {
+          convId = await newConversation();
+          if (!convId) return;
+        }
 
-      let convId = conversationId;
-      if (!convId) {
-        convId = await newConversation();
-        if (!convId) return;
+        const idx = messages.findIndex((m) => m.id === userMessageId);
+        if (idx === -1) return;
+        // Drop the edited user message and everything after it, then re-send the
+        // edited text as a fresh user turn.
+        const history = messages.slice(0, idx);
+        const userMsg = userMessage(trimmed);
+        const baseMessages: EmileMessage[] = [...history, userMsg];
+        setError(null);
+        setMessages(baseMessages);
+        await streamAssistant(baseMessages, convId);
+      } finally {
+        inFlightRef.current = false;
       }
-
-      const idx = messages.findIndex((m) => m.id === userMessageId);
-      if (idx === -1) return;
-      // Drop the edited user message and everything after it, then re-send the
-      // edited text as a fresh user turn.
-      const history = messages.slice(0, idx);
-      const userMsg = userMessage(trimmed);
-      const baseMessages: EmileMessage[] = [...history, userMsg];
-      setError(null);
-      setMessages(baseMessages);
-      await streamAssistant(baseMessages, convId);
     },
     [conversationId, isLoading, messages, newConversation, streamAssistant],
   );
@@ -648,6 +731,7 @@ export function useEmile(
     error,
     conversationId,
     sendMessage,
+    retry,
     regenerate,
     editAndResend,
     newConversation,

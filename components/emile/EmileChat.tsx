@@ -87,6 +87,7 @@ export function EmileChat({
     isHydrated,
     error,
     sendMessage,
+    retry,
     regenerate,
     editAndResend,
     loadConversation,
@@ -735,12 +736,25 @@ export function EmileChat({
       )}
 
       {error && (
-        <div className="border-t border-red-200 bg-red-50 px-4 py-2 text-[12px] text-red-700">
-          {error}
+        <div className="flex items-center justify-between gap-3 border-t border-red-200 bg-red-50 px-4 py-2 text-[12px] text-red-700">
+          <span className="min-w-0">{error}</span>
+          {!isLoading && (
+            <button
+              type="button"
+              onClick={() => void retry()}
+              className="shrink-0 rounded-full border border-red-300 bg-white px-3 py-1 text-[12px] font-semibold text-red-700 transition-colors hover:bg-red-100"
+            >
+              Réessayer
+            </button>
+          )}
         </div>
       )}
 
-      <QuickReplies message={lastMessage} onSelect={sendMessage} />
+      <QuickReplies
+        message={lastMessage}
+        onSelect={sendMessage}
+        disabled={isLoading}
+      />
 
       <EmileInput
         onSend={sendMessage}

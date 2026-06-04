@@ -7,6 +7,8 @@ import type { EmileMessage } from "@/hooks/useEmile";
 interface QuickRepliesProps {
   message: EmileMessage | undefined;
   onSelect: (text: string) => void;
+  /** Pendant qu'Émile traite : grise les boutons + bloque toute sélection. */
+  disabled?: boolean;
 }
 
 // Multi-line + case-insensitive: the model occasionally puts the marker on its
@@ -115,7 +117,11 @@ function getMessageText(message: EmileMessage): string {
     .join("\n");
 }
 
-export function QuickReplies({ message, onSelect }: QuickRepliesProps) {
+export function QuickReplies({
+  message,
+  onSelect,
+  disabled = false,
+}: QuickRepliesProps) {
   const [hiddenForId, setHiddenForId] = useState<string | null>(null);
   const [pressedReply, setPressedReply] = useState<string | null>(null);
   // Free-text "Autre…" escape hatch — always available on top of the model's
@@ -150,7 +156,7 @@ export function QuickReplies({ message, onSelect }: QuickRepliesProps) {
 
   function send(value: string) {
     const v = value.trim();
-    if (!message || !v) return;
+    if (!message || !v || disabled) return;
     // Press animation: hold the row in a faded/pressed state for ~180ms before
     // calling onSelect — gives an iOS-style "tap" feel before the user bubble
     // mounts and replaces this row.
@@ -211,6 +217,8 @@ export function QuickReplies({ message, onSelect }: QuickRepliesProps) {
         // ≥sm = horizontal wrap so multi-option rows breathe on desktop.
         "flex flex-col gap-2 border-t border-[var(--border)] bg-white px-4 py-3 transition-opacity duration-200 sm:flex-row sm:flex-wrap",
         fading ? "opacity-0" : "opacity-100",
+        // Pendant le traitement : grisé + non-cliquable (anti actions concurrentes).
+        disabled && "pointer-events-none opacity-50",
       )}
     >
       {replies.map((reply, i) => {
@@ -220,7 +228,7 @@ export function QuickReplies({ message, onSelect }: QuickRepliesProps) {
             key={`${reply}-${i}`}
             type="button"
             onClick={() => send(reply)}
-            disabled={fading}
+            disabled={fading || disabled}
             className={cn(
               "w-full rounded-full border border-[var(--border)] bg-[var(--primary-bg)] px-3.5 py-1.5 text-[13px] font-semibold text-[var(--primary)] shadow-sm transition-all duration-150 sm:w-auto",
               "hover:border-[var(--primary)] hover:bg-[var(--primary)] hover:text-white hover:shadow-md",
@@ -236,7 +244,7 @@ export function QuickReplies({ message, onSelect }: QuickRepliesProps) {
         <button
           type="button"
           onClick={() => setOtherMode(true)}
-          disabled={fading}
+          disabled={fading || disabled}
           className={cn(
             "w-full rounded-full border border-dashed border-[var(--border)] bg-white px-3.5 py-1.5 text-[13px] font-medium text-[var(--text-secondary)] transition-all duration-150 sm:w-auto",
             "hover:border-[var(--primary)] hover:text-[var(--primary)]",

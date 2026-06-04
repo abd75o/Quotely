@@ -79,3 +79,36 @@ export async function createInvoice(
   // create_invoice RETURNS public.invoices → une seule ligne.
   return (Array.isArray(data) ? data[0] : data) as Invoice;
 }
+
+export interface CreateInvoiceForUserParams extends CreateInvoiceParams {
+  /** Propriétaire de la facture (le devis doit lui appartenir). */
+  userId: string;
+}
+
+/**
+ * Variante SERVEUR/SYSTÈME : crée une facture pour un `userId` EXPLICITE, sans
+ * dépendre de auth.uid(). À utiliser avec un client service_role (ex. depuis la
+ * route de signature, où le signataire est anonyme). Délègue à la fonction SQL
+ * create_invoice_for_user (réservée au service_role) — même allocation atomique
+ * du numéro et même vérification de propriété du devis.
+ */
+export async function createInvoiceForUser(
+  admin: SupabaseClient,
+  params: CreateInvoiceForUserParams,
+): Promise<Invoice> {
+  const { data, error } = await admin.rpc("create_invoice_for_user", {
+    p_user_id: params.userId,
+    p_quote_id: params.quoteId ?? null,
+    p_type: params.type,
+    p_status: params.status ?? "pending",
+    p_emitter_snapshot: params.emitterSnapshot ?? null,
+    p_acompte_percent: params.acomptePercent ?? null,
+    p_acompte_amount: params.acompteAmount ?? null,
+    p_total_ht: params.totalHt ?? 0,
+    p_total_tva: params.totalTva ?? 0,
+    p_total_ttc: params.totalTtc ?? 0,
+    p_issued_at: params.issuedAt ?? null,
+  });
+  if (error) throw error;
+  return (Array.isArray(data) ? data[0] : data) as Invoice;
+}

@@ -7,6 +7,7 @@ import {
 } from "@/lib/resend/send-quote";
 import { formatClientName } from "@/lib/text/name-normalize";
 import { signerNameMatches } from "@/lib/text/name-compare";
+import { generateInvoiceForSignedQuote } from "@/lib/invoices/on-signature";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
@@ -289,6 +290,23 @@ export async function POST(
     sign_attempts: 0,
     sign_blocked_until: null,
   });
+
+  // 3bis. Génération automatique de la facture (Palier 2A) — APRÈS le commit de
+  // la signature, en BEST-EFFORT ISOLÉ : si la création échoue (migration
+  // manquante, devis vide, etc.), on loggue mais la signature reste valide et le
+  // client ne voit AUCUNE erreur. Aucun email / notif / PDF ici — juste la ligne
+  // invoices (anti-doublon + détection acompte gérés dans le helper).
+  try {
+    await generateInvoiceForSignedQuote(admin, {
+      quoteId: id,
+      userId: quote.user_id as string,
+    });
+  } catch (e) {
+    console.error(
+      "[sign] génération facture échouée (signature OK, sans impact client):",
+      e,
+    );
+  }
 
   // 4. Notifications (best-effort, ne fait pas échouer la signature). clientRow
   // est déjà extrait plus haut pour la validation du nom.

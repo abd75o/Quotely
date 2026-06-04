@@ -111,6 +111,13 @@ export function EmileChat({
   const searchParams = useSearchParams();
   const startParam = searchParams?.get("start") ?? null;
   const autoSeededRef = useRef<string | null>(null);
+  // Empêche la ré-ouverture d'une modale (profil, ligne, signature…) à partir
+  // d'un marker PERSISTÉ dans l'historique : à la 1re passe après (re)chargement
+  // d'une conversation, on neutralise tous les messages déjà présents ; seules
+  // les réponses LIVE d'Émile peuvent ensuite ouvrir une modale. Sans ça, une
+  // conversation dont le dernier message porte [OPEN_PROFILE_MODAL] rouvrait une
+  // modale plein écran à CHAQUE chargement, masquant la barre de saisie.
+  const autoOpenArmedRef = useRef<string | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -181,6 +188,7 @@ export function EmileChat({
     setEditClientInitial(null);
     setEditClientMissing([]);
     autoSeededRef.current = null;
+    autoOpenArmedRef.current = null;
   }, [conversationId]);
 
   // Auto-seed a freshly-created conversation. Entry points like the "Nouveau
@@ -271,6 +279,23 @@ export function EmileChat({
   // 2-button [CLIENT_PICKER] (handled inside EmileMessage) and the artisan
   // chooses. We dedupe via the message id so streaming re-renders don't reopen.
   useEffect(() => {
+    // CRITIQUE — n'agir qu'une fois l'HISTORIQUE chargé (isHydrated). Sinon on
+    // armerait trop tôt (sur une liste vide ou l'ancienne conversation) puis,
+    // quand l'historique arrive ~1s plus tard, le dernier message porteur d'un
+    // marker rouvrirait sa modale plein écran et masquerait la barre de saisie.
+    if (!isHydrated) return;
+    // 1re passe APRÈS hydratation : on marque TOUS les messages déjà présents
+    // (l'historique complet) comme "déjà traités" pour qu'AUCUN marker de
+    // l'historique — quel qu'il soit (profil, ligne, client, signature) — ne
+    // puisse rouvrir une modale au chargement. Seules les réponses LIVE
+    // suivantes (nouveaux ids absents du set) déclenchent une modale.
+    if (autoOpenArmedRef.current !== (conversationId ?? "")) {
+      for (const m of messages) {
+        if (m.id) triggeredModalIdsRef.current.add(m.id);
+      }
+      autoOpenArmedRef.current = conversationId ?? "";
+      return;
+    }
     if (!lastMessage || lastMessage.role !== "assistant" || !lastMessage.id) {
       return;
     }
@@ -359,7 +384,7 @@ export function EmileChat({
           });
       }
     }
-  }, [lastMessage]);
+  }, [lastMessage, conversationId, messages, isHydrated]);
 
   // External callers (e.g. the legacy [PROFILE_BUTTON] CTA on /dashboard) can
   // pop the modal by dispatching this CustomEvent. Kept as a thin alternative

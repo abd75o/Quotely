@@ -433,7 +433,12 @@ export function useEmile(
     // persists to the OLD conv — split-brain state on refresh (bug C2).
     abortRef.current?.abort();
     abortRef.current = null;
+    // Repart d'un état propre au (re)chargement d'une conversation : aucune
+    // action en vol, aucun loading résiduel, aucune erreur héritée de la
+    // conversation précédente — la barre de saisie reste toujours utilisable.
+    inFlightRef.current = false;
     setIsLoading(false);
+    setError(null);
     setIsHydrated(false);
     try {
       const res = await fetch(`/api/conversations/${id}`);

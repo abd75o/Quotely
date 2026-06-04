@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "test:bulk": "node lib/bulk/parse-line.test.ts",
+    "test:names": "node lib/text/name-compare.test.ts",
     "lint": "eslint"
   },
   "dependencies": {

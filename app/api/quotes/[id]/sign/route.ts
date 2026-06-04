@@ -6,9 +6,63 @@ import {
   sendArtisanSignedNotification,
 } from "@/lib/resend/send-quote";
 import { formatClientName } from "@/lib/text/name-normalize";
+import { signerNameMatches } from "@/lib/text/name-compare";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
+
+// Anti-bruteforce : 5 échecs de nom → blocage 15 min (état sur la ligne devis).
+const MAX_SIGN_ATTEMPTS = 5;
+const SIGN_BLOCK_MS = 15 * 60 * 1000;
+
+interface SignThrottle {
+  attempts: number;
+  blockedUntil: string | null;
+}
+
+// Lecture DÉFENSIVE des compteurs : si la migration n'est pas appliquée, on
+// renvoie null → l'anti-bruteforce est inactif mais la signature fonctionne.
+async function readSignThrottle(
+  admin: SupabaseClient,
+  id: string,
+  token: string,
+): Promise<SignThrottle | null> {
+  try {
+    const { data, error } = await admin
+      .from("quotes")
+      .select("sign_attempts, sign_blocked_until")
+      .eq("id", id)
+      .eq("signature_token", token)
+      .maybeSingle();
+    if (error || !data) return null;
+    const row = data as { sign_attempts?: number | null; sign_blocked_until?: string | null };
+    return {
+      attempts: Number(row.sign_attempts ?? 0) || 0,
+      blockedUntil: row.sign_blocked_until ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+// Écriture best-effort (colonne potentiellement absente → on avale l'erreur).
+async function writeSignThrottle(
+  admin: SupabaseClient,
+  id: string,
+  token: string,
+  patch: { sign_attempts: number; sign_blocked_until: string | null },
+): Promise<void> {
+  try {
+    await admin
+      .from("quotes")
+      .update(patch)
+      .eq("id", id)
+      .eq("signature_token", token);
+  } catch {
+    /* migration non appliquée — anti-bruteforce inactif, sans bloquer la signature */
+  }
+}
 
 interface SignBody {
   signature_token: string;
@@ -126,6 +180,60 @@ export async function POST(
     );
   }
 
+  // ── Anti-bruteforce + validation stricte du nom du signataire ────────────
+  // admin sert ici (lire/écrire les compteurs) ET plus bas (UPDATE signé).
+  const admin = getSupabaseAdmin();
+  const now = Date.now();
+
+  const throttle = await readSignThrottle(admin, id, body.signature_token);
+  if (throttle?.blockedUntil && new Date(throttle.blockedUntil).getTime() > now) {
+    return jsonResponse(
+      { error: "Trop de tentatives. Réessayez dans quelques minutes.", code: "rate_limited" },
+      429,
+    );
+  }
+
+  // Le signataire doit être le destinataire enregistré. Comparaison tolérante
+  // (casse/accents/espaces/tirets) mais stricte sur le fond (1 lettre ⇒ refus).
+  const clientRow = Array.isArray(quote.clients)
+    ? (quote.clients[0] as Record<string, unknown> | undefined)
+    : ((quote.clients as Record<string, unknown> | null) ?? undefined);
+  const expectedFirst = (clientRow?.first_name as string | null | undefined) ?? null;
+  const expectedLast = (clientRow?.name as string | null | undefined) ?? null;
+  const hasExpectedName = Boolean(
+    (expectedFirst ?? "").trim() || (expectedLast ?? "").trim(),
+  );
+  if (
+    hasExpectedName &&
+    !signerNameMatches(body.full_name, expectedFirst, expectedLast)
+  ) {
+    const attempts = (throttle?.attempts ?? 0) + 1;
+    if (attempts >= MAX_SIGN_ATTEMPTS) {
+      // 5e échec → blocage 15 min ; compteur remis à 0 pour l'après-blocage.
+      await writeSignThrottle(admin, id, body.signature_token, {
+        sign_attempts: 0,
+        sign_blocked_until: new Date(now + SIGN_BLOCK_MS).toISOString(),
+      });
+      return jsonResponse(
+        { error: "Trop de tentatives. Réessayez dans quelques minutes.", code: "rate_limited" },
+        429,
+      );
+    }
+    await writeSignThrottle(admin, id, body.signature_token, {
+      sign_attempts: attempts,
+      sign_blocked_until: null,
+    });
+    // Message GÉNÉRIQUE : ne révèle jamais le nom attendu.
+    return jsonResponse(
+      {
+        error:
+          "Le nom saisi ne correspond pas au destinataire de ce devis. Vérifiez l'orthographe de votre nom et prénom.",
+        code: "name_mismatch",
+      },
+      422,
+    );
+  }
+
   const ip = getClientIp(req);
   const userAgent = req.headers.get("user-agent") ?? null;
   const timestamp = new Date().toISOString();
@@ -135,8 +243,17 @@ export async function POST(
       ? body.handwritten_mention.trim().slice(0, 200)
       : null;
 
+  // Nom NORMALISÉ stocké/affiché : "Camille DUPONT" issu de la fiche client
+  // (validée comme correspondant à la saisie), pas la frappe brute. Fallback
+  // sur la saisie si aucun nom client (cas sans destinataire identifié).
+  const canonicalSignerName =
+    formatClientName({ first_name: expectedFirst, name: expectedLast }) ||
+    body.full_name.trim();
+
   const signatureData = {
-    full_name: body.full_name.trim(),
+    full_name: canonicalSignerName,
+    // Frappe brute conservée pour l'audit (litige) — distincte du nom affiché.
+    typed_name: body.full_name.trim(),
     email: body.email.trim(),
     ip,
     user_agent: userAgent,
@@ -151,8 +268,8 @@ export async function POST(
     ...(handwrittenMention ? { handwritten_mention: handwrittenMention } : {}),
   };
 
-  // 3. Update via admin (RLS UPDATE non publique)
-  const admin = getSupabaseAdmin();
+  // 3. Update via admin (RLS UPDATE non publique). `admin` est déjà instancié
+  // plus haut pour l'anti-bruteforce.
   const { error: updateErr } = await admin
     .from("quotes")
     .update({
@@ -167,11 +284,14 @@ export async function POST(
     return jsonResponse({ error: updateErr.message }, 500);
   }
 
-  // 4. Notifications (best-effort, ne fait pas échouer la signature)
-  const clientRow = Array.isArray(quote.clients)
-    ? (quote.clients[0] as Record<string, unknown> | undefined)
-    : ((quote.clients as Record<string, unknown> | null) ?? undefined);
+  // Signature réussie → reset des compteurs anti-bruteforce (best-effort).
+  await writeSignThrottle(admin, id, body.signature_token, {
+    sign_attempts: 0,
+    sign_blocked_until: null,
+  });
 
+  // 4. Notifications (best-effort, ne fait pas échouer la signature). clientRow
+  // est déjà extrait plus haut pour la validation du nom.
   const { data: profile } = await admin
     .from("profiles")
     .select(

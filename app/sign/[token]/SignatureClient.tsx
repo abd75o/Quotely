@@ -39,6 +39,10 @@ export function SignatureClient({
   const [bonPourTravaux, setBonPourTravaux] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Nom refusé par le serveur (≠ destinataire) : on bloque le bouton tant que
+  // la saisie n'a pas changé. rateLimited : 5 échecs → blocage serveur 15 min.
+  const [nameRejected, setNameRejected] = useState(false);
+  const [rateLimited, setRateLimited] = useState(false);
   // Tracks whether the pad has any stroke. The pad calls back on strokeEnd
   // with the data URL (or null on clear); we only need the boolean here to
   // gate the submit button — the actual PNG is pulled via padRef at submit
@@ -104,7 +108,9 @@ export function SignatureClient({
     accepted &&
     hasStroke &&
     mentionOk &&
-    !submitting;
+    !submitting &&
+    !nameRejected &&
+    !rateLimited;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -150,7 +156,17 @@ export function SignatureClient({
       if (!res.ok) {
         const json = (await res.json().catch(() => ({}))) as {
           error?: string;
+          code?: string;
         };
+        // Nom ≠ destinataire : bloque le bouton jusqu'à ce que l'utilisateur
+        // corrige sa saisie (le serveur ne révèle jamais le nom attendu).
+        if (res.status === 422 && json.code === "name_mismatch") {
+          setNameRejected(true);
+        }
+        // 5 échecs → blocage serveur 15 min : on bloque aussi côté UI.
+        if (res.status === 429) {
+          setRateLimited(true);
+        }
         setError(json.error ?? `Erreur ${res.status}`);
         return;
       }
@@ -201,7 +217,13 @@ export function SignatureClient({
           <input
             id="fullName"
             value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
+            onChange={(e) => {
+              setFullName(e.target.value);
+              // L'utilisateur corrige : on réautorise la tentative (le blocage
+              // anti-bruteforce rateLimited reste, lui, géré par le serveur).
+              if (nameRejected) setNameRejected(false);
+              if (error) setError(null);
+            }}
             placeholder="Ex : Marie Dupont"
             required
             className="h-10 w-full rounded-lg border border-[#D1D5DB] bg-white px-3 text-[14px] outline-none focus:border-[var(--brand)] focus:ring-2"

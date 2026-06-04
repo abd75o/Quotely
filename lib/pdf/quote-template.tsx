@@ -20,7 +20,7 @@ import { formatSiret as formatSiretShared } from "@/lib/format/siret";
 // Quovi PDF v2 — modern, premium, indigo accent. Re-skinning the document is
 // a one-line change here (palette + DEFAULT_ACCENT). react-pdf does NOT
 // support CSS variables, so the accent is threaded through buildStyles().
-const palette = {
+export const palette = {
   ink: "#0F172A",          // slate-900 — strong headings + grand total
   text: "#1F2937",         // slate-800 — body copy
   textMuted: "#475569",    // slate-600 — secondary text
@@ -40,7 +40,7 @@ const HEX_RE = /^#[0-9A-Fa-f]{6}$/;
 // react-pdf bundles Helvetica + Courier; no Font.register call avoids
 // shipping TTFs in the serverless bundle. Mono for digits sells the
 // "modern receipt" feel without a custom font drop.
-const fonts = {
+export const fonts = {
   regular: "Helvetica",
   bold: "Helvetica-Bold",
   italic: "Helvetica-Oblique",
@@ -142,7 +142,7 @@ export interface PdfClient {
 }
 
 // ─── Formatters ────────────────────────────────────────────────────────────
-function formatDate(iso: string | null | undefined): string {
+export function formatDate(iso: string | null | undefined): string {
   if (!iso) return "—";
   try {
     return new Date(iso).toLocaleDateString("fr-FR", {
@@ -200,7 +200,7 @@ function formatDateTimeFr(iso: string | null | undefined): string {
  * avec U+00A0 pour que le montant reste d'un seul tenant.
  */
 const NBSP = " ";
-function formatEuros(value: number): string {
+export function formatEuros(value: number): string {
   const n = Number.isFinite(value) ? value : 0;
   const fixed = Math.abs(n).toFixed(2);
   const [intPart, decPart] = fixed.split(".");
@@ -209,7 +209,7 @@ function formatEuros(value: number): string {
   return `${sign}${grouped},${decPart}${NBSP}€`;
 }
 
-function companyDisplay(p: PdfProfile): string {
+export function companyDisplay(p: PdfProfile): string {
   // No "Prestataire" fallback: if every identifying field is empty the profile
   // is broken upstream and we surface the empty string so the PDF reviewer
   // immediately spots the data hole instead of shipping a generic label.
@@ -220,7 +220,7 @@ function companyDisplay(p: PdfProfile): string {
   return (p.email || "").trim();
 }
 
-function clientDisplay(c: PdfClient): string {
+export function clientDisplay(c: PdfClient): string {
   // Same no-fallback policy as companyDisplay — a generic "Client" on a legal
   // document hides a real bug (broken embed / missing client_id) so we let
   // the empty string render and force a fix upstream. formatClientName gère le
@@ -232,7 +232,7 @@ function clientDisplay(c: PdfClient): string {
   return c.civility ? `${c.civility.trim()} ${base}` : base;
 }
 
-function formatSiret(siret: string | null | undefined): string | null {
+export function formatSiret(siret: string | null | undefined): string | null {
   if (!siret) return null;
   const formatted = formatSiretShared(siret);
   // Fall back to the raw value when the input isn't 14 digits — better to
@@ -249,7 +249,7 @@ function formatSiret(siret: string | null | undefined): string | null {
 const RCS_LEGAL_STATUSES_PDF = new Set(["sarl", "sas", "sasu", "eurl"]);
 const RM_LEGAL_STATUSES_PDF = new Set(["ei", "auto-entrepreneur"]);
 
-function formatRegistration(profile: PdfProfile): string | null {
+export function formatRegistration(profile: PdfProfile): string | null {
   const number = profile.registration_number?.trim();
   if (!number) return null;
   const status = (profile.legal_status ?? "").toLowerCase().trim();
@@ -263,14 +263,14 @@ function formatRegistration(profile: PdfProfile): string | null {
   return `N° ${number}`;
 }
 
-function formatIban(iban: string | null | undefined): string | null {
+export function formatIban(iban: string | null | undefined): string | null {
   if (!iban) return null;
   const compact = iban.replace(/\s+/g, "").toUpperCase();
   if (!/^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/.test(compact)) return compact;
   return compact.replace(/(.{4})/g, "$1 ").trim();
 }
 
-function resolveAccent(p: PdfProfile): string {
+export function resolveAccent(p: PdfProfile): string {
   for (const candidate of [p.brand_color, p.couleur_principale, p.primary_color]) {
     if (candidate && HEX_RE.test(candidate)) return candidate;
   }
@@ -309,7 +309,7 @@ function statusDescriptor(status: string, accent: string): StatusDescriptor {
 // printing an "échéancier" nobody asked for (see PaymentScheduleBlock).
 
 // ─── StyleSheet ────────────────────────────────────────────────────────────
-function buildStyles(accent: string) {
+export function buildStyles(accent: string) {
   return StyleSheet.create({
     // 48pt margins, with extra paddingBottom for the fixed page footer.
     page: {
@@ -776,7 +776,7 @@ function PdfHeader(props: {
   );
 }
 
-function EmitterReceiver(props: {
+export function EmitterReceiver(props: {
   styles: ReturnType<typeof buildStyles>;
   profile: PdfProfile;
   client: PdfClient;
@@ -866,7 +866,7 @@ function EmitterReceiver(props: {
   );
 }
 
-function LineItemsTable(props: {
+export function LineItemsTable(props: {
   styles: ReturnType<typeof buildStyles>;
   quote: PdfQuote;
 }) {
@@ -1066,7 +1066,7 @@ function ValidityNotesBlock(props: {
   );
 }
 
-function BankBlock(props: {
+export function BankBlock(props: {
   styles: ReturnType<typeof buildStyles>;
   profile: PdfProfile;
   companyName: string;

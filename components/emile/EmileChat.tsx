@@ -168,6 +168,28 @@ export function EmileChat({
     }
   }, [conversationId, loadConversation]);
 
+  // Re-fetch la conversation quand l'onglet REDEVIENT visible (l'artisan revient
+  // sur Quovi). Couvre le cas réel : le client signe pendant que l'artisan est
+  // absent — un message d'Émile (facture générée) est inséré côté serveur ;
+  // sans temps réel, on le récupère au retour sur l'onglet. On NE re-fetch PAS
+  // pendant un stream en cours (sinon on casserait la réponse live).
+  const isLoadingRef = useRef(isLoading);
+  useEffect(() => {
+    isLoadingRef.current = isLoading;
+  }, [isLoading]);
+  useEffect(() => {
+    if (!conversationId) return;
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      if (isLoadingRef.current) return;
+      void loadConversation(conversationId);
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [conversationId, loadConversation]);
+
   // Switching conversations would otherwise carry over a "scrolled up" state from
   // the previous thread, leaving the freshly loaded messages stuck at the top.
   useEffect(() => {

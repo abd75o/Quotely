@@ -441,7 +441,12 @@ export function useEmile(
     setError(null);
     setIsHydrated(false);
     try {
-      const res = await fetch(`/api/conversations/${id}`);
+      // no-store : on veut TOUJOURS l'état frais en base à l'ouverture/au reload.
+      // Sinon le navigateur peut servir une réponse JSON mise en cache qui ne
+      // contient pas les messages insérés côté serveur depuis (ex. la notif de
+      // facture postée par Émile quand le client signe pendant l'absence de
+      // l'artisan).
+      const res = await fetch(`/api/conversations/${id}`, { cache: "no-store" });
       if (!res.ok) {
         setError(`Chargement conversation: HTTP ${res.status}`);
         return;
@@ -461,6 +466,7 @@ export function useEmile(
         try {
           const qRes = await fetch(
             `/api/quotes/${json.conversation.related_quote_id}`,
+            { cache: "no-store" },
           );
           if (qRes.ok) {
             const qJson = (await qRes.json()) as {

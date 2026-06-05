@@ -116,3 +116,86 @@ export async function generateInvoiceForSignedQuote(
     totalTtc,
   });
 }
+
+/**
+ * Palier 2B — poste un message d'Émile dans la conversation liée au devis pour
+ * annoncer que la facture vient d'être générée à la signature.
+ *
+ * BEST-EFFORT : appelé depuis le même try/catch que la création de facture, un
+ * échec ici (lève) est avalé par le caller → signature + facture intactes, le
+ * client ne voit rien. À n'appeler QUE si une facture a réellement été créée.
+ *
+ * - Cible la conversation `related_quote_id` (la plus récente si plusieurs).
+ * - Skip propre si aucune conversation liée (devis créé hors chat) : pas de
+ *   conversation orpheline créée.
+ * - Anti-doublon : ne reposte pas si un message mentionnant déjà ce numéro de
+ *   facture existe dans la conversation (re-signature / course).
+ * - Écrit via le client `admin` (le signataire est anonyme, RLS bypassée).
+ */
+function formatEurosFr(n: number): string {
+  return new Intl.NumberFormat("fr-FR", {
+    style: "currency",
+    currency: "EUR",
+  }).format(Number.isFinite(n) ? n : 0);
+}
+
+function buildInvoiceNoticeContent(
+  invoice: Invoice,
+  quoteNumber: string,
+  clientName: string,
+): string {
+  if (invoice.type === "acompte") {
+    return `✅ ${clientName} a signé le devis ${quoteNumber} ! J'ai généré la facture d'acompte ${invoice.invoice_number} (${formatEurosFr(invoice.total_ttc)}). Elle est prête à être envoyée.`;
+  }
+  return `✅ ${clientName} a signé le devis ${quoteNumber} ! J'ai préparé la facture ${invoice.invoice_number}. À toi de l'envoyer quand tu veux (à la commande ou en fin de travaux).`;
+}
+
+export async function postInvoiceSignatureNotice(
+  admin: SupabaseClient,
+  opts: {
+    invoice: Invoice;
+    quoteNumber: string;
+    clientName: string;
+    userId: string;
+  },
+): Promise<void> {
+  const { invoice, quoteNumber, clientName, userId } = opts;
+  if (!invoice.quote_id) return; // pas de devis lié → rien à rattacher
+
+  // 1) Conversation liée au devis (la plus récente si plusieurs).
+  const { data: convs, error: convErr } = await admin
+    .from("conversations")
+    .select("id")
+    .eq("related_quote_id", invoice.quote_id)
+    .eq("user_id", userId)
+    .order("updated_at", { ascending: false })
+    .limit(1);
+  if (convErr) throw convErr;
+  const conversationId = (convs?.[0]?.id as string | undefined) ?? null;
+  // Pas de conversation liée (devis créé hors chat) → skip propre.
+  if (!conversationId) return;
+
+  // 2) Anti-doublon : notif de CETTE facture déjà postée dans la conversation ?
+  const { data: existing, error: existErr } = await admin
+    .from("messages")
+    .select("id")
+    .eq("conversation_id", conversationId)
+    .ilike("content", `%${invoice.invoice_number}%`)
+    .limit(1);
+  if (existErr) throw existErr;
+  if (existing && existing.length > 0) return;
+
+  // 3) Poste le message d'Émile (role assistant) — persisté, visible au retour.
+  const { error: insErr } = await admin.from("messages").insert({
+    conversation_id: conversationId,
+    role: "assistant",
+    content: buildInvoiceNoticeContent(invoice, quoteNumber, clientName),
+  });
+  if (insErr) throw insErr;
+
+  // 4) Remonte la conversation en tête de la sidebar au retour de l'artisan.
+  await admin
+    .from("conversations")
+    .update({ updated_at: new Date().toISOString() })
+    .eq("id", conversationId);
+}

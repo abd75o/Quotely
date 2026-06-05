@@ -7,7 +7,10 @@ import {
 } from "@/lib/resend/send-quote";
 import { formatClientName } from "@/lib/text/name-normalize";
 import { signerNameMatches } from "@/lib/text/name-compare";
-import { generateInvoiceForSignedQuote } from "@/lib/invoices/on-signature";
+import {
+  generateInvoiceForSignedQuote,
+  postInvoiceSignatureNotice,
+} from "@/lib/invoices/on-signature";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
@@ -291,19 +294,36 @@ export async function POST(
     sign_blocked_until: null,
   });
 
-  // 3bis. Génération automatique de la facture (Palier 2A) — APRÈS le commit de
-  // la signature, en BEST-EFFORT ISOLÉ : si la création échoue (migration
-  // manquante, devis vide, etc.), on loggue mais la signature reste valide et le
-  // client ne voit AUCUNE erreur. Aucun email / notif / PDF ici — juste la ligne
-  // invoices (anti-doublon + détection acompte gérés dans le helper).
+  // clientName formaté — calculé UNE SEULE fois ici, réutilisé pour la notif
+  // facture (2B) ET les emails de signature plus bas (pas de duplication).
+  const clientName =
+    formatClientName({
+      first_name: clientRow?.first_name as string | null | undefined,
+      name: clientRow?.name as string | null | undefined,
+    }) || body.full_name.trim();
+
+  // 3bis. Génération auto de la facture (Palier 2A) + notif Émile dans le chat
+  // (Palier 2B) — APRÈS le commit de la signature, en BEST-EFFORT ISOLÉ : si ça
+  // échoue (migration manquante, devis vide, etc.), on loggue mais la signature
+  // reste valide et le client ne voit AUCUNE erreur.
   try {
-    await generateInvoiceForSignedQuote(admin, {
+    const invoice = await generateInvoiceForSignedQuote(admin, {
       quoteId: id,
       userId: quote.user_id as string,
     });
+    // On ne poste la notif QUE si une facture a réellement été créée (non-null :
+    // null = doublon/retry → pas de re-notif).
+    if (invoice) {
+      await postInvoiceSignatureNotice(admin, {
+        invoice,
+        quoteNumber: quote.number as string,
+        clientName,
+        userId: quote.user_id as string,
+      });
+    }
   } catch (e) {
     console.error(
-      "[sign] génération facture échouée (signature OK, sans impact client):",
+      "[sign] facture/notif échouée (signature OK, sans impact client):",
       e,
     );
   }
@@ -338,13 +358,8 @@ export async function POST(
       | string
       | undefined) || "#5B5BD6";
 
-  const clientName =
-    formatClientName({
-      first_name: clientRow?.first_name as string | null | undefined,
-      name: clientRow?.name as string | null | undefined,
-    }) || body.full_name.trim();
-
-  // 4a. Confirmation au client (mail depuis l'entreprise artisan)
+  // 4a. Confirmation au client (mail depuis l'entreprise artisan). clientName
+  // est calculé plus haut (réutilisé pour la notif facture ET ici).
   await sendQuoteSignedClientEmail({
     to: body.email.trim(),
     company,

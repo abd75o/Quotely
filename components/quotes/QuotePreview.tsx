@@ -172,6 +172,9 @@ export function QuotePreview({
   const [sent, setSent] = useState(false);
   const [copied, setCopied] = useState(false);
   const [signLink, setSignLink] = useState("");
+  // Génération de la facture de solde (palier 4).
+  const [showSoldeModal, setShowSoldeModal] = useState(false);
+  const [generatingSolde, setGeneratingSolde] = useState(false);
   const { isStarter } = useUserPlan();
   const { showUpgradeModal } = useUpgradeModal();
 
@@ -220,6 +223,33 @@ export function QuotePreview({
       setSent(true);
     } finally {
       setSending(false);
+    }
+  }
+
+  async function handleGenerateSolde() {
+    setGeneratingSolde(true);
+    try {
+      const res = await fetch(`/api/quotes/${quote.id}/solde`, {
+        method: "POST",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        // 409 = solde déjà créé : on redirige quand même vers la facture existante.
+        if (res.status === 409 && data?.existingSoldeId) {
+          router.push(`/dashboard/factures/${data.existingSoldeId}`);
+          return;
+        }
+        throw new Error(data?.error ?? `HTTP ${res.status}`);
+      }
+      toast.success("Facture de solde générée ✓");
+      router.push(`/dashboard/factures/${data.invoiceId}`);
+    } catch (e) {
+      console.error("[GENERATE SOLDE]", e);
+      toast.error(
+        e instanceof Error ? e.message : "Échec de la génération — réessaie.",
+      );
+      setGeneratingSolde(false);
+      setShowSoldeModal(false);
     }
   }
 
@@ -425,6 +455,18 @@ export function QuotePreview({
               <Receipt className="w-4 h-4" />
               Facture de solde générée
             </Link>
+          )}
+
+          {/* Devis signé + acompte facturé + pas encore de solde → générer le solde. */}
+          {!isEditing && soldeInfo?.eligible && (
+            <button
+              type="button"
+              onClick={() => setShowSoldeModal(true)}
+              className="flex items-center gap-2 px-5 py-2 text-sm font-bold text-white bg-[var(--primary)] hover:bg-[var(--primary-dark)] rounded-xl cursor-pointer transition-colors shadow-sm"
+            >
+              <Receipt className="w-4 h-4" />
+              Générer la facture de solde
+            </button>
           )}
         </div>
       </div>
@@ -770,6 +812,66 @@ export function QuotePreview({
           </div>
         </div>
       </div>
+
+      {/* Modale de confirmation — génération de la facture de solde (palier 4). */}
+      {showSoldeModal && soldeInfo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--primary-bg)]">
+                <Receipt className="h-5 w-5 text-[var(--primary)]" />
+              </div>
+              <h2 className="text-lg font-bold text-[var(--text-primary)]">
+                Générer la facture de solde
+              </h2>
+            </div>
+
+            <div className="mt-4 space-y-2 text-sm text-[var(--text-secondary)]">
+              <p>
+                Tu vas générer la facture de solde du devis{" "}
+                <span className="font-semibold text-[var(--text-primary)]">
+                  {quote.number}
+                </span>{" "}
+                (reste dû après acompte).
+              </p>
+              <div className="flex items-center justify-between rounded-xl bg-[var(--surface)] px-4 py-3">
+                <span className="text-[var(--text-secondary)]">Montant du solde</span>
+                <span className="text-base font-bold text-[var(--primary)] tabular-nums">
+                  {fmt(soldeInfo.montantSolde)} €
+                </span>
+              </div>
+              <p className="text-xs text-[var(--text-muted)]">
+                Un numéro de facture (FAC-…) sera attribué définitivement. La
+                facture est créée en attente — tu l&apos;enverras quand tu veux.
+              </p>
+            </div>
+
+            <div className="mt-6 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowSoldeModal(false)}
+                disabled={generatingSolde}
+                className="rounded-xl border border-[var(--border)] bg-white px-4 py-2 text-sm font-medium text-[var(--text-secondary)] hover:bg-gray-50 disabled:opacity-60 transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={handleGenerateSolde}
+                disabled={generatingSolde}
+                className="flex items-center gap-2 rounded-xl bg-[var(--primary)] px-5 py-2 text-sm font-bold text-white hover:bg-[var(--primary-dark)] disabled:opacity-70 transition-colors shadow-sm"
+              >
+                {generatingSolde ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Receipt className="h-4 w-4" />
+                )}
+                {generatingSolde ? "Génération…" : "Générer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

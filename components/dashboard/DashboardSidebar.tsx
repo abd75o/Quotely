@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   FileText,
+  Receipt,
   Users,
   UserCircle2,
   BarChart2,
@@ -37,6 +38,7 @@ const NAV: NavItemDef[] = [
   { label: "Tableau de bord", icon: LayoutDashboard, href: "/dashboard" },
   { label: "Mon équipe",      icon: Users,           href: "/dashboard/equipe" },
   { label: "Devis",           icon: FileText,        href: "/dashboard/devis" },
+  { label: "Factures",        icon: Receipt,         href: "/dashboard/factures" },
   { label: "Clients",         icon: UserCircle2,     href: "/dashboard/clients" },
   { label: "Statistiques",    icon: BarChart2,       href: "/dashboard/stats", proOnly: true },
   { label: "Parrainage",      icon: Gift,            href: "/dashboard/parrainage" },

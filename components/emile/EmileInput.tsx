@@ -163,7 +163,7 @@ export function EmileInput({
   }
 
   return (
-    <div className="border-t border-[var(--border)] bg-white px-3 py-3">
+    <div className="flex-shrink-0 border-t border-[var(--border)] bg-white px-3 py-3">
       <form
         onSubmit={(e) => {
           e.preventDefault();

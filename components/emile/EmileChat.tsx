@@ -715,7 +715,7 @@ export function EmileChat({
       : "Réponds à Émile…";
 
   return (
-    <div className="relative flex h-full min-h-0 flex-col bg-white">
+    <div className="relative flex min-h-0 flex-1 flex-col bg-white">
       <div
         ref={scrollRef}
         onScroll={handleScroll}
@@ -761,7 +761,7 @@ export function EmileChat({
       )}
 
       {error && (
-        <div className="flex items-center justify-between gap-3 border-t border-red-200 bg-red-50 px-4 py-2 text-[12px] text-red-700">
+        <div className="flex flex-shrink-0 items-center justify-between gap-3 border-t border-red-200 bg-red-50 px-4 py-2 text-[12px] text-red-700">
           <span className="min-w-0">{error}</span>
           {!isLoading && (
             <button

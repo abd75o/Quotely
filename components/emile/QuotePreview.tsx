@@ -116,7 +116,7 @@ export function QuotePreview({
   }
 
   return (
-    <div className="flex h-full min-w-0 flex-col bg-[var(--surface)]">
+    <div className="flex h-full min-h-0 min-w-0 flex-col bg-[var(--surface)]">
       <header className="flex items-center justify-between border-b border-[var(--border)] bg-white px-4 py-3">
         <div className="flex items-center gap-2 min-w-0">
           <Pencil className="h-4 w-4 flex-shrink-0 text-[var(--primary)]" />

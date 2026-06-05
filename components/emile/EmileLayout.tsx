@@ -330,9 +330,9 @@ export function EmileLayout({ conversationId }: EmileLayoutProps) {
   }, [conversationId]);
 
   return (
-    <div className="flex h-[calc(100vh-6rem)] w-full flex-col lg:h-[calc(100vh-4rem)]">
+    <div className="flex h-[calc(100dvh-6rem)] w-full flex-col lg:h-[calc(100dvh-4rem)]">
       {/* Desktop : 3 colonnes */}
-      <div className="hidden h-full min-h-0 lg:grid lg:grid-cols-[260px_minmax(0,1fr)_380px] lg:overflow-hidden lg:rounded-2xl lg:border lg:border-[var(--border)] lg:bg-white lg:shadow-sm">
+      <div className="hidden h-full min-h-0 lg:grid lg:grid-cols-[260px_minmax(0,1fr)_380px] lg:grid-rows-[minmax(0,1fr)] lg:overflow-hidden lg:rounded-2xl lg:border lg:border-[var(--border)] lg:bg-white lg:shadow-sm">
         <ConversationsSidebar activeConversationId={conversationId} />
         <div className="flex min-h-0 min-w-0 flex-col">
           <ChatHeader />

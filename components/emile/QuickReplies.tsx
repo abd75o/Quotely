@@ -175,7 +175,7 @@ export function QuickReplies({
 
   if (otherMode) {
     return (
-      <div className="flex items-center gap-2 border-t border-[var(--border)] bg-white px-4 py-3">
+      <div className="flex flex-shrink-0 items-center gap-2 border-t border-[var(--border)] bg-white px-4 py-3">
         <input
           type="text"
           autoFocus
@@ -215,7 +215,7 @@ export function QuickReplies({
       className={cn(
         // Mobile = stack vertical (one tap target per line, easier on thumbs);
         // ≥sm = horizontal wrap so multi-option rows breathe on desktop.
-        "flex flex-col gap-2 border-t border-[var(--border)] bg-white px-4 py-3 transition-opacity duration-200 sm:flex-row sm:flex-wrap",
+        "flex flex-shrink-0 flex-col gap-2 border-t border-[var(--border)] bg-white px-4 py-3 transition-opacity duration-200 sm:flex-row sm:flex-wrap",
         fading ? "opacity-0" : "opacity-100",
         // Pendant le traitement : grisé + non-cliquable (anti actions concurrentes).
         disabled && "pointer-events-none opacity-50",

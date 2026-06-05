@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Receipt } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { formatClientName } from "@/lib/text/name-normalize";
+import { DocumentCard } from "@/components/dashboard/DocumentCard";
+import { MonthSection } from "@/components/dashboard/MonthSection";
+import { groupByMonth } from "@/lib/dashboard/group-by-month";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +20,7 @@ interface InvoiceRow {
   status: InvoiceStatus;
   total_ttc: number;
   issued_at: string | null;
+  created_at: string | null;
   clientName: string;
 }
 
@@ -45,8 +48,8 @@ function fmtDate(d: string | null): string {
   const p = new Date(d);
   if (Number.isNaN(p.getTime())) return "—";
   return p.toLocaleDateString("fr-FR", {
-    day: "2-digit",
-    month: "2-digit",
+    day: "numeric",
+    month: "long",
     year: "numeric",
   });
 }
@@ -92,6 +95,7 @@ async function getInvoices(): Promise<InvoiceRow[]> {
         status: row.status as InvoiceStatus,
         total_ttc: Number(row.total_ttc ?? 0),
         issued_at: (row.issued_at as string | null) ?? null,
+        created_at: (row.created_at as string | null) ?? null,
         clientName,
       };
     });
@@ -103,6 +107,8 @@ async function getInvoices(): Promise<InvoiceRow[]> {
 
 export default async function InvoicesListPage() {
   const invoices = await getInvoices();
+  // Groupement par mois sur la date d'émission (fallback création).
+  const groups = groupByMonth(invoices, (inv) => inv.issued_at ?? inv.created_at);
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
@@ -118,59 +124,32 @@ export default async function InvoicesListPage() {
             automatiquement quand un client signe un devis.
           </div>
         ) : (
-          <div className="overflow-hidden rounded-2xl border border-[var(--border)] bg-white">
-            <table className="w-full text-sm">
-              <thead className="border-b border-[var(--border)] bg-[var(--surface)]">
-                <tr className="text-left text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                  <th className="px-4 py-3">N°</th>
-                  <th className="px-4 py-3">Client</th>
-                  <th className="px-4 py-3">Type</th>
-                  <th className="px-4 py-3 text-right">Montant TTC</th>
-                  <th className="px-4 py-3">Statut</th>
-                  <th className="px-4 py-3">Date</th>
-                  <th className="px-4 py-3" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--border-light)]">
-                {invoices.map((inv) => {
+          <div>
+            {groups.map((group) => (
+              <MonthSection key={group.key} label={group.label} count={group.items.length}>
+                {group.items.map((inv) => {
                   const badge = STATUS_BADGE[inv.status] ?? STATUS_BADGE.pending;
                   return (
-                    <tr key={inv.id} className="hover:bg-[var(--surface)]">
-                      <td className="px-4 py-3 font-mono text-[12px] text-[var(--text-primary)]">
-                        {inv.invoice_number}
-                      </td>
-                      <td className="px-4 py-3 text-[var(--text-secondary)]">
-                        {inv.clientName || "—"}
-                      </td>
-                      <td className="px-4 py-3 text-[var(--text-secondary)]">
-                        {TYPE_LABEL[inv.type]}
-                      </td>
-                      <td className="px-4 py-3 text-right font-medium tabular-nums text-[var(--text-primary)]">
-                        {fmtEuros(inv.total_ttc)}
-                      </td>
-                      <td className="px-4 py-3">
+                    <DocumentCard
+                      key={inv.id}
+                      href={`/dashboard/factures/${inv.id}`}
+                      icon={Receipt}
+                      number={inv.invoice_number}
+                      title={inv.clientName || "—"}
+                      subtitle={`${TYPE_LABEL[inv.type]} · ${fmtDate(inv.issued_at)}`}
+                      amount={fmtEuros(inv.total_ttc)}
+                      badge={
                         <span
-                          className={`inline-block rounded-full border px-2 py-0.5 text-[11px] font-semibold ${badge.cls}`}
+                          className={`inline-block flex-shrink-0 rounded-full border px-2.5 py-1 text-xs font-semibold ${badge.cls}`}
                         >
                           {badge.label}
                         </span>
-                      </td>
-                      <td className="px-4 py-3 text-[var(--text-muted)] tabular-nums">
-                        {fmtDate(inv.issued_at)}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <Link
-                          href={`/dashboard/factures/${inv.id}`}
-                          className="text-sm font-semibold text-[var(--primary)] hover:underline"
-                        >
-                          Voir
-                        </Link>
-                      </td>
-                    </tr>
+                      }
+                    />
                   );
                 })}
-              </tbody>
-            </table>
+              </MonthSection>
+            ))}
           </div>
         )}
       </div>

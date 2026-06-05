@@ -17,6 +17,9 @@ import {
 } from "lucide-react";
 import { StatsCards } from "./StatsCards";
 import { NewQuoteButton } from "./NewQuoteButton";
+import { DocumentCard } from "@/components/dashboard/DocumentCard";
+import { MonthSection } from "@/components/dashboard/MonthSection";
+import { groupByMonth } from "@/lib/dashboard/group-by-month";
 import { toastSuccess, toastError } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { PLAN_FEATURES } from "@/lib/permissions";
@@ -46,7 +49,9 @@ interface QuoteRow {
 }
 
 const STATUS_CONFIG = {
+  draft: { label: "Brouillon", icon: FileText, color: "text-gray-600 bg-gray-100 border-gray-200" },
   pending: { label: "En attente", icon: Clock, color: "text-amber-600 bg-amber-50 border-amber-200" },
+  sent: { label: "Envoyé", icon: Send, color: "text-blue-600 bg-blue-50 border-blue-200" },
   signed: { label: "Signé", icon: CheckCircle2, color: "text-emerald-600 bg-emerald-50 border-emerald-200" },
   refused: { label: "Refusé", icon: XCircle, color: "text-red-600 bg-red-50 border-red-200" },
   invoiced: { label: "Facturé", icon: CheckCircle2, color: "text-violet-600 bg-violet-50 border-violet-200" },
@@ -197,6 +202,9 @@ export function QuotesList({
     return matchTab && matchSearch;
   });
 
+  // Groupement par mois (date de création), appliqué APRÈS le filtre.
+  const groups = groupByMonth(filtered, (q) => q.created_at);
+
   // Stats
   const total = initialQuotes.length;
   const signed = initialQuotes.filter((q) => q.status === "signed").length;
@@ -272,19 +280,19 @@ export function QuotesList({
         </div>
       </div>
 
-      {/* Table */}
+      {/* Liste — cartes pleine largeur groupées par mois */}
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-[var(--border)]">
           <div className="w-14 h-14 bg-[var(--surface)] rounded-2xl flex items-center justify-center mb-4">
             <FileText className="w-7 h-7 text-[var(--text-muted)]" />
           </div>
           <p className="text-base font-semibold text-[var(--text-primary)] mb-1">
-            {search ? "Aucun résultat" : "Aucun devis"}
+            {search || activeTab !== "all" ? "Aucun résultat" : "Aucun devis"}
           </p>
           <p className="text-sm text-[var(--text-muted)] mb-5">
-            {search ? "Essayez avec d'autres termes" : "Créez votre premier devis en 30 secondes"}
+            {search || activeTab !== "all" ? "Essayez avec d'autres termes" : "Créez votre premier devis en 30 secondes"}
           </p>
-          {!search && (
+          {!search && activeTab === "all" && (
             <NewQuoteButton
               className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-[var(--primary)] hover:bg-[var(--primary-dark)] rounded-xl cursor-pointer transition-colors"
             >
@@ -294,97 +302,29 @@ export function QuotesList({
           )}
         </div>
       ) : (
-        <>
-          {/* Mobile : liste de cartes */}
-          <ul className="md:hidden flex flex-col gap-3">
-            {filtered.map((quote) => (
-              <li key={quote.id}>
-                <Link
+        <div>
+          {groups.map((group) => (
+            <MonthSection key={group.key} label={group.label} count={group.items.length}>
+              {group.items.map((quote) => (
+                <DocumentCard
+                  key={quote.id}
                   href={`/dashboard/devis/${quote.id}`}
-                  className="block bg-white rounded-2xl border border-[var(--border)] p-4 hover:border-[var(--primary)]/30 hover:shadow-sm cursor-pointer transition-all"
-                >
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="w-7 h-7 rounded-lg bg-[var(--primary-bg)] flex items-center justify-center flex-shrink-0">
-                        <FileText className="w-3.5 h-3.5 text-[var(--primary)]" />
-                      </div>
-                      <p className="text-xs font-semibold text-[var(--text-muted)] font-mono truncate">
-                        {quote.number}
-                      </p>
-                    </div>
-                    <StatusBadge status={quote.status} />
-                  </div>
-                  <p className="text-sm font-bold text-[var(--text-primary)] truncate mb-1">
-                    {quote.client?.name ? formatClientName(quote.client) : "—"}
-                  </p>
-                  <div className="flex items-end justify-between gap-2">
-                    <p className="text-lg font-bold text-[var(--text-primary)] tabular-nums leading-none">
-                      {quote.total.toLocaleString("fr-FR", { style: "currency", currency: "EUR" })}
-                    </p>
-                    <p className="text-xs text-[var(--text-muted)] flex-shrink-0">
-                      {fmtDate(quote.created_at)}
-                    </p>
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
-
-          {/* Desktop : table classique */}
-          <div className="hidden md:block bg-white rounded-3xl border border-[var(--border)] overflow-hidden">
-            <div className="grid grid-cols-[1fr_160px_120px_140px_100px_40px] gap-4 px-6 py-3 border-b border-[var(--border)] bg-[var(--surface)]">
-              {["Devis", "Client", "Montant TTC", "Date", "Statut", ""].map((h) => (
-                <span key={h} className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider">
-                  {h}
-                </span>
-              ))}
-            </div>
-
-            <ul className="divide-y divide-[var(--border-light)]">
-              {filtered.map((quote) => (
-                <li key={quote.id}>
-                  <Link
-                    href={`/dashboard/devis/${quote.id}`}
-                    className="grid grid-cols-[1fr_160px_120px_140px_100px_40px] gap-4 items-center px-6 py-4 hover:bg-[var(--surface)] cursor-pointer transition-colors group"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-9 h-9 rounded-xl bg-[var(--primary-bg)] flex items-center justify-center flex-shrink-0">
-                        <FileText className="w-4 h-4 text-[var(--primary)]" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-[var(--text-primary)] font-mono">{quote.number}</p>
-                        <p className="text-xs text-[var(--text-muted)] truncate">
-                          {quote.items?.[0]?.description || "—"}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-[var(--text-primary)] truncate">{quote.client?.name ? formatClientName(quote.client) : "—"}</p>
-                      <p className="text-xs text-[var(--text-muted)] truncate">{quote.client?.email ?? ""}</p>
-                    </div>
-
-                    <p className="text-sm font-bold text-[var(--text-primary)] tabular-nums">
-                      {quote.total.toLocaleString("fr-FR", { style: "currency", currency: "EUR" })}
-                    </p>
-
-                    <p className="text-sm text-[var(--text-secondary)]">
-                      {fmtDate(quote.created_at)}
-                    </p>
-
-                    <div>
-                      <StatusBadge status={quote.status} />
-                    </div>
-
-                    <div onClick={(e) => e.preventDefault()} className="flex justify-end">
+                  icon={FileText}
+                  number={quote.number}
+                  title={quote.client?.name ? formatClientName(quote.client) : "—"}
+                  subtitle={fmtDate(quote.created_at)}
+                  amount={quote.total.toLocaleString("fr-FR", { style: "currency", currency: "EUR" })}
+                  badge={<StatusBadge status={quote.status} />}
+                  trailing={
+                    <div onClick={(e) => e.preventDefault()} className="flex flex-shrink-0 justify-end">
                       <QuoteRowMenu quote={quote} />
                     </div>
-                  </Link>
-                </li>
+                  }
+                />
               ))}
-            </ul>
-          </div>
-        </>
+            </MonthSection>
+          ))}
+        </div>
       )}
     </div>
   );

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { QuotePreview } from "@/components/quotes/QuotePreview";
+import { QuotePreview, type SoldeInfo } from "@/components/quotes/QuotePreview";
+import { computeQuoteTotals, type QuoteItem } from "@/lib/quotes/items";
 
 interface ProfileRow {
   id?: string;
@@ -120,6 +121,84 @@ async function getQuote(id: string) {
   }
 }
 
+// La décision (signé + acompte présent + pas de solde) est prise côté serveur ;
+// le montant du solde est calculé EXACTEMENT comme le PDF de solde
+// (computeQuoteTotals × (100 − pct)/100). Le type SoldeInfo vit avec le
+// composant qui le consomme (QuotePreview).
+interface SoldeQuoteItem {
+  id?: string;
+  label?: string;
+  description?: string;
+  quantity?: number;
+  unite?: string | null;
+  price?: number;
+  unitPrice?: number;
+  tva?: number;
+}
+
+function toQuoteItem(it: SoldeQuoteItem): QuoteItem {
+  return {
+    id: String(it.id ?? ""),
+    label: String(it.label ?? it.description ?? ""),
+    quantity: Number(it.quantity ?? 0),
+    unite: (it.unite ?? null) as string | null,
+    price: Number(it.price ?? it.unitPrice ?? 0),
+    tva: Number(it.tva ?? 0),
+  };
+}
+
+async function getSoldeInfo(quoteId: string): Promise<SoldeInfo> {
+  const empty: SoldeInfo = {
+    eligible: false,
+    soldeInvoiceId: null,
+    montantSolde: 0,
+  };
+  try {
+    const { createClient } = await import("@/lib/supabase/server");
+    const supabase = await createClient();
+
+    const { data: quote } = await supabase
+      .from("quotes")
+      .select("status, items, acompte_percent")
+      .eq("id", quoteId)
+      .maybeSingle();
+    if (!quote) return empty;
+
+    const { data: invoices } = await supabase
+      .from("invoices")
+      .select("id, type")
+      .eq("quote_id", quoteId);
+
+    const rows = invoices ?? [];
+    const hasAcompte = rows.some((i) => i.type === "acompte");
+    const solde = rows.find((i) => i.type === "solde");
+    const soldeInvoiceId = (solde?.id as string | undefined) ?? null;
+
+    const pctRaw = (quote as { acompte_percent?: number | string | null })
+      .acompte_percent;
+    const pct =
+      pctRaw != null && Number.isFinite(Number(pctRaw)) ? Number(pctRaw) : 0;
+    const validPct = pct > 0 && pct < 100;
+
+    const rawItems = Array.isArray((quote as { items?: unknown }).items)
+      ? ((quote as { items: SoldeQuoteItem[] }).items)
+      : [];
+    const totals = computeQuoteTotals(rawItems.map(toQuoteItem));
+    const montantSolde = +(totals.total * ((100 - pct) / 100)).toFixed(2);
+
+    const eligible =
+      (quote as { status?: string }).status === "signed" &&
+      hasAcompte &&
+      validPct &&
+      !soldeInvoiceId;
+
+    return { eligible, soldeInvoiceId, montantSolde };
+  } catch (e) {
+    console.error("[devis/[id]] getSoldeInfo failed:", e);
+    return empty;
+  }
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -141,9 +220,12 @@ export default async function QuoteDetailPage({
 
   if (!quote) notFound();
 
+  const soldeInfo = await getSoldeInfo(id);
+
   return (
     <QuotePreview
       quote={quote as Parameters<typeof QuotePreview>[0]["quote"]}
+      soldeInfo={soldeInfo}
     />
   );
 }

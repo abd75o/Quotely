@@ -22,6 +22,7 @@ import {
   X as XIcon,
   Plus,
   Trash2,
+  Receipt,
 } from "lucide-react";
 import { ProBadge } from "@/components/ui/ProBadge";
 import { useUserPlan } from "@/lib/hooks/useUserState";
@@ -148,7 +149,24 @@ function buildSignLink(quote: Quote): string | null {
   return `${origin}/${path}/${token}`;
 }
 
-export function QuotePreview({ quote }: { quote: Quote }) {
+// Info « facture de solde » calculée côté serveur (page détail devis). Pilote
+// l'affichage de l'action de génération du solde dans la barre d'actions.
+export interface SoldeInfo {
+  /** Le devis est signé + a un acompte + n'a pas encore de solde → bouton actif. */
+  eligible: boolean;
+  /** Si un solde existe déjà : son id (→ mention + lien « Voir la facture »). */
+  soldeInvoiceId: string | null;
+  /** Montant TTC du solde, pour la modale de confirmation. */
+  montantSolde: number;
+}
+
+export function QuotePreview({
+  quote,
+  soldeInfo,
+}: {
+  quote: Quote;
+  soldeInfo?: SoldeInfo;
+}) {
   const router = useRouter();
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
@@ -396,6 +414,17 @@ export function QuotePreview({ quote }: { quote: Quote }) {
               {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : sent ? <Check className="w-4 h-4" /> : <Send className="w-4 h-4" />}
               {sending ? "Envoi…" : sent ? "Envoyé !" : "Envoyer au client"}
             </button>
+          )}
+
+          {/* Solde déjà généré → mention + lien vers la facture (palier 4). */}
+          {!isEditing && soldeInfo?.soldeInvoiceId && (
+            <Link
+              href={`/dashboard/factures/${soldeInfo.soldeInvoiceId}`}
+              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl cursor-pointer transition-colors"
+            >
+              <Receipt className="w-4 h-4" />
+              Facture de solde générée
+            </Link>
           )}
         </div>
       </div>

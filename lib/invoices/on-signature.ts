@@ -144,10 +144,14 @@ function buildInvoiceNoticeContent(
   quoteNumber: string,
   clientName: string,
 ): string {
+  // Marker [OPEN_INVOICE:<id>] → rendu comme bouton "Voir la facture" dans la
+  // bulle (parsé/strippé côté front). L'anti-doublon 2b matche invoice_number,
+  // pas l'id, donc le marker n'interfère pas avec la déduplication.
+  const link = ` [OPEN_INVOICE:${invoice.id}]`;
   if (invoice.type === "acompte") {
-    return `✅ ${clientName} a signé le devis ${quoteNumber} ! J'ai généré la facture d'acompte ${invoice.invoice_number} (${formatEurosFr(invoice.total_ttc)}). Elle est prête à être envoyée.`;
+    return `✅ ${clientName} a signé le devis ${quoteNumber} ! J'ai généré la facture d'acompte ${invoice.invoice_number} (${formatEurosFr(invoice.total_ttc)}). Elle est prête à être envoyée.${link}`;
   }
-  return `✅ ${clientName} a signé le devis ${quoteNumber} ! J'ai préparé la facture ${invoice.invoice_number}. À toi de l'envoyer quand tu veux (à la commande ou en fin de travaux).`;
+  return `✅ ${clientName} a signé le devis ${quoteNumber} ! J'ai préparé la facture ${invoice.invoice_number}. À toi de l'envoyer quand tu veux (à la commande ou en fin de travaux).${link}`;
 }
 
 export async function postInvoiceSignatureNotice(

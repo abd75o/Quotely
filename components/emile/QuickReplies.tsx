@@ -32,6 +32,9 @@ const OPEN_CLIENT_MODAL_REGEX = /\[OPEN_CLIENT_MODAL\]/i;
 // in EDIT mode pre-filled, and highlights the listed missing fields.
 const OPEN_CLIENT_EDIT_MODAL_REGEX =
   /\[OPEN_CLIENT_EDIT_MODAL(?::\s*([\s\S]+?))?\]/i;
+// Lien vers la page d'une facture — posé par Émile à la signature (palier 2b/3).
+// Format : [OPEN_INVOICE:<invoiceId>]. Rendu comme un bouton "Voir la facture".
+const OPEN_INVOICE_REGEX = /\[OPEN_INVOICE:\s*([^\]\s]+)\s*\]/i;
 
 export function parseQuickReplies(text: string): {
   cleaned: string;
@@ -53,7 +56,15 @@ export function parseQuickReplies(text: string): {
   cleaned = cleaned.replace(OPEN_QUOTE_LINE_MODAL_REGEX, "").trim();
   cleaned = cleaned.replace(OPEN_PROFILE_MODAL_REGEX, "").trim();
   cleaned = cleaned.replace(OPEN_CLIENT_EDIT_MODAL_REGEX, "").trim();
+  cleaned = cleaned.replace(OPEN_INVOICE_REGEX, "").trim();
   return { cleaned, replies };
+}
+
+/** Renvoie l'id de facture du marker [OPEN_INVOICE:<id>], ou null. */
+export function parseOpenInvoice(text: string): string | null {
+  const m = text.match(OPEN_INVOICE_REGEX);
+  const id = m?.[1]?.trim();
+  return id ? id : null;
 }
 
 export function parseOpenClientEditModal(

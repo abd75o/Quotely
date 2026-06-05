@@ -6,9 +6,11 @@ import { cn } from "@/lib/utils";
 import {
   parseQuickReplies,
   parseProfileButton,
+  parseOpenInvoice,
   hasClientPicker,
 } from "./QuickReplies";
 import { ProfileButton } from "./ProfileButton";
+import { InvoiceButton } from "./InvoiceButton";
 import { ClientPicker } from "./ClientPicker";
 import type { EmileMessage as EmileMessageType } from "@/hooks/useEmile";
 
@@ -123,6 +125,8 @@ function EmileMessageInner({
   const text = getText(message);
   const { cleaned, replies } = parseQuickReplies(text);
   const profileLabel = parseProfileButton(text);
+  const invoiceId =
+    message.role === "assistant" ? parseOpenInvoice(text) : null;
   const showClientPicker =
     message.role === "assistant" &&
     hasClientPicker(text) &&
@@ -245,6 +249,7 @@ function EmileMessageInner({
             <div className="leading-relaxed">{renderMessageBody(bodyText)}</div>
           )}
           {profileLabel && <ProfileButton label={profileLabel} />}
+          {invoiceId && <InvoiceButton invoiceId={invoiceId} />}
           {showClientPicker && (
             <ClientPicker
               onExisting={onPickExistingClient!}

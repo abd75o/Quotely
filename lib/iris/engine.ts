@@ -1,11 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { sendReminderEmail } from "./reminder-email";
+import { sendReminderEmail, buildReminderProfile } from "./reminder-email";
 import { postReminderNotice } from "./post-reminder-notice";
-import type {
-  ReminderStage,
-  ReminderContext,
-  ReminderEmailProfile,
-} from "@/emails/ReminderEmail";
+import type { ReminderStage, ReminderContext } from "@/emails/ReminderEmail";
 
 // ════════════════════════════════════════════════════════════════════════════
 // Iris — MOTEUR DE RELANCE. Balaie chaque jour les devis envoyés non signés et
@@ -48,34 +44,6 @@ function daysSince(iso: string, now: number): number {
   const t = new Date(iso).getTime();
   if (Number.isNaN(t)) return -1;
   return Math.floor((now - t) / 86_400_000);
-}
-
-// Construit le profil pour l'email depuis le snapshot figé du devis (ce que le
-// client a reçu), avec repli sur le profil live de l'artisan.
-function profileForEmail(
-  snapshot: Record<string, unknown> | null,
-  live: Record<string, unknown> | null,
-): ReminderEmailProfile {
-  const s = snapshot ?? {};
-  const l = live ?? {};
-  const pick = (k: string) =>
-    (s[k] as string | null | undefined) ??
-    (l[k] as string | null | undefined) ??
-    null;
-  return {
-    company_name: pick("company_name"),
-    company: pick("company"),
-    first_name: pick("first_name"),
-    last_name: pick("last_name"),
-    email: pick("email"),
-    telephone: pick("telephone"),
-    address: pick("address"),
-    postal_code: pick("postal_code"),
-    city: pick("city"),
-    logo_url: pick("logo_url"),
-    couleur_principale:
-      pick("couleur_principale") ?? pick("brand_color"),
-  };
 }
 
 interface QuoteRowRaw {
@@ -227,7 +195,7 @@ export async function runIrisReminders(
       const context: ReminderContext = q.page_viewed_at
         ? "viewed"
         : "not_viewed";
-      const profile = profileForEmail(
+      const profile = buildReminderProfile(
         q.emitter_snapshot,
         profileById.get(q.user_id) ?? null,
       );

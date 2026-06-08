@@ -32,6 +32,34 @@ function companyDisplay(p: ReminderEmailProfile): string {
   return person || "Votre prestataire";
 }
 
+// Construit le profil pour l'email de relance depuis le snapshot figé du devis
+// (ce que le client a reçu), avec repli sur le profil live de l'artisan.
+// Partagé par le moteur Iris et la relance manuelle.
+export function buildReminderProfile(
+  snapshot: Record<string, unknown> | null,
+  live: Record<string, unknown> | null,
+): ReminderEmailProfile {
+  const s = snapshot ?? {};
+  const l = live ?? {};
+  const pick = (k: string) =>
+    (s[k] as string | null | undefined) ??
+    (l[k] as string | null | undefined) ??
+    null;
+  return {
+    company_name: pick("company_name"),
+    company: pick("company"),
+    first_name: pick("first_name"),
+    last_name: pick("last_name"),
+    email: pick("email"),
+    telephone: pick("telephone"),
+    address: pick("address"),
+    postal_code: pick("postal_code"),
+    city: pick("city"),
+    logo_url: pick("logo_url"),
+    couleur_principale: pick("couleur_principale") ?? pick("brand_color"),
+  };
+}
+
 // Sujet adapté au palier — anonymisé (porte le nom de l'artisan, pas Quovi).
 function subjectFor(
   stage: ReminderStage,

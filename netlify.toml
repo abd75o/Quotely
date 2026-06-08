@@ -8,6 +8,11 @@
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
+# Fonctions Netlify de l'app (hors fonctions générées par le plugin Next).
+# Contient la Scheduled Function iris-cron (relances quotidiennes Iris).
+[functions]
+  directory = "netlify/functions"
+
 [[headers]]
   for = "/*"
   [headers.values]

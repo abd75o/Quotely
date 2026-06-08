@@ -1,10 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Bell, CheckCircle2, Eye, Mail, Pause, Send } from "lucide-react";
+import { ArrowLeft, Bell, CheckCircle2, Eye, Mail, Pause, Send, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatTile } from "@/components/ui/StatTile";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { cn } from "@/lib/utils";
 
 interface PendingItem {
   id: string;
@@ -27,6 +30,7 @@ interface IrisDashboardProps {
   signedThanksToIris: number;
   successRate: number;
   recentActivity: ActivityItem[];
+  irisEnabled: boolean;
 }
 
 export function IrisDashboard({
@@ -35,7 +39,33 @@ export function IrisDashboard({
   signedThanksToIris,
   successRate,
   recentActivity,
+  irisEnabled,
 }: IrisDashboardProps) {
+  const [enabled, setEnabled] = useState(irisEnabled);
+  const [saving, setSaving] = useState(false);
+
+  async function toggleIris() {
+    const next = !enabled;
+    setSaving(true);
+    // Optimiste : on bascule tout de suite, on annule si l'API échoue.
+    setEnabled(next);
+    try {
+      const res = await fetch("/api/iris/toggle", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled: next }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      toast.success(next ? "Iris activée ✓" : "Iris mise en pause");
+    } catch (e) {
+      console.error("[IRIS toggle]", e);
+      setEnabled(!next);
+      toast.error("Impossible de mettre à jour Iris — réessaie.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <div className="max-w-4xl mx-auto">
       <Link
@@ -50,10 +80,17 @@ export function IrisDashboard({
         title={
           <span className="flex items-center gap-3">
             Iris
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold uppercase tracking-wider">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              Active
-            </span>
+            {enabled ? (
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold uppercase tracking-wider">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                Active
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 border border-gray-200 text-[10px] font-bold uppercase tracking-wider">
+                <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                En pause
+              </span>
+            )}
           </span>
         }
         subtitle="Ta sentinelle automatique — relance, surveille, signe."
@@ -159,9 +196,45 @@ export function IrisDashboard({
         )}
       </section>
 
-      {/* Réglages — placeholder */}
-      <section className="bg-white rounded-2xl border border-[var(--border)] shadow-[var(--shadow-sm)] p-5 sm:p-6 opacity-90">
-        <h2 className="text-sm font-bold text-[var(--text-primary)] mb-1">Réglages d&apos;Iris</h2>
+      {/* Réglages */}
+      <section className="bg-white rounded-2xl border border-[var(--border)] shadow-[var(--shadow-sm)] p-5 sm:p-6">
+        <h2 className="text-sm font-bold text-[var(--text-primary)] mb-4">Réglages d&apos;Iris</h2>
+
+        {/* Toggle ON/OFF */}
+        <div className="flex items-center justify-between gap-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 mb-4">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-[var(--text-primary)]">
+              Relances automatiques
+            </p>
+            <p className="text-xs text-[var(--text-muted)]">
+              {enabled
+                ? "Iris relance tes devis envoyés non signés (J+3 · J+7 · J+14)."
+                : "En pause — Iris n'envoie aucune relance."}
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={enabled}
+            aria-label="Activer ou mettre Iris en pause"
+            onClick={toggleIris}
+            disabled={saving}
+            className={cn(
+              "relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors disabled:opacity-60",
+              enabled ? "bg-[var(--primary)]" : "bg-gray-300",
+            )}
+          >
+            <span
+              className={cn(
+                "inline-flex h-5 w-5 items-center justify-center rounded-full bg-white shadow transition-transform",
+                enabled ? "translate-x-[22px]" : "translate-x-0.5",
+              )}
+            >
+              {saving && <Loader2 className="h-3 w-3 animate-spin text-[var(--primary)]" />}
+            </span>
+          </button>
+        </div>
+
         <p className="text-xs text-[var(--text-muted)] mb-4">
           La personnalisation des délais et du ton arrive très prochainement.
         </p>

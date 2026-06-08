@@ -24,6 +24,7 @@ interface IrisData {
   signedThanksToIris: number;
   successRate: number;
   pendingOver3Days: number;
+  irisEnabled: boolean;
 }
 
 function nextRelance(daysSince: number): PendingItem["nextRelance"] {
@@ -39,6 +40,7 @@ async function getIrisData(): Promise<IrisData> {
     signedThanksToIris: 0,
     successRate: 0,
     pendingOver3Days: 0,
+    irisEnabled: true,
   };
   try {
     const { createClient } = await import("@/lib/supabase/server");
@@ -47,6 +49,14 @@ async function getIrisData(): Promise<IrisData> {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) return empty;
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("iris_enabled")
+      .eq("id", user.id)
+      .maybeSingle();
+    const irisEnabled =
+      (profile as { iris_enabled?: boolean } | null)?.iris_enabled ?? true;
 
     const { data, error } = await supabase
       .from("quotes")
@@ -89,6 +99,7 @@ async function getIrisData(): Promise<IrisData> {
     return {
       pendingItems,
       pendingOver3Days,
+      irisEnabled,
       // Iris n'envoie pas encore de relances réellement : placeholders honnêtes.
       remindersSentThisMonth: 0,
       signedThanksToIris: 0,
@@ -129,6 +140,7 @@ export default async function SentinellePage() {
         signedThanksToIris={data.signedThanksToIris}
         successRate={data.successRate}
         recentActivity={[]}
+        irisEnabled={data.irisEnabled}
       />
     </LockedFeature>
   );

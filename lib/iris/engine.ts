@@ -92,10 +92,12 @@ export async function runIrisReminders(
   };
 
   // 1) Artisans éligibles : Iris activé + plan pro/comptable.
+  // NB : `profiles` n'a PAS de colonne email — l'email artisan vit dans
+  // auth.users (cf. lib/quotes/send.ts). On l'ajoute plus bas via l'API admin.
   const { data: profiles, error: profErr } = await admin
     .from("profiles")
     .select(
-      "id, company_name, company, first_name, last_name, email, telephone, address, postal_code, city, logo_url, couleur_principale, plan, iris_enabled",
+      "id, company_name, company, first_name, last_name, telephone, address, postal_code, city, logo_url, couleur_principale, plan, iris_enabled",
     )
     .eq("iris_enabled", true)
     .in("plan", ["pro", "comptable"]);
@@ -122,6 +124,23 @@ export async function runIrisReminders(
   const candidates = (quotes ?? []) as QuoteRowRaw[];
   summary.scannedQuotes = candidates.length;
   if (candidates.length === 0) return summary;
+
+  // Email artisan : absent de `profiles`, on le lit dans auth.users (repli au
+  // reply-to/contact ; emitter_snapshot.email reste prioritaire). Uniquement
+  // pour les artisans ayant des devis candidats.
+  const candidateUserIds = [...new Set(candidates.map((q) => q.user_id))];
+  await Promise.all(
+    candidateUserIds.map(async (uid) => {
+      try {
+        const { data } = await admin.auth.admin.getUserById(uid);
+        const e = data.user?.email ?? null;
+        const p = profileById.get(uid);
+        if (e && p) p.email = e;
+      } catch {
+        // best-effort : sans email, l'envoi part quand même (sans reply-to).
+      }
+    }),
+  );
 
   // 3) Paliers déjà envoyés pour ces devis (anti-doublon).
   const quoteIds = candidates.map((q) => q.id);

@@ -59,16 +59,18 @@ export async function POST(
     const signLink = `${origin}/sign/${quote.signature_token}`;
 
     // Profil émetteur (snapshot figé du devis, repli sur profil live).
+    // NB : `profiles` n'a pas de colonne email — l'email artisan vient de
+    // auth.users (user.email), comme dans l'envoi de devis (lib/quotes/send.ts).
     const { data: profileRow } = await supabase
       .from("profiles")
       .select(
-        "company_name, company, first_name, last_name, email, telephone, address, postal_code, city, logo_url, couleur_principale, brand_color",
+        "company_name, company, first_name, last_name, telephone, address, postal_code, city, logo_url, couleur_principale, brand_color",
       )
       .eq("id", user.id)
       .maybeSingle();
     const profile = buildReminderProfile(
       (quote.emitter_snapshot as Record<string, unknown> | null) ?? null,
-      (profileRow as Record<string, unknown> | null) ?? null,
+      { ...((profileRow as Record<string, unknown> | null) ?? {}), email: user.email ?? null },
     );
 
     // Prochain palier non encore envoyé (sert au ton + à la trace anti-doublon).

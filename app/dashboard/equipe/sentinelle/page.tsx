@@ -16,6 +16,7 @@ interface PendingItem {
   total: number;
   daysSince: number;
   nextRelance: "J+3" | "J+7" | "J+14";
+  pageViewedAt: string | null;
 }
 
 interface ActivityItem {
@@ -153,7 +154,9 @@ async function getIrisData(): Promise<IrisData> {
     // ── Devis surveillés : envoyés non signés (sent/viewed) ─────────────────
     const { data: quotes } = await supabase
       .from("quotes")
-      .select("id, number, total, status, sent_at, client:clients(name)")
+      .select(
+        "id, number, total, status, sent_at, page_viewed_at, client:clients(name)",
+      )
       .eq("user_id", user.id)
       .in("status", ["sent", "viewed"])
       .order("sent_at", { ascending: true });
@@ -162,6 +165,7 @@ async function getIrisData(): Promise<IrisData> {
       number: string;
       total: number | null;
       sent_at: string | null;
+      page_viewed_at: string | null;
       client: unknown;
     }>;
 
@@ -177,6 +181,7 @@ async function getIrisData(): Promise<IrisData> {
           clientName: joinedName(q.client),
           total: Number(q.total ?? 0),
           daysSince,
+          pageViewedAt: q.page_viewed_at,
           next: nextRelanceFor(stagesByQuote.get(q.id) ?? new Set()),
         };
       });
@@ -193,6 +198,7 @@ async function getIrisData(): Promise<IrisData> {
         total: r.total,
         daysSince: r.daysSince,
         nextRelance: r.next as PendingItem["nextRelance"],
+        pageViewedAt: r.pageViewedAt,
       }));
 
     return {

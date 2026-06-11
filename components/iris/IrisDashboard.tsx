@@ -16,6 +16,19 @@ interface PendingItem {
   total: number;
   daysSince: number;
   nextRelance: "J+3" | "J+7" | "J+14";
+  pageViewedAt: string | null;
+}
+
+// « Vu le 9 juin à 14:30 » — date courte (cf. recentActivity) + heure (cf. page
+// de signature). Pas d'année : un devis surveillé a ≤ 14 jours.
+function formatViewedAt(iso: string): string {
+  const d = new Date(iso);
+  const date = d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+  const time = d.toLocaleTimeString("fr-FR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  return `Vu le ${date} à ${time}`;
 }
 
 interface ActivityItem {
@@ -143,7 +156,7 @@ export function IrisDashboard({
             {pendingItems.map((q) => (
               <li
                 key={q.id}
-                className="flex items-center gap-3 px-4 sm:px-5 py-3.5"
+                className="flex items-stretch gap-3 px-4 sm:px-5 py-3.5"
               >
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-[var(--text-primary)] truncate">
@@ -153,19 +166,33 @@ export function IrisDashboard({
                     {q.number} · {q.total.toLocaleString("fr-FR")} € · en attente depuis{" "}
                     {q.daysSince} jour{q.daysSince > 1 ? "s" : ""}
                   </p>
+                  {/* Statut de vue : page_viewed_at = ouverture réelle de /sign. */}
+                  {q.pageViewedAt ? (
+                    <p className="mt-0.5 flex items-center gap-1 text-[11px] font-medium text-emerald-600">
+                      <Eye className="w-3 h-3 shrink-0" />
+                      {formatViewedAt(q.pageViewedAt)}
+                    </p>
+                  ) : (
+                    <p className="mt-0.5 flex items-center gap-1 text-[11px] text-[var(--text-muted)]">
+                      <Eye className="w-3 h-3 shrink-0 opacity-50" />
+                      Pas encore ouvert
+                    </p>
+                  )}
                 </div>
-                <span className="hidden sm:inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full bg-[var(--primary-bg)] text-[var(--primary)] border border-[var(--primary)]/20">
-                  Prochaine : {q.nextRelance}
-                </span>
-                <button
-                  type="button"
-                  disabled
-                  title="Bientôt disponible"
-                  className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold text-[var(--text-muted)] bg-white border border-[var(--border)] rounded-lg opacity-60 cursor-not-allowed"
-                >
-                  <Pause className="w-3 h-3" />
-                  Pause
-                </button>
+                <div className="flex flex-col items-end justify-between shrink-0">
+                  <span className="hidden sm:inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full bg-[var(--primary-bg)] text-[var(--primary)] border border-[var(--primary)]/20">
+                    Prochaine : {q.nextRelance}
+                  </span>
+                  <button
+                    type="button"
+                    disabled
+                    title="Bientôt disponible"
+                    className="mt-auto inline-flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold text-[var(--text-muted)] bg-white border border-[var(--border)] rounded-lg opacity-60 cursor-not-allowed"
+                  >
+                    <Pause className="w-3 h-3" />
+                    Pause
+                  </button>
+                </div>
               </li>
             ))}
           </ul>

@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Bell, CheckCircle2, Eye, Mail, Pause, Send, Loader2 } from "lucide-react";
+import { ArrowLeft, Bell, CheckCircle2, Eye, Mail, Send, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatTile } from "@/components/ui/StatTile";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { useReminderState } from "@/lib/hooks/useReminderState";
 import { cn } from "@/lib/utils";
 
 interface PendingItem {
@@ -35,6 +36,82 @@ interface ActivityItem {
   id: string;
   date: string;
   message: string;
+}
+
+// Carte d'un devis surveillé. Chaque carte porte son propre état de relance
+// (cooldown 48h, relance Iris récente) via le hook partagé avec la page détail
+// (QuotePreview) et le widget dashboard (PendingQuotesList).
+function PendingItemRow({ q }: { q: PendingItem }) {
+  const { state, sending, remind } = useReminderState(q.id);
+  const blocked = state ? !state.canRemind : false;
+  const showAutoNotice =
+    state?.lastAutoHoursAgo != null && state.lastAutoHoursAgo < 48;
+
+  async function handleRemind() {
+    const r = await remind();
+    if (r.ok) toast.success(`Relance envoyée à ${r.clientName ?? "le client"}`);
+    else toast.error(r.error ?? "Échec de la relance");
+  }
+
+  return (
+    <li className="flex items-stretch gap-3 px-4 sm:px-5 py-3.5">
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-[var(--text-primary)] truncate">
+          {q.clientName}
+        </p>
+        <p className="text-[11px] text-[var(--text-muted)]">
+          {q.number} · {q.total.toLocaleString("fr-FR")} € · en attente depuis{" "}
+          {q.daysSince} jour{q.daysSince > 1 ? "s" : ""}
+        </p>
+        {/* Statut de vue : page_viewed_at = ouverture réelle de /sign. */}
+        {q.pageViewedAt ? (
+          <p className="mt-0.5 flex items-center gap-1 text-[11px] font-medium text-emerald-600">
+            <Eye className="w-3 h-3 shrink-0" />
+            {formatViewedAt(q.pageViewedAt)}
+          </p>
+        ) : (
+          <p className="mt-0.5 flex items-center gap-1 text-[11px] text-[var(--text-muted)]">
+            <Eye className="w-3 h-3 shrink-0 opacity-50" />
+            Pas encore ouvert
+          </p>
+        )}
+        {/* Info non bloquante : Iris a déjà relancé récemment (anti-doublon involontaire). */}
+        {showAutoNotice && (
+          <p className="mt-0.5 flex items-center gap-1 text-[11px] text-[var(--text-muted)]">
+            <Bell className="w-3 h-3 shrink-0" />
+            Iris a relancé ce client il y a {state!.lastAutoHoursAgo}h.
+          </p>
+        )}
+      </div>
+      <div className="flex flex-col items-end justify-between shrink-0">
+        <span className="hidden sm:inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full bg-[var(--primary-bg)] text-[var(--primary)] border border-[var(--primary)]/20">
+          Prochaine : {q.nextRelance}
+        </span>
+        <button
+          type="button"
+          onClick={handleRemind}
+          disabled={sending || blocked}
+          title={
+            blocked && state
+              ? `Dernière relance récente — attends encore ${state.hoursUntilAllowed}h avant de relancer.`
+              : undefined
+          }
+          className="mt-auto inline-flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold text-[var(--primary)] bg-[var(--primary-bg)] hover:bg-indigo-100 disabled:opacity-60 disabled:cursor-not-allowed border border-[var(--primary)]/20 rounded-lg cursor-pointer transition-colors"
+        >
+          {sending ? (
+            <Loader2 className="w-3 h-3 animate-spin" />
+          ) : (
+            <Bell className="w-3 h-3" />
+          )}
+          {sending
+            ? "Envoi…"
+            : blocked && state
+              ? `Relancer (dans ${state.hoursUntilAllowed}h)`
+              : "Relancer"}
+        </button>
+      </div>
+    </li>
+  );
 }
 
 interface IrisDashboardProps {
@@ -106,7 +183,17 @@ export function IrisDashboard({
             )}
           </span>
         }
-        subtitle="Ta sentinelle automatique — relance, surveille, signe."
+        subtitle={
+          <>
+            Iris ne dort jamais. Tu vis ta vie, tu gères tes chantiers. Pendant
+            ce temps, je surveille tes devis et je relance au bon moment, avec le
+            bon ton. Aucun devis oublié, aucune vente perdue par négligence.
+            <span className="block mt-1 text-[11px] italic text-[var(--text-muted)]">
+              Tu peux aussi me déclencher manuellement depuis chaque devis quand
+              tu sens que c&apos;est le bon moment.
+            </span>
+          </>
+        }
       />
 
       {/* Stats */}
@@ -154,46 +241,7 @@ export function IrisDashboard({
         ) : (
           <ul className="divide-y divide-[var(--border)]">
             {pendingItems.map((q) => (
-              <li
-                key={q.id}
-                className="flex items-stretch gap-3 px-4 sm:px-5 py-3.5"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-[var(--text-primary)] truncate">
-                    {q.clientName}
-                  </p>
-                  <p className="text-[11px] text-[var(--text-muted)]">
-                    {q.number} · {q.total.toLocaleString("fr-FR")} € · en attente depuis{" "}
-                    {q.daysSince} jour{q.daysSince > 1 ? "s" : ""}
-                  </p>
-                  {/* Statut de vue : page_viewed_at = ouverture réelle de /sign. */}
-                  {q.pageViewedAt ? (
-                    <p className="mt-0.5 flex items-center gap-1 text-[11px] font-medium text-emerald-600">
-                      <Eye className="w-3 h-3 shrink-0" />
-                      {formatViewedAt(q.pageViewedAt)}
-                    </p>
-                  ) : (
-                    <p className="mt-0.5 flex items-center gap-1 text-[11px] text-[var(--text-muted)]">
-                      <Eye className="w-3 h-3 shrink-0 opacity-50" />
-                      Pas encore ouvert
-                    </p>
-                  )}
-                </div>
-                <div className="flex flex-col items-end justify-between shrink-0">
-                  <span className="hidden sm:inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full bg-[var(--primary-bg)] text-[var(--primary)] border border-[var(--primary)]/20">
-                    Prochaine : {q.nextRelance}
-                  </span>
-                  <button
-                    type="button"
-                    disabled
-                    title="Bientôt disponible"
-                    className="mt-auto inline-flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold text-[var(--text-muted)] bg-white border border-[var(--border)] rounded-lg opacity-60 cursor-not-allowed"
-                  >
-                    <Pause className="w-3 h-3" />
-                    Pause
-                  </button>
-                </div>
-              </li>
+              <PendingItemRow key={q.id} q={q} />
             ))}
           </ul>
         )}

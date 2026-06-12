@@ -27,6 +27,7 @@ import {
 import { ProBadge } from "@/components/ui/ProBadge";
 import { useUserPlan } from "@/lib/hooks/useUserState";
 import { useUpgradeModal } from "@/lib/hooks/useUpgradeModal";
+import { useReminderState } from "@/lib/hooks/useReminderState";
 import { cn } from "@/lib/utils";
 import { formatSiret } from "@/lib/format/siret";
 import { formatCompanyName, formatClientName } from "@/lib/text/name-normalize";
@@ -189,6 +190,28 @@ export function QuotePreview({
 
   const status = STATUS[quote.status as keyof typeof STATUS] ?? STATUS.pending;
   const StatusIcon = status.icon;
+
+  // Relance manuelle : disponible pour un devis envoyé non signé. Le cooldown
+  // 48h (entre relances manuelles) est piloté par l'état serveur ; une relance
+  // Iris récente est seulement signalée (non bloquante).
+  const remindable = quote.status === "sent" || quote.status === "viewed";
+  const {
+    state: remindState,
+    sending: reminding,
+    remind,
+  } = useReminderState(quote.id, { enabled: remindable });
+  const remindBlocked = remindState ? !remindState.canRemind : false;
+  const showAutoNotice =
+    remindState?.lastAutoHoursAgo != null && remindState.lastAutoHoursAgo < 48;
+
+  async function handleRemind() {
+    const r = await remind();
+    if (r.ok) {
+      toast.success(`Relance envoyée à ${r.clientName ?? "le client"}`);
+    } else {
+      toast.error(r.error ?? "Échec de la relance");
+    }
+  }
 
   // Live totals while editing (round to 2 decimals to match the API).
   const draftSubtotal = useMemo(
@@ -446,6 +469,32 @@ export function QuotePreview({
             </button>
           )}
 
+          {/* Relance manuelle — devis envoyé non signé (indépendant du toggle Iris). */}
+          {!isEditing && remindable && (
+            <button
+              type="button"
+              onClick={handleRemind}
+              disabled={reminding || remindBlocked}
+              title={
+                remindBlocked && remindState
+                  ? `Dernière relance récente — attends encore ${remindState.hoursUntilAllowed}h avant de relancer.`
+                  : undefined
+              }
+              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-[var(--primary)] bg-[var(--primary-bg)] hover:bg-indigo-100 disabled:opacity-60 disabled:cursor-not-allowed border border-[var(--primary)]/20 rounded-xl cursor-pointer transition-colors"
+            >
+              {reminding ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Bell className="w-4 h-4" />
+              )}
+              {reminding
+                ? "Envoi…"
+                : remindBlocked && remindState
+                  ? `Relancer (dans ${remindState.hoursUntilAllowed}h)`
+                  : "Relancer maintenant"}
+            </button>
+          )}
+
           {/* Solde déjà généré → mention + lien vers la facture (palier 4). */}
           {!isEditing && soldeInfo?.soldeInvoiceId && (
             <Link
@@ -470,6 +519,14 @@ export function QuotePreview({
           )}
         </div>
       </div>
+
+      {/* Info non bloquante : Iris a déjà relancé récemment (anti-doublon involontaire). */}
+      {!isEditing && remindable && showAutoNotice && (
+        <p className="mb-4 -mt-2 flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
+          <Bell className="w-3 h-3 shrink-0" />
+          Iris a relancé ce client il y a {remindState!.lastAutoHoursAgo}h.
+        </p>
+      )}
 
       {/* Pro features teaser — Starter uniquement */}
       {isStarter && !isEditing && (

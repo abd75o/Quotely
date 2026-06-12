@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Bell, Clock, Loader2, Send, PartyPopper } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { toastError, toastSuccess } from "@/lib/toast";
+import { useReminderState } from "@/lib/hooks/useReminderState";
 import { cn } from "@/lib/utils";
 
 interface PendingQuote {
@@ -34,10 +35,66 @@ function clientName(client: RawQuote["client"]): string {
   return client.name ?? "Client";
 }
 
+// Ligne = un devis à relancer. Chaque ligne porte son propre état de relance
+// (cooldown 48h, relance Iris récente) via le hook partagé avec la page détail.
+function PendingQuoteRow({ q }: { q: PendingQuote }) {
+  const { state, sending, remind } = useReminderState(q.id);
+  const blocked = state ? !state.canRemind : false;
+
+  async function handleRemind() {
+    const r = await remind();
+    if (r.ok) toastSuccess(`Relance envoyée à ${r.clientName ?? "le client"}`);
+    else toastError(r.error ?? "Impossible d'envoyer la relance");
+  }
+
+  return (
+    <li className="flex items-center gap-3 px-4 sm:px-5 py-3.5">
+      <div className="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
+        <Clock className="w-4 h-4 text-amber-600" />
+      </div>
+      <Link
+        href={`/dashboard/devis/${q.id}`}
+        className="flex-1 min-w-0 group cursor-pointer"
+      >
+        <p className="text-sm font-semibold text-[var(--text-primary)] truncate group-hover:text-[var(--primary)] transition-colors">
+          {q.client_name}
+        </p>
+        <p className="text-xs text-[var(--text-muted)]">
+          {q.number} · {q.total.toLocaleString("fr-FR")} € · en attente depuis {q.daysSince} jour
+          {q.daysSince > 1 ? "s" : ""}
+        </p>
+      </Link>
+      <button
+        type="button"
+        onClick={handleRemind}
+        disabled={sending || blocked}
+        title={
+          blocked && state
+            ? `Dernière relance récente — attends encore ${state.hoursUntilAllowed}h.`
+            : undefined
+        }
+        className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-[var(--primary)] bg-[var(--primary-bg)] hover:bg-indigo-100 disabled:opacity-60 disabled:cursor-not-allowed rounded-lg cursor-pointer transition-colors flex-shrink-0"
+      >
+        {sending ? (
+          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+        ) : (
+          <Send className="w-3.5 h-3.5" />
+        )}
+        <span className="hidden sm:inline">
+          {sending
+            ? "Envoi…"
+            : blocked && state
+              ? `Dans ${state.hoursUntilAllowed}h`
+              : "Relancer"}
+        </span>
+      </button>
+    </li>
+  );
+}
+
 export function PendingQuotesList({ className }: { className?: string }) {
   const [loading, setLoading] = useState(true);
   const [quotes, setQuotes] = useState<PendingQuote[]>([]);
-  const [reminding, setReminding] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -59,7 +116,7 @@ export function PendingQuotesList({ className }: { className?: string }) {
           .from("quotes")
           .select("id, number, total, created_at, status, client:clients(name)")
           .eq("user_id", user.id)
-          .eq("status", "pending")
+          .in("status", ["sent", "viewed"])
           .lte("created_at", cutoff)
           .order("created_at", { ascending: true })
           .limit(MAX_DISPLAY);
@@ -89,22 +146,6 @@ export function PendingQuotesList({ className }: { className?: string }) {
       cancelled = true;
     };
   }, []);
-
-  async function handleRemind(id: string) {
-    setReminding(id);
-    try {
-      const res = await fetch(`/api/quotes/${id}/remind`, { method: "POST" });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(data.error ?? "Échec de la relance");
-      }
-      toastSuccess("Relance envoyée au client");
-    } catch (err) {
-      toastError(err instanceof Error ? err.message : "Impossible d'envoyer la relance");
-    } finally {
-      setReminding(null);
-    }
-  }
 
   return (
     <section
@@ -145,41 +186,7 @@ export function PendingQuotesList({ className }: { className?: string }) {
       ) : (
         <ul className="divide-y divide-[var(--border)]">
           {quotes.map((q) => (
-            <li
-              key={q.id}
-              className="flex items-center gap-3 px-4 sm:px-5 py-3.5"
-            >
-              <div className="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
-                <Clock className="w-4 h-4 text-amber-600" />
-              </div>
-              <Link
-                href={`/dashboard/devis/${q.id}`}
-                className="flex-1 min-w-0 group cursor-pointer"
-              >
-                <p className="text-sm font-semibold text-[var(--text-primary)] truncate group-hover:text-[var(--primary)] transition-colors">
-                  {q.client_name}
-                </p>
-                <p className="text-xs text-[var(--text-muted)]">
-                  {q.number} · {q.total.toLocaleString("fr-FR")} € · en attente depuis {q.daysSince} jour
-                  {q.daysSince > 1 ? "s" : ""}
-                </p>
-              </Link>
-              <button
-                type="button"
-                onClick={() => handleRemind(q.id)}
-                disabled={reminding === q.id}
-                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-[var(--primary)] bg-[var(--primary-bg)] hover:bg-indigo-100 disabled:opacity-60 disabled:cursor-not-allowed rounded-lg cursor-pointer transition-colors flex-shrink-0"
-              >
-                {reminding === q.id ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <Send className="w-3.5 h-3.5" />
-                )}
-                <span className="hidden sm:inline">
-                  {reminding === q.id ? "Envoi…" : "Relancer"}
-                </span>
-              </button>
-            </li>
+            <PendingQuoteRow key={q.id} q={q} />
           ))}
         </ul>
       )}

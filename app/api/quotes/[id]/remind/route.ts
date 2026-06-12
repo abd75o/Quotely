@@ -1,16 +1,100 @@
 import { NextRequest } from "next/server";
 import { sendReminderEmail, buildReminderProfile } from "@/lib/iris/reminder-email";
-import type { ReminderStage } from "@/emails/ReminderEmail";
+import {
+  computeReminderState,
+  stageFromDaysSinceSent,
+  REMINDER_COOLDOWN_HOURS,
+  type ReminderRow,
+} from "@/lib/iris/cooldown";
 
 /**
- * POST /api/quotes/[id]/remind
- * Relance MANUELLE d'un devis par l'artisan (bouton). Réservé au plan Pro côté
- * UI ; l'auth + les RLS suffisent côté serveur (le devis doit appartenir au user).
+ * /api/quotes/[id]/remind — relance MANUELLE d'un devis par l'artisan.
  *
- * Utilise EXACTEMENT le même email anonymisé qu'Iris (From = artisan, reply-to
- * artisan, zéro mention Quovi) et écrit dans quote_reminders (source 'manual')
- * pour qu'Iris ne renvoie pas le même palier automatiquement.
+ * GET  : état du bouton (canRemind, dates des dernières relances, cooldown).
+ * POST : envoie la relance (email anonymisé identique à Iris) si le cooldown
+ *        48h entre relances MANUELLES est écoulé. Une relance AUTO récente
+ *        n'empêche RIEN (elle est seulement signalée à l'UI).
+ *
+ * Réservé au plan Pro côté UI ; l'auth + les RLS suffisent côté serveur (le
+ * devis doit appartenir au user). Écrit dans quote_reminders (source 'manual')
+ * pour qu'Iris coordonne sa propre cadence (cf. lib/iris/cooldown.ts).
  */
+
+const REMINDABLE = ["sent", "viewed"];
+
+function clientNameOf(c: unknown): string {
+  const obj = (Array.isArray(c) ? c[0] : c) as
+    | { name?: string | null; first_name?: string | null }
+    | null;
+  return (obj?.first_name || obj?.name || "le client").trim() || "le client";
+}
+
+async function loadReminderRows(
+  supabase: Awaited<ReturnType<typeof getSupabase>>,
+  quoteId: string,
+): Promise<ReminderRow[]> {
+  const { data } = await supabase
+    .from("quote_reminders")
+    .select("sent_at, source")
+    .eq("quote_id", quoteId);
+  return (data ?? []) as ReminderRow[];
+}
+
+async function getSupabase() {
+  const { createClient } = await import("@/lib/supabase/server");
+  return createClient();
+}
+
+// ─── GET : état du bouton ────────────────────────────────────────────────────
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+  try {
+    const supabase = await getSupabase();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { data: quote } = await supabase
+      .from("quotes")
+      .select("id, status")
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (!quote) {
+      return Response.json({ error: "Devis introuvable" }, { status: 404 });
+    }
+
+    const statusRemindable = REMINDABLE.includes(quote.status as string);
+    const state = computeReminderState(
+      await loadReminderRows(supabase, id),
+      Date.now(),
+    );
+
+    return Response.json({
+      canRemind: statusRemindable && !state.manualCooldownActive,
+      statusRemindable,
+      lastManualAt: state.lastManualAt,
+      lastAutoAt: state.lastAutoAt,
+      hoursUntilAllowed: state.hoursUntilAllowed,
+      lastAutoHoursAgo:
+        state.lastAutoHoursAgo === null
+          ? null
+          : Math.floor(state.lastAutoHoursAgo),
+      cooldownHours: REMINDER_COOLDOWN_HOURS,
+    });
+  } catch (err) {
+    console.error("[quotes/remind GET]", err);
+    return Response.json({ error: "Erreur serveur" }, { status: 500 });
+  }
+}
+
+// ─── POST : envoi de la relance ──────────────────────────────────────────────
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -18,8 +102,7 @@ export async function POST(
   const { id } = await params;
 
   try {
-    const { createClient } = await import("@/lib/supabase/server");
-    const supabase = await createClient();
+    const supabase = await getSupabase();
 
     const {
       data: { user },
@@ -40,7 +123,7 @@ export async function POST(
     if (error || !quote) {
       return Response.json({ error: "Devis introuvable" }, { status: 404 });
     }
-    if (!["sent", "viewed"].includes(quote.status)) {
+    if (!REMINDABLE.includes(quote.status)) {
       return Response.json(
         { error: "Ce devis n'est plus en attente." },
         { status: 409 },
@@ -52,6 +135,24 @@ export async function POST(
       return Response.json(
         { error: "Email du client manquant." },
         { status: 400 },
+      );
+    }
+
+    // Anti-spam : 48h DUR entre deux relances MANUELLES. Une relance auto
+    // récente ne bloque pas (l'artisan reste maître).
+    const now = Date.now();
+    const reminderRows = await loadReminderRows(supabase, id);
+    const state = computeReminderState(reminderRows, now);
+    if (state.manualCooldownActive) {
+      return Response.json(
+        {
+          error: `Trop tôt : dernière relance il y a ${Math.floor(
+            state.lastManualHoursAgo ?? 0,
+          )}h. Attends encore ${state.hoursUntilAllowed}h.`,
+          retryAfterHours: state.hoursUntilAllowed,
+          lastManualHoursAgo: Math.floor(state.lastManualHoursAgo ?? 0),
+        },
+        { status: 409 },
       );
     }
 
@@ -73,17 +174,11 @@ export async function POST(
       { ...((profileRow as Record<string, unknown> | null) ?? {}), email: user.email ?? null },
     );
 
-    // Prochain palier non encore envoyé (sert au ton + à la trace anti-doublon).
-    const { data: sent } = await supabase
-      .from("quote_reminders")
-      .select("stage")
-      .eq("quote_id", id);
-    const sentStages = new Set((sent ?? []).map((r) => r.stage as string));
-    const stage: ReminderStage = !sentStages.has("j3")
-      ? "j3"
-      : !sentStages.has("j7")
-        ? "j7"
-        : "j14";
+    // Palier = ton de l'email, calculé par l'ancienneté du devis (et non par le
+    // « prochain palier libre ») : une relance manuelle peut se répéter.
+    const sentAtMs = quote.sent_at ? new Date(quote.sent_at).getTime() : now;
+    const daysSinceSent = Math.floor((now - sentAtMs) / 86_400_000);
+    const stage = stageFromDaysSinceSent(daysSinceSent);
 
     const context = quote.page_viewed_at ? "viewed" : "not_viewed";
 
@@ -106,8 +201,9 @@ export async function POST(
       );
     }
 
-    // Trace (best-effort) : permet à Iris de ne pas renvoyer ce palier.
-    // Si le palier est déjà tracé (course), l'UNIQUE échoue → on ignore.
+    // Trace (source 'manual') : alimente le cooldown 48h et la coordination
+    // avec Iris auto. L'unicité ne s'applique qu'aux relances auto désormais
+    // (migration 20260609) → cet insert ne peut plus échouer sur un doublon.
     const { error: insErr } = await supabase.from("quote_reminders").insert({
       quote_id: id,
       user_id: user.id,
@@ -121,7 +217,11 @@ export async function POST(
       console.error("[quotes/remind] trace quote_reminders échouée", insErr);
     }
 
-    return Response.json({ success: true, signLink });
+    return Response.json({
+      success: true,
+      signLink,
+      clientName: clientNameOf(quote.client),
+    });
   } catch (err) {
     console.error("[quotes/remind]", err);
     return Response.json({ error: "Erreur serveur" }, { status: 500 });

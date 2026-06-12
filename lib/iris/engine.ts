@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendReminderEmail, buildReminderProfile } from "./reminder-email";
 import { postReminderNotice } from "./post-reminder-notice";
+import { REMINDER_COOLDOWN_MS } from "./cooldown";
 import type { ReminderStage, ReminderContext } from "@/emails/ReminderEmail";
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -142,18 +143,28 @@ export async function runIrisReminders(
     }),
   );
 
-  // 3) Paliers déjà envoyés pour ces devis (anti-doublon).
+  // 3) Relances déjà envoyées pour ces devis : paliers (anti-doublon auto) +
+  //    date de la DERNIÈRE relance toutes sources confondues (cooldown 48h, pour
+  //    ne pas doubler une relance manuelle récente — cf. lib/iris/cooldown.ts).
   const quoteIds = candidates.map((q) => q.id);
   const { data: reminders, error: remErr } = await admin
     .from("quote_reminders")
-    .select("quote_id, stage")
+    .select("quote_id, stage, sent_at")
     .in("quote_id", quoteIds);
   if (remErr) throw remErr;
   const sentStages = new Map<string, Set<string>>();
+  const lastSentAt = new Map<string, number>();
   for (const r of reminders ?? []) {
-    const set = sentStages.get(r.quote_id as string) ?? new Set<string>();
+    const qid = r.quote_id as string;
+    const set = sentStages.get(qid) ?? new Set<string>();
     set.add(r.stage as string);
-    sentStages.set(r.quote_id as string, set);
+    sentStages.set(qid, set);
+    if (r.sent_at) {
+      const t = new Date(r.sent_at as string).getTime();
+      if (!Number.isNaN(t) && t > (lastSentAt.get(qid) ?? 0)) {
+        lastSentAt.set(qid, t);
+      }
+    }
   }
 
   // 4) Traitement par devis (best-effort isolé).
@@ -194,6 +205,22 @@ export async function runIrisReminders(
           number: q.number,
           outcome: "skipped",
           reason: `aucun palier dû (j+${days})`,
+        });
+        continue;
+      }
+
+      // Cooldown 48h : une relance (auto OU manuelle) a-t-elle été envoyée
+      // récemment ? Si oui, on laisse respirer le client (évite notamment de
+      // doubler une relance manuelle que l'artisan vient de faire).
+      const last = lastSentAt.get(q.id);
+      if (last !== undefined && now - last < REMINDER_COOLDOWN_MS) {
+        summary.skipped++;
+        summary.details.push({
+          quoteId: q.id,
+          number: q.number,
+          stage: due.stage,
+          outcome: "skipped",
+          reason: "relance récente (< 48h)",
         });
         continue;
       }

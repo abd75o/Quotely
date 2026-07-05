@@ -104,6 +104,17 @@ export function isVatSubject(vatStatus?: string | null): boolean {
 }
 
 /**
+ * True quand l'entreprise n'applique PAS de TVA : franchise en base
+ * (auto-entrepreneur) OU non-assujetti. Source de vérité unique de
+ * l'exonération, réutilisée par le system-prompt et l'outil calculateTVA
+ * d'Émile pour qu'aucune copie de cette logique ne puisse diverger.
+ */
+export function isVatExempt(vatStatus?: string | null): boolean {
+  const s = normalizeVatStatus(vatStatus);
+  return VAT_FRANCHISE.has(s) || VAT_NON_ASSUJETTI.has(s);
+}
+
+/**
  * Mention légale TVA correspondant au statut :
  * - franchise / auto-entrepreneur → "TVA non applicable, art. 293 B du CGI"
  * - non assujetti                → "TVA non applicable" (293 B ne vise que la

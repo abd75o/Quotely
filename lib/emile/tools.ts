@@ -7,6 +7,7 @@ import { autoTitleConversation } from "@/lib/conversations/auto-title";
 import { resolveQuoteId } from "@/lib/quotes/resolve-id";
 import { normalizeFrTva, computeQuoteTotals } from "@/lib/quotes/items";
 import { checkMonthlyQuoteQuota } from "@/lib/quotes/quota";
+import { isVatExempt, resolveTvaNote } from "@/lib/pdf/mentions-legales";
 
 export interface EmileToolContext {
   supabase: SupabaseClient;
@@ -379,7 +380,7 @@ export function createEmileTools(ctx: EmileToolContext) {
 
     calculateTVA: tool({
       description:
-        "Calcule la TVA correcte selon le contexte du chantier. typeChantier: 'renovation_plus_2ans' (10%), 'amelioration_energetique' (5.5%), 'neuf' (20%), 'b2b' (20%), 'autre' (20%). Si statutFiscal='auto_entrepreneur_franchise', TVA=0%.",
+        "Calcule la TVA correcte selon le contexte du chantier. typeChantier: 'renovation_plus_2ans' (10%), 'amelioration_energetique' (5.5%), 'neuf' (20%), 'b2b' (20%), 'autre' (20%). Si statutFiscal exonéré ('auto_entrepreneur' ou 'non_assujetti', valeurs canoniques de profiles.vat_status), TVA=0% et mention légale d'exonération.",
       inputSchema: z.object({
         montantHT: z.number(),
         typeChantier: z.enum([
@@ -390,17 +391,29 @@ export function createEmileTools(ctx: EmileToolContext) {
           "autre",
         ]),
         statutFiscal: z
-          .enum(["auto_entrepreneur_franchise", "normal"])
+          .enum([
+            // Valeurs canoniques réellement stockées en base (profiles.vat_status)
+            "auto_entrepreneur",
+            "non_assujetti",
+            "assujetti",
+            // Alias hérités tolérés par résilience
+            "auto_entrepreneur_franchise",
+            "franchise",
+            "normal",
+          ])
           .optional(),
       }),
       execute: async ({ montantHT, typeChantier, statutFiscal }) => {
         const ht = safeNumber(montantHT, 0);
-        if (statutFiscal === "auto_entrepreneur_franchise") {
+        // Exonération (0 %) : franchise en base OU non-assujetti. On délègue le
+        // test ET la mention à lib/pdf/mentions-legales — source de vérité unique
+        // (293 B pour la franchise, "TVA non applicable" pour un non-assujetti).
+        if (isVatExempt(statutFiscal)) {
           return ok({
             tauxTVA: 0,
             montantTVA: 0,
             montantTTC: ht,
-            mention: "TVA non applicable, art. 293 B du CGI",
+            mention: resolveTvaNote(statutFiscal) ?? "TVA non applicable",
           });
         }
         const taux = TAUX_TVA_MAP[typeChantier as TypeChantier] ?? 20;

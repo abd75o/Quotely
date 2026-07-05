@@ -1,3 +1,5 @@
+import { isVatExempt, resolveTvaNote } from "@/lib/pdf/mentions-legales";
+
 export interface EmileProfileContext {
   prenom: string;
   metier_principal: string;
@@ -9,20 +11,10 @@ export interface EmileProfileContext {
   toggle_suggestions: boolean;
 }
 
-// Statut TVA — valeurs canoniques de profiles.vat_status (alias hérités inclus).
-// Doit rester aligné avec lib/pdf/mentions-legales.ts (source de vérité unique).
-const VAT_FRANCHISE_STATUSES = new Set([
-  "auto_entrepreneur",
-  "auto_entrepreneur_franchise",
-  "franchise",
-]);
-const VAT_NON_ASSUJETTI_STATUSES = new Set(["non_assujetti"]);
-
-function isVatExempt(statut?: string): boolean {
-  const s = (statut ?? "").toLowerCase().trim();
-  return VAT_FRANCHISE_STATUSES.has(s) || VAT_NON_ASSUJETTI_STATUSES.has(s);
-}
-
+// Statut TVA : la logique d'exonération (isVatExempt) et la mention légale
+// (resolveTvaNote) viennent de lib/pdf/mentions-legales.ts — SOURCE DE VÉRITÉ
+// UNIQUE partagée par le PDF, le system-prompt et l'outil calculateTVA. Ne PAS
+// redéfinir de sets locaux ici : c'est ce qui avait fait diverger calculateTVA.
 export function buildEmileSystemPrompt(profile: EmileProfileContext): string {
   const specialitesText =
     profile.specialites.length > 0
@@ -30,12 +22,8 @@ export function buildEmileSystemPrompt(profile: EmileProfileContext): string {
       : "";
 
   const vatExempt = isVatExempt(profile.statut_tva);
-  const franchise = VAT_FRANCHISE_STATUSES.has(
-    (profile.statut_tva ?? "").toLowerCase().trim(),
-  );
-  const exemptMention = franchise
-    ? "TVA non applicable, art. 293 B du CGI"
-    : "TVA non applicable";
+  const exemptMention =
+    resolveTvaNote(profile.statut_tva) ?? "TVA non applicable";
 
   // Bloc TVA injecté selon le statut RÉEL de l'artisan. Pour un
   // auto-entrepreneur / franchise / non-assujetti, Émile ne DOIT jamais
